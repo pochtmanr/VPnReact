@@ -7,13 +7,13 @@ export default function TabLayout() {
         <Icon sf="shield.checkered" />
         <Label>VPN</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="parental">
+        <Icon sf="figure.and.child.holdinghands" />
+        <Label>Parental</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="adblock">
         <Icon sf="nosign" />
         <Label>Ad Block</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="status">
-        <Icon sf="speedometer" />
-        <Label>Speed Test</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf="person.fill" />

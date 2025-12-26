@@ -8,8 +8,7 @@ import { useAuth } from './AuthContext';
 // Storage keys for persisting settings
 const STORAGE_KEYS = {
   AD_BLOCK_ENABLED: '@vpn_settings/ad_block_enabled',
-  AUTO_CONNECT_WIFI: '@vpn_settings/auto_connect_wifi',
-  KILL_SWITCH_ENABLED: '@vpn_settings/kill_switch_enabled',
+  PARENTAL_ENABLED: '@parental/enabled',
 };
 
 // WireGuard types
@@ -42,10 +41,6 @@ interface VPNContextType {
   isCheckingProfile: boolean;
   adBlockEnabled: boolean;
   setAdBlockEnabled: (enabled: boolean) => void;
-  autoConnectWifi: boolean;
-  setAutoConnectWifi: (enabled: boolean) => void;
-  killSwitchEnabled: boolean;
-  setKillSwitchEnabled: (enabled: boolean) => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   selectServer: (server: VPNServer) => void;
@@ -61,7 +56,7 @@ const VPNContext = createContext<VPNContextType | undefined>(undefined);
 const WireGuardModule = Platform.OS !== 'web' ? NativeModules.WireGuardVpnModule : null;
 
 export function VPNProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { account } = useAuth();
   const [servers, setServers] = useState<VPNServer[]>([]);
   const [selectedServer, setSelectedServer] = useState<VPNServer | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -72,11 +67,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   const [isProfileInstalled, setIsProfileInstalled] = useState(true);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [useSimulation, setUseSimulation] = useState(false);
   const [adBlockEnabled, setAdBlockEnabledState] = useState(false);
-  const [autoConnectWifi, setAutoConnectWifiState] = useState(false);
-  const [killSwitchEnabled, setKillSwitchEnabledState] = useState(true); // Kill switch enabled by default for security
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // DNS servers - AdGuard DNS when ad blocking is enabled, regular DNS otherwise
   const AD_BLOCK_DNS = ['10.0.0.1']; // VPN server running AdGuard Home
@@ -86,27 +77,15 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [adBlock, autoConnect, killSwitch] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.AD_BLOCK_ENABLED),
-          AsyncStorage.getItem(STORAGE_KEYS.AUTO_CONNECT_WIFI),
-          AsyncStorage.getItem(STORAGE_KEYS.KILL_SWITCH_ENABLED),
-        ]);
+        const adBlock = await AsyncStorage.getItem(STORAGE_KEYS.AD_BLOCK_ENABLED);
 
         if (adBlock !== null) {
           setAdBlockEnabledState(adBlock === 'true');
         }
-        if (autoConnect !== null) {
-          setAutoConnectWifiState(autoConnect === 'true');
-        }
-        if (killSwitch !== null) {
-          setKillSwitchEnabledState(killSwitch === 'true');
-        }
 
-        console.log('VPN settings loaded:', { adBlock, autoConnect, killSwitch });
+        console.log('VPN settings loaded:', { adBlock });
       } catch (error) {
         console.error('Error loading VPN settings:', error);
-      } finally {
-        setSettingsLoaded(true);
       }
     };
 
@@ -124,42 +103,6 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setAutoConnectWifi = useCallback(async (enabled: boolean) => {
-    setAutoConnectWifiState(enabled);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.AUTO_CONNECT_WIFI, String(enabled));
-      console.log('Auto-connect setting saved:', enabled);
-
-      // Update native module settings if initialized
-      if (WireGuardModule?.updateSettings) {
-        await WireGuardModule.updateSettings({
-          autoConnectWifi: enabled,
-          killSwitchEnabled: killSwitchEnabled,
-        });
-      }
-    } catch (error) {
-      console.error('Error saving auto-connect setting:', error);
-    }
-  }, [killSwitchEnabled]);
-
-  const setKillSwitchEnabled = useCallback(async (enabled: boolean) => {
-    setKillSwitchEnabledState(enabled);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.KILL_SWITCH_ENABLED, String(enabled));
-      console.log('Kill switch setting saved:', enabled);
-
-      // Update native module settings if initialized
-      if (WireGuardModule?.updateSettings) {
-        await WireGuardModule.updateSettings({
-          autoConnectWifi: autoConnectWifi,
-          killSwitchEnabled: enabled,
-        });
-      }
-    } catch (error) {
-      console.error('Error saving kill switch setting:', error);
-    }
-  }, [autoConnectWifi]);
-
   // Initialize WireGuard module
   const initializeWireGuard = useCallback(async () => {
     if (isInitialized || Platform.OS === 'web') return;
@@ -173,12 +116,9 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       await WireGuardModule.initialize();
 
       setIsInitialized(true);
-      setUseSimulation(false);
       console.log('WireGuard VPN service initialized successfully');
     } catch (error) {
       console.warn('WireGuard initialization failed:', error);
-      // Don't use simulation - let user know the real error
-      setUseSimulation(false);
       setIsInitialized(true);
     }
   }, [isInitialized]);
@@ -221,13 +161,13 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch favorites
   const fetchFavorites = useCallback(async () => {
-    if (!user) return;
+    if (!account) return;
 
     try {
       const { data, error } = await supabase
         .from('user_favorites')
         .select('server_id')
-        .eq('user_id', user.id);
+        .eq('user_id', account.id);
 
       if (!error && data) {
         setFavorites(data.map((f) => f.server_id));
@@ -235,17 +175,17 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching favorites:', error);
     }
-  }, [user]);
+  }, [account]);
 
   // Fetch connection logs
   const fetchLogs = useCallback(async () => {
-    if (!user) return;
+    if (!account) return;
 
     try {
       const { data, error } = await supabase
         .from('connection_logs')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', account.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -255,7 +195,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching logs:', error);
     }
-  }, [user]);
+  }, [account]);
 
   // WireGuard doesn't require pre-installed profiles
   const checkProfileInstalled = useCallback(async (): Promise<boolean> => {
@@ -277,15 +217,15 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   }, [refreshServers]);
 
   useEffect(() => {
-    if (user) {
+    if (account) {
       fetchFavorites();
       fetchLogs();
     }
-  }, [user, fetchFavorites, fetchLogs]);
+  }, [account, fetchFavorites, fetchLogs]);
 
   // Subscribe to realtime logs
   useEffect(() => {
-    if (!user) return;
+    if (!account) return;
 
     const channel = supabase
       .channel('connection_logs')
@@ -295,7 +235,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
           event: 'INSERT',
           schema: 'public',
           table: 'connection_logs',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${account.id}`,
         },
         (payload) => {
           setConnectionLogs((prev) => [payload.new as ConnectionLog, ...prev]);
@@ -306,7 +246,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [account]);
 
   // Poll VPN status periodically
   useEffect(() => {
@@ -348,11 +288,11 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     message: string,
     extraData?: Partial<ConnectionLog>
   ) {
-    if (!user || !selectedServer) return;
+    if (!account || !selectedServer) return;
 
     try {
       await supabase.from('connection_logs').insert({
-        user_id: user.id,
+        user_id: account.id,
         server_id: selectedServer.id,
         status,
         message,
@@ -366,12 +306,16 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Parse WireGuard config from server's config_data
-  function parseWireGuardConfig(configData: string): WireGuardConfig | null {
+  async function parseWireGuardConfig(configData: string): Promise<WireGuardConfig | null> {
     console.log('Parsing config_data:', configData);
 
-    // Determine DNS based on ad block setting
-    const dnsServers = adBlockEnabled ? AD_BLOCK_DNS : REGULAR_DNS;
-    console.log('Using DNS servers:', dnsServers, 'Ad block:', adBlockEnabled);
+    // Check if parental controls are enabled
+    const parentalEnabled = await AsyncStorage.getItem(STORAGE_KEYS.PARENTAL_ENABLED);
+    const useAdGuardDNS = adBlockEnabled || parentalEnabled === 'true';
+
+    // Determine DNS based on ad block or parental controls setting
+    const dnsServers = useAdGuardDNS ? AD_BLOCK_DNS : REGULAR_DNS;
+    console.log('Using DNS servers:', dnsServers, 'Ad block:', adBlockEnabled, 'Parental:', parentalEnabled);
 
     try {
       // Try parsing as JSON first (new format)
@@ -512,7 +456,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Parse the config
-      const wgConfig = parseWireGuardConfig(selectedServer.config_data);
+      const wgConfig = await parseWireGuardConfig(selectedServer.config_data);
 
       if (!wgConfig) {
         throw new Error('Invalid WireGuard configuration');
@@ -529,10 +473,6 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         mtu: wgConfig.mtu,
         presharedKey: wgConfig.presharedKey,
         clientAddress: wgConfig.clientAddress,
-        // Kill switch blocks all traffic if VPN disconnects unexpectedly
-        includeAllNetworks: killSwitchEnabled,
-        // On-demand rules for auto-connect
-        onDemandEnabled: autoConnectWifi,
       });
 
       setConnectionStatus('connected');
@@ -600,7 +540,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function toggleFavorite(serverId: string) {
-    if (!user) return;
+    if (!account) return;
 
     const isFavorite = favorites.includes(serverId);
 
@@ -609,11 +549,11 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         await supabase
           .from('user_favorites')
           .delete()
-          .eq('user_id', user.id)
+          .eq('user_id', account.id)
           .eq('server_id', serverId);
         setFavorites((prev) => prev.filter((id) => id !== serverId));
       } else {
-        await supabase.from('user_favorites').insert({ user_id: user.id, server_id: serverId });
+        await supabase.from('user_favorites').insert({ user_id: account.id, server_id: serverId });
         setFavorites((prev) => [...prev, serverId]);
       }
     } catch (error) {
@@ -634,10 +574,6 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         isCheckingProfile,
         adBlockEnabled,
         setAdBlockEnabled,
-        autoConnectWifi,
-        setAutoConnectWifi,
-        killSwitchEnabled,
-        setKillSwitchEnabled,
         connect,
         disconnect,
         selectServer,

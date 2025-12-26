@@ -23,7 +23,6 @@ import {
   Eye,
   ChevronRight,
   Download,
-  Power,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -203,7 +202,7 @@ function getGreeting() {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { profile, user } = useAuth();
+  const { account, isAuthenticated } = useAuth();
   const {
     servers,
     selectedServer,
@@ -213,10 +212,6 @@ export default function HomeScreen() {
     isCheckingProfile,
     adBlockEnabled,
     setAdBlockEnabled,
-    autoConnectWifi,
-    setAutoConnectWifi,
-    killSwitchEnabled,
-    setKillSwitchEnabled,
     connect,
     disconnect,
     selectServer,
@@ -230,7 +225,7 @@ export default function HomeScreen() {
 
   const bottomSheetRef = useRef<ServerBottomSheetRef>(null);
 
-  const isLoggedIn = !!user;
+  const isLoggedIn = isAuthenticated;
   const isConnected = connectionStatus === 'connected';
   const isConnecting = connectionStatus === 'connecting';
   const [isInstallingProfile, setIsInstallingProfile] = useState(false);
@@ -263,8 +258,8 @@ export default function HomeScreen() {
   }, [toggleFavorite]);
 
   const isPremiumLocked = useCallback((server: typeof servers[0]) =>
-    server.is_premium && profile?.subscription_tier === 'free',
-    [profile?.subscription_tier]
+    server.is_premium && account?.subscription_tier === 'free',
+    [account?.subscription_tier]
   );
 
   // Helper to get country flag emoji from country code
@@ -319,7 +314,7 @@ export default function HomeScreen() {
           >
             <View>
               <Text style={[styles.greeting, { color: colors.text }]}>
-                {getGreeting()}, {profile?.username || 'User'}
+                {getGreeting()}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 {isConnected
@@ -334,7 +329,7 @@ export default function HomeScreen() {
               ]}
             >
               <Text style={[styles.tierText, { color: colors.textSecondary }]}>
-                {profile?.subscription_tier?.toUpperCase() || 'FREE'}
+                {account?.subscription_tier?.toUpperCase() || 'FREE'}
               </Text>
             </View>
           </AnimatedView>
@@ -506,50 +501,6 @@ export default function HomeScreen() {
                 onValueChange={setAdBlockEnabled}
                 trackColor={{ false: colors.border, true: '#EF4444' }}
                 thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-                ios_backgroundColor={colors.border}
-              />
-            </View>
-
-            <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
-
-            {/* Auto-Connect on Wi-Fi */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                  <Wifi size={20} color="#3B82F6" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Auto-Connect</Text>
-                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Connect on new Wi-Fi</Text>
-                </View>
-              </View>
-              <Switch
-                value={autoConnectWifi}
-                onValueChange={setAutoConnectWifi}
-                trackColor={{ false: colors.border, true: '#3B82F6' }}
-                thumbColor={autoConnectWifi ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-                ios_backgroundColor={colors.border}
-              />
-            </View>
-
-            <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
-
-            {/* Kill Switch */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : 'rgba(249, 115, 22, 0.1)' }]}>
-                  <Power size={20} color="#F97316" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Kill Switch</Text>
-                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Block traffic if VPN drops</Text>
-                </View>
-              </View>
-              <Switch
-                value={killSwitchEnabled}
-                onValueChange={setKillSwitchEnabled}
-                trackColor={{ false: colors.border, true: '#F97316' }}
-                thumbColor={killSwitchEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                 ios_backgroundColor={colors.border}
               />
             </View>

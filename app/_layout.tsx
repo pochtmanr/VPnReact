@@ -11,6 +11,7 @@ import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { VPNProvider } from '@/context/VPNContext';
+import { ParentalControlsProvider } from '@/context/ParentalControlsContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 export {
@@ -129,7 +130,9 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <VPNProvider>
-          <RootLayoutNav />
+          <ParentalControlsProvider>
+            <RootLayoutNav />
+          </ParentalControlsProvider>
         </VPNProvider>
       </AuthProvider>
     </ThemeProvider>
