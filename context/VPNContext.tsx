@@ -22,6 +22,7 @@ interface WireGuardConfig {
   dns?: string[];
   mtu?: number;
   presharedKey?: string;
+  clientAddress?: string;
 }
 
 interface WireGuardStatus {
@@ -386,6 +387,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         dns: dnsServers, // Use DNS based on ad block setting
         mtu: jsonConfig.mtu || 1420,
         presharedKey: jsonConfig.presharedKey || jsonConfig.preshared_key,
+        clientAddress: jsonConfig.clientAddress || jsonConfig.client_address || '10.0.0.2/32',
       };
 
       console.log('Parsed WireGuard config:', result);
@@ -526,6 +528,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         dns: wgConfig.dns,
         mtu: wgConfig.mtu,
         presharedKey: wgConfig.presharedKey,
+        clientAddress: wgConfig.clientAddress,
         // Kill switch blocks all traffic if VPN disconnects unexpectedly
         includeAllNetworks: killSwitchEnabled,
         // On-demand rules for auto-connect

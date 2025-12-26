@@ -1,7 +1,12 @@
 #import "WireGuardVpn.h"
 #import <NetworkExtension/NetworkExtension.h>
 
-@implementation WireGuardVpn
+static NSString *const kProviderBundleIdentifier = @"com.simnetiq.vpnreact.VPNShieldTunnel";
+static NSString *const kVPNDescription = @"VPN Shield";
+
+@implementation WireGuardVpn {
+  NETunnelProviderManager *_cachedManager;
+}
 
 RCT_EXPORT_MODULE(WireGuardVpnModule)
 
@@ -13,31 +18,52 @@ RCT_EXPORT_MODULE(WireGuardVpnModule)
 RCT_EXPORT_METHOD(initialize:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-  // Load and clean up any broken VPN configurations
+  // Load existing VPN configurations and find valid one
   [NETunnelProviderManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETunnelProviderManager *> * _Nullable managers, NSError * _Nullable error) {
-    // Ignore load errors - they often mean there's a broken config
     if (error) {
-      NSLog(@"[WireGuardVpn] Initialize had load error (will clean up): %@", error.localizedDescription);
+      NSLog(@"[WireGuardVpn] Initialize load warning: %@", error.localizedDescription);
     }
 
     NSLog(@"[WireGuardVpn] Found %lu existing managers", (unsigned long)managers.count);
 
-    // Check for and remove any broken configs (missing server address)
+    // Find our existing valid manager
+    NETunnelProviderManager *validManager = nil;
+    NSMutableArray *managersToRemove = [NSMutableArray array];
+
     for (NETunnelProviderManager *manager in managers) {
       NETunnelProviderProtocol *protocol = (NETunnelProviderProtocol *)manager.protocolConfiguration;
-      if (!protocol.serverAddress || protocol.serverAddress.length == 0) {
-        NSLog(@"[WireGuardVpn] Found broken config without server address, removing...");
-        [manager removeFromPreferencesWithCompletionHandler:^(NSError * _Nullable removeError) {
-          if (removeError) {
-            NSLog(@"[WireGuardVpn] Failed to remove broken config: %@", removeError.localizedDescription);
+
+      // Check if this is our VPN manager
+      if ([protocol.providerBundleIdentifier isEqualToString:kProviderBundleIdentifier]) {
+        if (protocol.serverAddress && protocol.serverAddress.length > 0) {
+          // Valid manager found
+          if (!validManager) {
+            validManager = manager;
+            NSLog(@"[WireGuardVpn] Found valid existing VPN configuration");
           } else {
-            NSLog(@"[WireGuardVpn] Removed broken config successfully");
+            // Duplicate - mark for removal
+            [managersToRemove addObject:manager];
           }
-        }];
+        } else {
+          // Broken config - mark for removal
+          [managersToRemove addObject:manager];
+        }
       }
     }
 
-    // Always succeed - we'll create the manager properly in connect()
+    // Cache the valid manager
+    self->_cachedManager = validManager;
+
+    // Remove broken/duplicate configs
+    for (NETunnelProviderManager *manager in managersToRemove) {
+      NSLog(@"[WireGuardVpn] Removing broken/duplicate config...");
+      [manager removeFromPreferencesWithCompletionHandler:^(NSError * _Nullable removeError) {
+        if (removeError) {
+          NSLog(@"[WireGuardVpn] Failed to remove config: %@", removeError.localizedDescription);
+        }
+      }];
+    }
+
     resolve(nil);
   }];
 }
@@ -47,44 +73,54 @@ RCT_EXPORT_METHOD(connect:(NSDictionary *)config
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
   [NETunnelProviderManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETunnelProviderManager *> * _Nullable managers, NSError * _Nullable error) {
-    // Ignore load errors - we'll create a fresh manager anyway
     if (error) {
-      NSLog(@"[WireGuardVpn] Load managers warning (continuing anyway): %@", error.localizedDescription);
+      NSLog(@"[WireGuardVpn] Load managers warning: %@", error.localizedDescription);
     }
 
-    // Remove ALL existing managers to avoid conflicts with broken configs
-    dispatch_group_t group = dispatch_group_create();
-    for (NETunnelProviderManager *oldManager in managers) {
-      dispatch_group_enter(group);
-      NSLog(@"[WireGuardVpn] Removing old VPN configuration...");
-      [oldManager removeFromPreferencesWithCompletionHandler:^(NSError * _Nullable removeError) {
-        if (removeError) {
-          NSLog(@"[WireGuardVpn] Remove warning: %@", removeError.localizedDescription);
-        } else {
-          NSLog(@"[WireGuardVpn] Old config removed");
-        }
-        dispatch_group_leave(group);
-      }];
+    // Find existing manager with our bundle identifier (REUSE instead of delete!)
+    NETunnelProviderManager *existingManager = nil;
+    for (NETunnelProviderManager *manager in managers) {
+      NETunnelProviderProtocol *protocol = (NETunnelProviderProtocol *)manager.protocolConfiguration;
+      if ([protocol.providerBundleIdentifier isEqualToString:kProviderBundleIdentifier]) {
+        existingManager = manager;
+        NSLog(@"[WireGuardVpn] Found existing VPN manager, will reuse");
+        break;
+      }
     }
 
-    // Wait for removals to complete, then create fresh manager
-    dispatch_group_notify(group, dispatch_get_main_queue(), ^{
-      [self createAndConnectWithConfig:config resolver:resolve rejecter:reject];
-    });
+    // Reuse existing manager or create new one
+    [self configureAndConnectManager:existingManager withConfig:config resolver:resolve rejecter:reject];
   }];
 }
 
-- (void)createAndConnectWithConfig:(NSDictionary *)config
-                          resolver:(RCTPromiseResolveBlock)resolve
-                          rejecter:(RCTPromiseRejectBlock)reject
+- (void)configureAndConnectManager:(NETunnelProviderManager *)existingManager
+                         withConfig:(NSDictionary *)config
+                           resolver:(RCTPromiseResolveBlock)resolve
+                           rejecter:(RCTPromiseRejectBlock)reject
 {
-    // Create a completely fresh manager
-    NETunnelProviderManager *manager = [[NETunnelProviderManager alloc] init];
-    manager.localizedDescription = @"VPN Shield";
+    BOOL isNewManager = (existingManager == nil);
+    NETunnelProviderManager *manager = isNewManager ? [[NETunnelProviderManager alloc] init] : existingManager;
 
-    NETunnelProviderProtocol *protocol = [[NETunnelProviderProtocol alloc] init];
+    if (isNewManager) {
+        NSLog(@"[WireGuardVpn] Creating new VPN manager");
+        manager.localizedDescription = kVPNDescription;
+    } else {
+        NSLog(@"[WireGuardVpn] Reusing existing VPN manager");
+    }
+
+    // Get or create protocol
+    NETunnelProviderProtocol *protocol;
+    if (isNewManager) {
+        protocol = [[NETunnelProviderProtocol alloc] init];
+    } else {
+        protocol = (NETunnelProviderProtocol *)manager.protocolConfiguration;
+        if (!protocol) {
+            protocol = [[NETunnelProviderProtocol alloc] init];
+        }
+    }
+
     protocol.serverAddress = config[@"serverAddress"];
-    protocol.providerBundleIdentifier = @"com.simnetiq.vpnreact.VPNShieldTunnel";
+    protocol.providerBundleIdentifier = kProviderBundleIdentifier;
 
     // Build WireGuard config string
     NSString *privateKey = config[@"privateKey"];
@@ -121,22 +157,32 @@ RCT_EXPORT_METHOD(connect:(NSDictionary *)config
 
     protocol.providerConfiguration = @{@"wgConfig": wgConfig};
 
-    // IMPORTANT: Assign the protocol to the manager
+    // Assign the protocol to the manager
     manager.protocolConfiguration = protocol;
     manager.enabled = YES;
 
-    [manager saveToPreferencesWithCompletionHandler:^(NSError * _Nullable error) {
-      if (error) {
-        NSLog(@"[WireGuardVpn] Save error: %@", error.localizedDescription);
-        reject(@"CONNECT_ERROR", error.localizedDescription, error);
+    [manager saveToPreferencesWithCompletionHandler:^(NSError * _Nullable saveError) {
+      if (saveError) {
+        NSLog(@"[WireGuardVpn] Save error: %@", saveError.localizedDescription);
+        reject(@"CONNECT_ERROR", saveError.localizedDescription, saveError);
         return;
       }
 
-      // Reload from preferences before starting
+      NSLog(@"[WireGuardVpn] Configuration saved successfully");
+
+      // Reload from preferences before starting (required by iOS)
       [manager loadFromPreferencesWithCompletionHandler:^(NSError * _Nullable loadError) {
         if (loadError) {
           NSLog(@"[WireGuardVpn] Load error: %@", loadError.localizedDescription);
           reject(@"CONNECT_ERROR", loadError.localizedDescription, loadError);
+          return;
+        }
+
+        // Check current connection status
+        NEVPNStatus currentStatus = manager.connection.status;
+        if (currentStatus == NEVPNStatusConnected || currentStatus == NEVPNStatusConnecting) {
+          NSLog(@"[WireGuardVpn] VPN already connected or connecting");
+          resolve(nil);
           return;
         }
 
@@ -149,6 +195,8 @@ RCT_EXPORT_METHOD(connect:(NSDictionary *)config
           return;
         }
 
+        // Cache the manager
+        self->_cachedManager = manager;
         NSLog(@"[WireGuardVpn] VPN tunnel started successfully");
         resolve(nil);
       }];

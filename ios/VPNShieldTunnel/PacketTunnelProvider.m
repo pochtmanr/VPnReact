@@ -43,7 +43,15 @@
     // Configure IPv4
     NSString *addressWithoutMask = [[clientAddress componentsSeparatedByString:@"/"] firstObject];
     NEIPv4Settings *ipv4Settings = [[NEIPv4Settings alloc] initWithAddresses:@[addressWithoutMask] subnetMasks:@[@"255.255.255.255"]];
+
+    // CRITICAL: Include default route for all traffic
     ipv4Settings.includedRoutes = @[[NEIPv4Route defaultRoute]];
+
+    // CRITICAL: Exclude the VPN server itself to prevent routing loop
+    NEIPv4Route *serverExcludeRoute = [[NEIPv4Route alloc] initWithDestinationAddress:serverIP subnetMask:@"255.255.255.255"];
+    ipv4Settings.excludedRoutes = @[serverExcludeRoute];
+    NSLog(@"[PacketTunnel] Excluding server from tunnel: %@", serverIP);
+
     tunnelSettings.IPv4Settings = ipv4Settings;
 
     // Configure DNS
@@ -58,10 +66,18 @@
     } else {
         dnsServers = @[@"1.1.1.1", @"8.8.8.8"];
     }
-    tunnelSettings.DNSSettings = [[NEDNSSettings alloc] initWithServers:dnsServers];
+
+    NEDNSSettings *dnsSettings = [[NEDNSSettings alloc] initWithServers:dnsServers];
+    // CRITICAL: Apply DNS to ALL domains for full tunnel
+    dnsSettings.matchDomains = @[@""];
+    tunnelSettings.DNSSettings = dnsSettings;
     NSLog(@"[PacketTunnel] DNS Servers: %@", dnsServers);
 
-    tunnelSettings.MTU = @1420;
+    // Get MTU from config or use default
+    NSString *mtuString = config[@"MTU"];
+    NSNumber *mtu = mtuString ? @([mtuString integerValue]) : @1420;
+    tunnelSettings.MTU = mtu;
+    NSLog(@"[PacketTunnel] MTU: %@", mtu);
 
     [self setTunnelNetworkSettings:tunnelSettings completionHandler:^(NSError *error) {
         if (error) {

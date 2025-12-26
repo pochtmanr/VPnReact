@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Switch,
+  RefreshControl,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,19 +13,22 @@ import {
   ShieldOff,
   Shield,
   ShieldCheck,
-  Eye,
   Bug,
-  Zap,
   Check,
   Globe,
   Smartphone,
   Wifi,
   Crown,
-  TrendingUp,
-  Clock,
   Ban,
   Activity,
+  Database,
 } from 'lucide-react-native';
+import {
+  getAdBlockStats,
+  setSafeBrowsingEnabled,
+  setParentalEnabled,
+  AdBlockStats,
+} from '@/lib/adguard';
 import Animated, {
   FadeInDown,
   Easing,
@@ -49,6 +53,7 @@ interface ProtectionToggleProps {
   onToggle: () => void;
   iconColor: string;
   activeColor?: string;
+  disabled?: boolean;
 }
 
 function ProtectionToggle({
@@ -59,12 +64,13 @@ function ProtectionToggle({
   onToggle,
   iconColor,
   activeColor,
+  disabled,
 }: ProtectionToggleProps) {
   const { colors, isDark } = useTheme();
   const effectiveColor = enabled && activeColor ? activeColor : iconColor;
 
   return (
-    <View style={styles.toggleItem}>
+    <View style={[styles.toggleItem, disabled && { opacity: 0.5 }]}>
       <View
         style={[
           styles.toggleIcon,
@@ -89,6 +95,7 @@ function ProtectionToggle({
         trackColor={{ false: colors.border, true: colors.success }}
         thumbColor={enabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
         ios_backgroundColor={colors.border}
+        disabled={disabled}
       />
     </View>
   );
@@ -98,11 +105,10 @@ interface StatCardProps {
   icon: React.ElementType;
   value: string;
   label: string;
-  trend?: string;
   color: string;
 }
 
-function StatCard({ icon: Icon, value, label, trend, color }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
   const { colors, isDark } = useTheme();
 
   return (
@@ -125,12 +131,6 @@ function StatCard({ icon: Icon, value, label, trend, color }: StatCardProps) {
       </View>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-      {trend && (
-        <View style={styles.trendContainer}>
-          <TrendingUp size={12} color={colors.success} />
-          <Text style={[styles.trendText, { color: colors.success }]}>{trend}</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -140,25 +140,66 @@ export default function AdblockScreen() {
   const { colors, isDark } = useTheme();
   const { adBlockEnabled, setAdBlockEnabled, connectionStatus } = useVPN();
 
-  // Local protection states (these would sync with VPN context in production)
-  const [trackerBlockEnabled, setTrackerBlockEnabled] = useState(true);
-  const [malwareBlockEnabled, setMalwareBlockEnabled] = useState(true);
-  const [adultContentBlock, setAdultContentBlock] = useState(false);
-  const [socialTrackingBlock, setSocialTrackingBlock] = useState(true);
+  // Real stats from AdGuard Home API
+  const [stats, setStats] = useState<AdBlockStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Simulated stats (would come from backend in production)
-  const [stats] = useState({
-    adsBlocked: 12847,
-    trackersBlocked: 3291,
-    dataSaved: '847 MB',
-    timeSaved: '2.4 hrs',
-  });
+  // Protection states synced with AdGuard
+  const [malwareBlockEnabled, setMalwareBlockEnabled] = useState(false);
+  const [adultContentBlock, setAdultContentBlock] = useState(false);
+
+  // Fetch stats from AdGuard Home
+  const fetchStats = useCallback(async () => {
+    try {
+      const data = await getAdBlockStats();
+      setStats(data);
+      setMalwareBlockEnabled(data.safeBrowsingEnabled);
+      setAdultContentBlock(data.parentalEnabled);
+    } catch (error) {
+      console.warn('Failed to fetch AdGuard stats:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    // Refresh stats every 30 seconds when connected
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchStats();
+  }, [fetchStats]);
+
+  // Toggle handlers that call AdGuard API
+  const handleMalwareToggle = async () => {
+    const newValue = !malwareBlockEnabled;
+    setMalwareBlockEnabled(newValue);
+    const success = await setSafeBrowsingEnabled(newValue);
+    if (!success) {
+      setMalwareBlockEnabled(!newValue); // Revert on failure
+    }
+  };
+
+  const handleAdultContentToggle = async () => {
+    const newValue = !adultContentBlock;
+    setAdultContentBlock(newValue);
+    const success = await setParentalEnabled(newValue);
+    if (!success) {
+      setAdultContentBlock(!newValue); // Revert on failure
+    }
+  };
 
   // Pulse animation for the shield when protection is active
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.5);
 
-  const isProtectionActive = adBlockEnabled || trackerBlockEnabled || malwareBlockEnabled;
+  const isProtectionActive = adBlockEnabled;
 
   useEffect(() => {
     if (isProtectionActive) {
@@ -194,10 +235,16 @@ export default function AdblockScreen() {
 
   const activeProtections = [
     adBlockEnabled,
-    trackerBlockEnabled,
     malwareBlockEnabled,
-    socialTrackingBlock,
+    adultContentBlock,
   ].filter(Boolean).length;
+
+  // Format numbers for display
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -221,6 +268,13 @@ export default function AdblockScreen() {
             paddingHorizontal: 20,
           }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
         >
           {/* Header with Pro Badge */}
           <AnimatedView
@@ -231,7 +285,7 @@ export default function AdblockScreen() {
               <View>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Ad Blocker</Text>
                 <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                  System-wide protection
+                  DNS-level protection
                 </Text>
               </View>
               <View style={[styles.proBadge, { backgroundColor: isDark ? '#FFD70020' : '#FFD70015' }]}>
@@ -283,65 +337,55 @@ export default function AdblockScreen() {
             </Text>
             <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>
               {isProtectionActive
-                ? `${activeProtections} protection layers active`
+                ? `${activeProtections} protection layer${activeProtections !== 1 ? 's' : ''} active`
                 : 'Enable protection to block ads and trackers'
               }
             </Text>
 
-            {/* Quick Stats Row */}
+            {/* Quick Stats Row - Real Data */}
             <View style={styles.quickStatsRow}>
               <View style={styles.quickStat}>
                 <Ban size={16} color={colors.error} />
                 <Text style={[styles.quickStatValue, { color: colors.text }]}>
-                  {stats.adsBlocked.toLocaleString()}
+                  {stats ? formatNumber(stats.totalBlocked) : '-'}
                 </Text>
                 <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Blocked</Text>
               </View>
               <View style={[styles.quickStatDivider, { backgroundColor: colors.border }]} />
               <View style={styles.quickStat}>
                 <Activity size={16} color={colors.primary} />
-                <Text style={[styles.quickStatValue, { color: colors.text }]}>99.9%</Text>
+                <Text style={[styles.quickStatValue, { color: colors.text }]}>
+                  {stats ? `${stats.blockRate}%` : '-'}
+                </Text>
                 <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Block Rate</Text>
               </View>
               <View style={[styles.quickStatDivider, { backgroundColor: colors.border }]} />
               <View style={styles.quickStat}>
-                <Clock size={16} color={colors.success} />
-                <Text style={[styles.quickStatValue, { color: colors.text }]}>{stats.timeSaved}</Text>
-                <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Saved</Text>
+                <Database size={16} color={colors.success} />
+                <Text style={[styles.quickStatValue, { color: colors.text }]}>
+                  {stats ? formatNumber(stats.filterRulesCount) : '-'}
+                </Text>
+                <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Rules</Text>
               </View>
             </View>
           </AnimatedView>
 
-          {/* Stats Grid */}
+          {/* Stats Grid - Real Data Only */}
           <AnimatedView
             entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.statsGrid}
           >
             <StatCard
               icon={Ban}
-              value={stats.adsBlocked.toLocaleString()}
+              value={stats ? formatNumber(stats.totalBlocked) : '-'}
               label="Ads Blocked"
-              trend="+847 today"
               color={colors.error}
             />
             <StatCard
-              icon={Eye}
-              value={stats.trackersBlocked.toLocaleString()}
-              label="Trackers Stopped"
-              trend="+124 today"
+              icon={Activity}
+              value={stats ? formatNumber(stats.totalQueries) : '-'}
+              label="DNS Queries"
               color={colors.primary}
-            />
-            <StatCard
-              icon={Zap}
-              value={stats.dataSaved}
-              label="Data Saved"
-              color={colors.warning}
-            />
-            <StatCard
-              icon={Clock}
-              value={stats.timeSaved}
-              label="Time Saved"
-              color={colors.success}
             />
           </AnimatedView>
 
@@ -383,7 +427,7 @@ export default function AdblockScreen() {
                 </Text>
                 <Text style={[styles.mainToggleDescription, { color: colors.textSecondary }]}>
                   {adBlockEnabled
-                    ? 'Blocking ads across all apps'
+                    ? 'Using AdGuard DNS for blocking'
                     : 'Enable to block advertisements'
                   }
                 </Text>
@@ -399,7 +443,7 @@ export default function AdblockScreen() {
             />
           </AnimatedView>
 
-          {/* Protection Settings */}
+          {/* Protection Settings - Real Features Only */}
           <AnimatedView
             entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
             style={[
@@ -412,48 +456,30 @@ export default function AdblockScreen() {
           >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Protection Settings</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              Customize your protection preferences
+              Additional AdGuard Home features
             </Text>
 
             <View style={styles.togglesList}>
               <ProtectionToggle
-                icon={Eye}
-                label="Tracker Blocking"
-                description="Prevent websites from tracking you"
-                enabled={trackerBlockEnabled}
-                onToggle={() => setTrackerBlockEnabled(!trackerBlockEnabled)}
-                iconColor={colors.primary}
-                activeColor={colors.success}
-              />
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <ProtectionToggle
                 icon={Bug}
                 label="Malware Protection"
-                description="Block malicious websites & downloads"
+                description="Block malicious websites & phishing"
                 enabled={malwareBlockEnabled}
-                onToggle={() => setMalwareBlockEnabled(!malwareBlockEnabled)}
+                onToggle={handleMalwareToggle}
                 iconColor={colors.warning}
                 activeColor={colors.success}
-              />
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <ProtectionToggle
-                icon={Globe}
-                label="Social Media Tracking"
-                description="Block social media trackers"
-                enabled={socialTrackingBlock}
-                onToggle={() => setSocialTrackingBlock(!socialTrackingBlock)}
-                iconColor={colors.info}
-                activeColor={colors.success}
+                disabled={connectionStatus !== 'connected'}
               />
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <ProtectionToggle
                 icon={ShieldOff}
                 label="Adult Content Filter"
-                description="Block adult websites"
+                description="Block adult websites (Parental Control)"
                 enabled={adultContentBlock}
-                onToggle={() => setAdultContentBlock(!adultContentBlock)}
+                onToggle={handleAdultContentToggle}
                 iconColor={colors.error}
                 activeColor={colors.success}
+                disabled={connectionStatus !== 'connected'}
               />
             </View>
           </AnimatedView>
@@ -544,8 +570,8 @@ export default function AdblockScreen() {
               }
             ]}>
               {connectionStatus === 'connected'
-                ? 'VPN connected - Ad blocking is using your VPN server\'s DNS for maximum protection.'
-                : 'Connect to VPN for DNS-level ad blocking. Ad blocking works best when combined with VPN protection.'
+                ? 'VPN connected - Ad blocking uses AdGuard Home DNS on your VPN server.'
+                : 'Connect to VPN for DNS-level ad blocking. Stats require VPN connection.'
               }
             </Text>
           </AnimatedView>
@@ -591,7 +617,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  // Hero Card
   heroCard: {
     borderRadius: 24,
     borderWidth: 1,
@@ -652,7 +677,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
   },
-  // Stats Grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -660,7 +684,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statCard: {
-    width: '47%',
+    flex: 1,
+    minWidth: '45%',
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
@@ -680,16 +705,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 13,
   },
-  trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  trendText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  // Main Toggle
   mainToggleCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -726,7 +741,6 @@ const styles = StyleSheet.create({
   mainToggleSwitch: {
     transform: [{ scale: 1.1 }],
   },
-  // Settings Card
   settingsCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -773,7 +787,6 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 54,
   },
-  // Coverage Card
   coverageCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -805,7 +818,6 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 54,
   },
-  // Info Card
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -2,7 +2,7 @@
  * Expo Config Plugin for VPN Network Extension
  *
  * This plugin adds the necessary Network Extension target and configuration
- * for WireGuard VPN functionality.
+ * for WireGuard VPN functionality using Swift and WireGuardKit.
  */
 
 const { withXcodeProject, withInfoPlist, withEntitlementsPlist } = require('@expo/config-plugins');
@@ -60,144 +60,154 @@ function withVPNExtension(config) {
       fs.mkdirSync(extensionPath, { recursive: true });
     }
 
-    // Create PacketTunnelProvider.h
-    const headerContent = `//
-//  PacketTunnelProvider.h
+    // Create Swift PacketTunnelProvider using WireGuardKit
+    const swiftContent = `//
+//  PacketTunnelProvider.swift
 //  ${EXTENSION_NAME}
 //
-//  WireGuard PacketTunnelProvider
+//  WireGuard VPN Packet Tunnel Provider using WireGuardKit
 //
 
-#import <NetworkExtension/NetworkExtension.h>
+import NetworkExtension
+import WireGuardKit
 
-NS_ASSUME_NONNULL_BEGIN
+class PacketTunnelProvider: NEPacketTunnelProvider {
 
-@interface PacketTunnelProvider : NEPacketTunnelProvider
+    // MARK: - Properties
 
-@end
+    private lazy var adapter: WireGuardAdapter = {
+        return WireGuardAdapter(with: self) { logLevel, message in
+            wg_log(logLevel, message: message)
+        }
+    }()
 
-NS_ASSUME_NONNULL_END
+    // MARK: - Tunnel Lifecycle
+
+    override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
+        wg_log(.info, message: "Starting tunnel...")
+
+        // Get configuration from provider protocol
+        guard let tunnelProtocol = protocolConfiguration as? NETunnelProviderProtocol,
+              let providerConfig = tunnelProtocol.providerConfiguration,
+              let wgConfigString = providerConfig["wgConfig"] as? String else {
+            wg_log(.error, message: "Missing WireGuard configuration")
+            let error = NSError(
+                domain: "VPNShieldTunnel",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "No WireGuard configuration found"]
+            )
+            completionHandler(error)
+            return
+        }
+
+        wg_log(.info, message: "WireGuard config received, parsing...")
+
+        do {
+            // Parse the WireGuard configuration
+            let tunnelConfiguration = try TunnelConfiguration(fromWgQuickConfig: wgConfigString, called: "VPN Shield")
+
+            wg_log(.info, message: "Configuration parsed successfully")
+            wg_log(.info, message: "Interface address: \\(tunnelConfiguration.interface.addresses.map { $0.stringRepresentation }.joined(separator: ", "))")
+
+            if let peer = tunnelConfiguration.peers.first {
+                wg_log(.info, message: "Peer endpoint: \\(peer.endpoint?.stringRepresentation ?? "none")")
+                wg_log(.info, message: "Allowed IPs: \\(peer.allowedIPs.map { $0.stringRepresentation }.joined(separator: ", "))")
+            }
+
+            // Start the WireGuard adapter
+            adapter.start(tunnelConfiguration: tunnelConfiguration) { adapterError in
+                if let error = adapterError {
+                    wg_log(.error, message: "Adapter start failed: \\(error.localizedDescription)")
+                    completionHandler(error)
+                } else {
+                    wg_log(.info, message: "WireGuard tunnel started successfully")
+                    completionHandler(nil)
+                }
+            }
+        } catch {
+            wg_log(.error, message: "Failed to parse WireGuard config: \\(error.localizedDescription)")
+            completionHandler(error)
+        }
+    }
+
+    override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
+        wg_log(.info, message: "Stopping tunnel, reason: \\(reason.rawValue)")
+
+        adapter.stop { error in
+            if let error = error {
+                wg_log(.error, message: "Adapter stop error: \\(error.localizedDescription)")
+            } else {
+                wg_log(.info, message: "Tunnel stopped successfully")
+            }
+
+            #if os(macOS)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                completionHandler()
+            }
+            #else
+            completionHandler()
+            #endif
+        }
+    }
+
+    // MARK: - App Messages
+
+    override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {
+        guard let message = String(data: messageData, encoding: .utf8) else {
+            completionHandler?(nil)
+            return
+        }
+
+        wg_log(.info, message: "Received app message: \\(message)")
+
+        switch message {
+        case "getStatus":
+            adapter.getRuntimeConfiguration { settings in
+                if let settings = settings {
+                    let response = settings.data(using: .utf8)
+                    completionHandler?(response)
+                } else {
+                    completionHandler?(nil)
+                }
+            }
+        default:
+            completionHandler?(nil)
+        }
+    }
+
+    // MARK: - Sleep/Wake
+
+    override func sleep(completionHandler: @escaping () -> Void) {
+        wg_log(.info, message: "Tunnel going to sleep")
+        completionHandler()
+    }
+
+    override func wake() {
+        wg_log(.info, message: "Tunnel waking up")
+    }
+}
+
+// MARK: - Logging
+
+private func wg_log(_ level: OSLogType, message: String) {
+    let levelString: String
+    switch level {
+    case .debug:
+        levelString = "DEBUG"
+    case .info:
+        levelString = "INFO"
+    case .error:
+        levelString = "ERROR"
+    case .fault:
+        levelString = "FAULT"
+    default:
+        levelString = "LOG"
+    }
+    NSLog("[PacketTunnel] [\\(levelString)] \\(message)")
+}
 `;
 
-    // Create PacketTunnelProvider.m with FULL WireGuard implementation
-    const implContent = `//
-//  PacketTunnelProvider.m
-//  ${EXTENSION_NAME}
-//
-
-#import "PacketTunnelProvider.h"
-
-@implementation PacketTunnelProvider
-
-- (void)startTunnelWithOptions:(NSDictionary *)options completionHandler:(void (^)(NSError *))completionHandler {
-    NETunnelProviderProtocol *tunnelProtocol = (NETunnelProviderProtocol *)self.protocolConfiguration;
-    NSDictionary *providerConfig = tunnelProtocol.providerConfiguration;
-    NSString *wgConfigString = providerConfig[@"wgConfig"];
-
-    if (!wgConfigString) {
-        NSLog(@"[PacketTunnel] No WireGuard configuration found");
-        NSError *error = [NSError errorWithDomain:@"VPNShieldTunnel" code:1 userInfo:@{NSLocalizedDescriptionKey: @"No configuration"}];
-        completionHandler(error);
-        return;
-    }
-
-    NSLog(@"[PacketTunnel] Starting tunnel...");
-
-    // Parse config to get endpoint and address
-    NSDictionary *config = [self parseWireGuardConfig:wgConfigString];
-    NSString *clientAddress = config[@"Address"];
-    NSString *endpoint = config[@"Endpoint"];
-
-    if (!clientAddress || !endpoint) {
-        NSLog(@"[PacketTunnel] Missing required config fields - Address: %@, Endpoint: %@", clientAddress, endpoint);
-        NSError *error = [NSError errorWithDomain:@"VPNShieldTunnel" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Invalid configuration"}];
-        completionHandler(error);
-        return;
-    }
-
-    // Extract server IP from endpoint
-    NSString *serverIP = [[endpoint componentsSeparatedByString:@":"] firstObject];
-    NSLog(@"[PacketTunnel] Server IP: %@, Client Address: %@", serverIP, clientAddress);
-
-    // Set up tunnel network settings
-    NEPacketTunnelNetworkSettings *tunnelSettings = [[NEPacketTunnelNetworkSettings alloc] initWithTunnelRemoteAddress:serverIP];
-
-    // Configure IPv4
-    NSString *addressWithoutMask = [[clientAddress componentsSeparatedByString:@"/"] firstObject];
-    NEIPv4Settings *ipv4Settings = [[NEIPv4Settings alloc] initWithAddresses:@[addressWithoutMask] subnetMasks:@[@"255.255.255.255"]];
-    ipv4Settings.includedRoutes = @[[NEIPv4Route defaultRoute]];
-    tunnelSettings.IPv4Settings = ipv4Settings;
-
-    // Configure DNS
-    NSString *dnsString = config[@"DNS"];
-    NSArray *dnsServers;
-    if (dnsString) {
-        NSMutableArray *trimmed = [NSMutableArray array];
-        for (NSString *dns in [dnsString componentsSeparatedByString:@","]) {
-            [trimmed addObject:[dns stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
-        }
-        dnsServers = trimmed;
-    } else {
-        dnsServers = @[@"1.1.1.1", @"8.8.8.8"];
-    }
-    tunnelSettings.DNSSettings = [[NEDNSSettings alloc] initWithServers:dnsServers];
-    NSLog(@"[PacketTunnel] DNS Servers: %@", dnsServers);
-
-    tunnelSettings.MTU = @1420;
-
-    [self setTunnelNetworkSettings:tunnelSettings completionHandler:^(NSError *error) {
-        if (error) {
-            NSLog(@"[PacketTunnel] Failed to set tunnel settings: %@", error.localizedDescription);
-            completionHandler(error);
-            return;
-        }
-        NSLog(@"[PacketTunnel] Tunnel network settings configured successfully");
-        completionHandler(nil);
-    }];
-}
-
-- (NSDictionary *)parseWireGuardConfig:(NSString *)configString {
-    NSMutableDictionary *result = [NSMutableDictionary dictionary];
-    NSArray *lines = [configString componentsSeparatedByString:@"\\n"];
-
-    for (NSString *line in lines) {
-        NSString *trimmed = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        if (trimmed.length == 0 || [trimmed hasPrefix:@"["]) continue;
-
-        NSRange equalRange = [trimmed rangeOfString:@"="];
-        if (equalRange.location != NSNotFound) {
-            NSString *key = [[trimmed substringToIndex:equalRange.location] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-            NSString *value = [[trimmed substringFromIndex:equalRange.location + 1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-            result[key] = value;
-        }
-    }
-
-    NSLog(@"[PacketTunnel] Parsed config keys: %@", [result allKeys]);
-    return result;
-}
-
-- (void)stopTunnelWithReason:(NEProviderStopReason)reason completionHandler:(void (^)(void))completionHandler {
-    NSLog(@"[PacketTunnel] Stopping tunnel, reason: %ld", (long)reason);
-    completionHandler();
-}
-
-- (void)handleAppMessage:(NSData *)messageData completionHandler:(void (^)(NSData *))completionHandler {
-    if (completionHandler) {
-        completionHandler(nil);
-    }
-}
-
-- (void)sleepWithCompletionHandler:(void (^)(void))completionHandler {
-    completionHandler();
-}
-
-- (void)wake {
-}
-
-@end
-`;
-
-    // Create Info.plist for extension
+    // Create Info.plist for extension (Swift version)
     const infoPlistContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -225,7 +235,7 @@ NS_ASSUME_NONNULL_END
         <key>NSExtensionPointIdentifier</key>
         <string>com.apple.networkextension.packet-tunnel</string>
         <key>NSExtensionPrincipalClass</key>
-        <string>PacketTunnelProvider</string>
+        <string>$(PRODUCT_MODULE_NAME).PacketTunnelProvider</string>
     </dict>
 </dict>
 </plist>
@@ -248,13 +258,22 @@ NS_ASSUME_NONNULL_END
 </plist>
 `;
 
-    // Write files
-    fs.writeFileSync(path.join(extensionPath, 'PacketTunnelProvider.h'), headerContent);
-    fs.writeFileSync(path.join(extensionPath, 'PacketTunnelProvider.m'), implContent);
+    // Write files (Swift instead of Objective-C)
+    fs.writeFileSync(path.join(extensionPath, 'PacketTunnelProvider.swift'), swiftContent);
     fs.writeFileSync(path.join(extensionPath, 'Info.plist'), infoPlistContent);
     fs.writeFileSync(path.join(extensionPath, `${EXTENSION_NAME}.entitlements`), entitlementsContent);
 
-    console.log(`[VPN Extension] Created extension files at: ${extensionPath}`);
+    // Remove old Objective-C files if they exist
+    const oldHeaderPath = path.join(extensionPath, 'PacketTunnelProvider.h');
+    const oldImplPath = path.join(extensionPath, 'PacketTunnelProvider.m');
+    if (fs.existsSync(oldHeaderPath)) {
+      fs.unlinkSync(oldHeaderPath);
+    }
+    if (fs.existsSync(oldImplPath)) {
+      fs.unlinkSync(oldImplPath);
+    }
+
+    console.log(`[VPN Extension] Created Swift extension files at: ${extensionPath}`);
 
     // Actually add the target to Xcode project
     try {
@@ -269,7 +288,6 @@ NS_ASSUME_NONNULL_END
           const config = configs[key];
           if (config && typeof config === 'object' && config.buildSettings) {
             if (config.buildSettings.PRODUCT_NAME === EXTENSION_NAME) {
-              // CRITICAL: Use Info.plist (not VPNShieldTunnel-Info.plist)
               config.buildSettings.INFOPLIST_FILE = `${EXTENSION_NAME}/Info.plist`;
               config.buildSettings.CODE_SIGN_ENTITLEMENTS = `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`;
               config.buildSettings.CODE_SIGN_STYLE = 'Automatic';
@@ -277,6 +295,7 @@ NS_ASSUME_NONNULL_END
               config.buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"';
               config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '15.1';
               config.buildSettings.SKIP_INSTALL = 'YES';
+              config.buildSettings.SWIFT_VERSION = '5.0';
               config.buildSettings.LD_RUNPATH_SEARCH_PATHS = '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"';
             }
           }
@@ -299,9 +318,9 @@ NS_ASSUME_NONNULL_END
         // Add files to the target
         const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
 
-        // Create extension group
+        // Create extension group with Swift file
         const extGroup = xcodeProject.addPbxGroup(
-          ['PacketTunnelProvider.h', 'PacketTunnelProvider.m', 'Info.plist', `${EXTENSION_NAME}.entitlements`],
+          ['PacketTunnelProvider.swift', 'Info.plist', `${EXTENSION_NAME}.entitlements`],
           EXTENSION_NAME,
           EXTENSION_NAME
         );
@@ -310,9 +329,9 @@ NS_ASSUME_NONNULL_END
         if (extGroup && extGroup.uuid) {
           xcodeProject.addToPbxGroup(extGroup.uuid, mainGroupKey);
 
-          // Add source file to build phase
+          // Add Swift source file to build phase
           xcodeProject.addSourceFile(
-            `${EXTENSION_NAME}/PacketTunnelProvider.m`,
+            `${EXTENSION_NAME}/PacketTunnelProvider.swift`,
             { target: target.uuid },
             extGroup.uuid
           );
@@ -321,13 +340,12 @@ NS_ASSUME_NONNULL_END
         // Add NetworkExtension.framework to the extension target
         xcodeProject.addFramework('NetworkExtension.framework', { target: target.uuid });
 
-        // Configure build settings - CRITICAL FIXES
+        // Configure build settings for Swift
         const configs = xcodeProject.pbxXCBuildConfigurationSection();
         Object.keys(configs).forEach((key) => {
           const config = configs[key];
           if (config && typeof config === 'object' && config.buildSettings) {
             if (config.buildSettings.PRODUCT_NAME === EXTENSION_NAME) {
-              // CRITICAL: Use Info.plist (not VPNShieldTunnel-Info.plist)
               config.buildSettings.INFOPLIST_FILE = `${EXTENSION_NAME}/Info.plist`;
               config.buildSettings.CODE_SIGN_ENTITLEMENTS = `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`;
               config.buildSettings.CODE_SIGN_STYLE = 'Automatic';
@@ -335,6 +353,7 @@ NS_ASSUME_NONNULL_END
               config.buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"';
               config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '15.1';
               config.buildSettings.SKIP_INSTALL = 'YES';
+              config.buildSettings.SWIFT_VERSION = '5.0';
               config.buildSettings.LD_RUNPATH_SEARCH_PATHS = '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"';
             }
           }
@@ -360,7 +379,7 @@ NS_ASSUME_NONNULL_END
           console.log(`[VPN Extension] Added embed app extensions build phase`);
         }
 
-        console.log(`[VPN Extension] Successfully configured ${EXTENSION_NAME} target`);
+        console.log(`[VPN Extension] Successfully configured ${EXTENSION_NAME} target with Swift`);
       }
     } catch (error) {
       console.error(`[VPN Extension] Error adding target: ${error.message}`);
