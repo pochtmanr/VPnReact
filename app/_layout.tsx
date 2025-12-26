@@ -1,33 +1,115 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { VPNProvider } from '@/context/VPNContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: '(auth)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,
-  });
+function RootLayoutNav() {
+  const { loading, isAuthenticated } = useAuth();
+  const { isDark, colors } = useTheme();
+  const segments = useSegments();
+  const router = useRouter();
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  // Create navigation theme based on current theme
+  const navigationTheme = isDark
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.backgroundSecondary,
+          text: colors.text,
+          border: colors.border,
+          notification: colors.primary,
+        },
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.backgroundSecondary,
+          text: colors.text,
+          border: colors.border,
+          notification: colors.primary,
+        },
+      };
+
+  useEffect(() => {
+    // Check if onboarding is complete on mount
+    AsyncStorage.getItem('onboarding_complete').then((value) => {
+      setOnboardingComplete(value === 'true');
+      setInitialCheckDone(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loading || !initialCheckDone) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    // Only redirect on initial load, not on every segment change
+    if (!onboardingComplete && !inAuthGroup) {
+      // Show onboarding
+      router.replace('/(auth)/welcome');
+    } else if (onboardingComplete && isAuthenticated && inAuthGroup) {
+      // User is authenticated, skip to main app
+      router.replace('/(tabs)');
+    } else if (onboardingComplete && !isAuthenticated && !inAuthGroup) {
+      // User completed onboarding but not authenticated, go to account
+      router.replace('/(auth)/account');
+    }
+  }, [loading, initialCheckDone, isAuthenticated]);
+
+  if (loading || !initialCheckDone) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationThemeProvider value={navigationTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </NavigationThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({  
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    ...FontAwesome.font,  
+  }); 
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -42,18 +124,21 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+    <ThemeProvider>
+      <AuthProvider>
+        <VPNProvider>
+          <RootLayoutNav />
+        </VPNProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

@@ -31,11 +31,20 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
+# Android (generated)
 /android
+
+# iOS build artifacts (but keep source files)
+ios/build/
+ios/Pods/
+ios/.xcode.env.local
+ios/DerivedData/
+*.xcuserstate
+xcuserdata/
+*.ovpn
