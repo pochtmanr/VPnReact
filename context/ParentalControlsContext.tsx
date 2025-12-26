@@ -4,7 +4,6 @@ import { useAuth } from './AuthContext';
 
 // Storage keys
 const STORAGE_KEYS = {
-  PARENTAL_PIN: '@parental/pin',
   PARENTAL_ENABLED: '@parental/enabled',
   BLOCKED_CATEGORIES: '@parental/blocked_categories',
   CUSTOM_BLOCKED_DOMAINS: '@parental/custom_blocked_domains',
@@ -99,20 +98,12 @@ export interface BlockingStats {
 interface ParentalControlsContextType {
   // State
   isEnabled: boolean;
-  isPinSet: boolean;
-  isPinVerified: boolean;
   blockedCategories: ContentCategory[];
   customBlockedDomains: string[];
   screenTimeLimit: number | null; // minutes per day, null = unlimited
   scheduledAccess: ScheduledAccess | null;
   blockingStats: BlockingStats | null;
   loading: boolean;
-
-  // PIN Management
-  setPin: (pin: string) => Promise<boolean>;
-  verifyPin: (pin: string) => Promise<boolean>;
-  removePin: () => Promise<void>;
-  lockControls: () => void;
 
   // Category Management
   toggleCategory: (category: ContentCategory) => Promise<void>;
@@ -149,8 +140,6 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
 
   // State
   const [isEnabled, setIsEnabled] = useState(false);
-  const [isPinSet, setIsPinSet] = useState(false);
-  const [isPinVerified, setIsPinVerified] = useState(false);
   const [blockedCategories, setBlockedCategoriesState] = useState<ContentCategory[]>([]);
   const [customBlockedDomains, setCustomBlockedDomainsState] = useState<string[]>([]);
   const [screenTimeLimit, setScreenTimeLimitState] = useState<number | null>(null);
@@ -166,14 +155,12 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   const loadSettings = async () => {
     try {
       const [
-        pin,
         enabled,
         categories,
         domains,
         timeLimit,
         schedule,
       ] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.PARENTAL_PIN),
         AsyncStorage.getItem(STORAGE_KEYS.PARENTAL_ENABLED),
         AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_CATEGORIES),
         AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_BLOCKED_DOMAINS),
@@ -181,7 +168,6 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
         AsyncStorage.getItem(STORAGE_KEYS.SCHEDULED_ACCESS),
       ]);
 
-      setIsPinSet(!!pin);
       setIsEnabled(enabled === 'true');
       setBlockedCategoriesState(categories ? JSON.parse(categories) : []);
       setCustomBlockedDomainsState(domains ? JSON.parse(domains) : []);
@@ -195,50 +181,6 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
       setLoading(false);
     }
   };
-
-  // PIN Management
-  const setPin = useCallback(async (pin: string): Promise<boolean> => {
-    try {
-      // Simple hash for storage (in production, use proper encryption)
-      const hashedPin = btoa(pin);
-      await AsyncStorage.setItem(STORAGE_KEYS.PARENTAL_PIN, hashedPin);
-      setIsPinSet(true);
-      setIsPinVerified(true);
-      return true;
-    } catch (error) {
-      console.error('Error setting PIN:', error);
-      return false;
-    }
-  }, []);
-
-  const verifyPin = useCallback(async (pin: string): Promise<boolean> => {
-    try {
-      const storedPin = await AsyncStorage.getItem(STORAGE_KEYS.PARENTAL_PIN);
-      const hashedInput = btoa(pin);
-      const isValid = storedPin === hashedInput;
-      if (isValid) {
-        setIsPinVerified(true);
-      }
-      return isValid;
-    } catch (error) {
-      console.error('Error verifying PIN:', error);
-      return false;
-    }
-  }, []);
-
-  const removePin = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem(STORAGE_KEYS.PARENTAL_PIN);
-      setIsPinSet(false);
-      setIsPinVerified(false);
-    } catch (error) {
-      console.error('Error removing PIN:', error);
-    }
-  }, []);
-
-  const lockControls = useCallback(() => {
-    setIsPinVerified(false);
-  }, []);
 
   // Category Management
   const toggleCategory = useCallback(async (category: ContentCategory) => {
@@ -315,8 +257,46 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
 
     if (enabled) {
       await syncWithAdGuard(blockedCategories, customBlockedDomains);
+    } else {
+      // Clear all AdGuard rules when disabling
+      await clearAdGuardRules();
     }
   }, [blockedCategories, customBlockedDomains]);
+
+  // Clear all AdGuard rules when parental controls are disabled
+  const clearAdGuardRules = async () => {
+    try {
+      const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
+
+      // Clear all custom filtering rules
+      const response = await fetch(`${ADGUARD_API.baseUrl}/control/filtering/set_rules`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rules: [] }),
+      });
+
+      // Disable safe browsing and parental features
+      await fetch(`${ADGUARD_API.baseUrl}/control/safebrowsing/disable`, {
+        method: 'POST',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+      await fetch(`${ADGUARD_API.baseUrl}/control/parental/disable`, {
+        method: 'POST',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+
+      if (!response.ok) {
+        console.error('AdGuard clear rules error:', response.status);
+      }
+
+      console.log('AdGuard rules cleared');
+    } catch (error) {
+      console.error('Error clearing AdGuard rules:', error);
+    }
+  };
 
   // Sync blocking rules with AdGuard Home
   const syncWithAdGuard = async (categories: ContentCategory[], domains: string[]) => {
@@ -412,18 +392,12 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
     <ParentalControlsContext.Provider
       value={{
         isEnabled,
-        isPinSet,
-        isPinVerified,
         blockedCategories,
         customBlockedDomains,
         screenTimeLimit,
         scheduledAccess,
         blockingStats,
         loading,
-        setPin,
-        verifyPin,
-        removePin,
-        lockControls,
         toggleCategory,
         setBlockedCategories,
         addBlockedDomain,

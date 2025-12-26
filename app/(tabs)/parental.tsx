@@ -16,12 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Shield,
   ShieldCheck,
-  Lock,
-  Unlock,
   Plus,
   Trash2,
-  ChevronRight,
-  Eye,
   EyeOff,
   Users,
   Gamepad2,
@@ -70,15 +66,10 @@ export default function ParentalControlsScreen() {
   const { colors, isDark } = useTheme();
   const {
     isEnabled,
-    isPinSet,
-    isPinVerified,
     blockedCategories,
     customBlockedDomains,
     blockingStats,
     loading,
-    setPin,
-    verifyPin,
-    lockControls,
     toggleCategory,
     addBlockedDomain,
     removeBlockedDomain,
@@ -86,74 +77,14 @@ export default function ParentalControlsScreen() {
     refreshStats,
   } = useParentalControls();
 
-  const [showPinModal, setShowPinModal] = useState(false);
   const [showAddDomainModal, setShowAddDomainModal] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [confirmPinInput, setConfirmPinInput] = useState('');
   const [domainInput, setDomainInput] = useState('');
-  const [pinMode, setPinMode] = useState<'set' | 'verify' | 'change'>('set');
-  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
-    if (isEnabled && isPinVerified) {
+    if (isEnabled) {
       refreshStats();
     }
-  }, [isEnabled, isPinVerified]);
-
-  const handleToggleParentalControls = async (enabled: boolean) => {
-    if (enabled && !isPinSet) {
-      // Need to set PIN first
-      setPinMode('set');
-      setShowPinModal(true);
-      return;
-    }
-
-    if (!isPinVerified && isPinSet) {
-      // Need to verify PIN
-      setPinMode('verify');
-      setShowPinModal(true);
-      return;
-    }
-
-    await toggleParentalControls(enabled);
-  };
-
-  const handleAccessSettings = () => {
-    if (!isPinVerified && isPinSet) {
-      setPinMode('verify');
-      setShowPinModal(true);
-    }
-  };
-
-  const handlePinSubmit = async () => {
-    setPinError('');
-
-    if (pinMode === 'set') {
-      if (pinInput.length < 4) {
-        setPinError('PIN must be at least 4 digits');
-        return;
-      }
-      if (pinInput !== confirmPinInput) {
-        setPinError('PINs do not match');
-        return;
-      }
-      const success = await setPin(pinInput);
-      if (success) {
-        setShowPinModal(false);
-        setPinInput('');
-        setConfirmPinInput('');
-        await toggleParentalControls(true);
-      }
-    } else if (pinMode === 'verify') {
-      const success = await verifyPin(pinInput);
-      if (success) {
-        setShowPinModal(false);
-        setPinInput('');
-      } else {
-        setPinError('Incorrect PIN');
-      }
-    }
-  };
+  }, [isEnabled]);
 
   const handleAddDomain = async () => {
     if (domainInput.trim()) {
@@ -177,8 +108,6 @@ export default function ParentalControlsScreen() {
       ]
     );
   };
-
-  const canAccessSettings = !isPinSet || isPinVerified;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -252,38 +181,12 @@ export default function ParentalControlsScreen() {
             </View>
             <Switch
               value={isEnabled}
-              onValueChange={handleToggleParentalControls}
+              onValueChange={toggleParentalControls}
               trackColor={{ false: colors.border, true: '#22C55E' }}
               thumbColor={isEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
               ios_backgroundColor={colors.border}
             />
           </View>
-
-          {isPinSet && (
-            <Pressable
-              onPress={isPinVerified ? lockControls : handleAccessSettings}
-              style={[
-                styles.lockButton,
-                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }
-              ]}
-            >
-              {isPinVerified ? (
-                <>
-                  <Unlock size={16} color={colors.textSecondary} />
-                  <Text style={[styles.lockButtonText, { color: colors.textSecondary }]}>
-                    Tap to lock settings
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Lock size={16} color={colors.primary} />
-                  <Text style={[styles.lockButtonText, { color: colors.primary }]}>
-                    Enter PIN to unlock settings
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          )}
         </AnimatedView>
 
         {/* Stats Card (when enabled) */}
@@ -318,7 +221,6 @@ export default function ParentalControlsScreen() {
             {
               backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              opacity: canAccessSettings ? 1 : 0.5,
             },
           ]}
         >
@@ -353,12 +255,7 @@ export default function ParentalControlsScreen() {
                 </View>
                 <Switch
                   value={blockedCategories.includes(category.id)}
-                  onValueChange={() => {
-                    if (canAccessSettings) {
-                      toggleCategory(category.id);
-                    }
-                  }}
-                  disabled={!canAccessSettings}
+                  onValueChange={() => toggleCategory(category.id)}
                   trackColor={{ false: colors.border, true: category.color }}
                   thumbColor={blockedCategories.includes(category.id) ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                   ios_backgroundColor={colors.border}
@@ -376,7 +273,6 @@ export default function ParentalControlsScreen() {
             {
               backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              opacity: canAccessSettings ? 1 : 0.5,
             },
           ]}
         >
@@ -390,8 +286,7 @@ export default function ParentalControlsScreen() {
               </Text>
             </View>
             <Pressable
-              onPress={() => canAccessSettings && setShowAddDomainModal(true)}
-              disabled={!canAccessSettings}
+              onPress={() => setShowAddDomainModal(true)}
               style={[
                 styles.addButton,
                 { backgroundColor: colors.primary }
@@ -418,8 +313,7 @@ export default function ParentalControlsScreen() {
                     {domain}
                   </Text>
                   <Pressable
-                    onPress={() => canAccessSettings && handleRemoveDomain(domain)}
-                    disabled={!canAccessSettings}
+                    onPress={() => handleRemoveDomain(domain)}
                     style={styles.removeButton}
                   >
                     <Trash2 size={18} color="#EF4444" />
@@ -430,86 +324,6 @@ export default function ParentalControlsScreen() {
           )}
         </AnimatedView>
       </ScrollView>
-
-      {/* PIN Modal */}
-      <Modal
-        visible={showPinModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPinModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }
-          ]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {pinMode === 'set' ? 'Set PIN' : 'Enter PIN'}
-              </Text>
-              <Pressable onPress={() => setShowPinModal(false)}>
-                <X size={24} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-              {pinMode === 'set'
-                ? 'Create a PIN to protect parental control settings'
-                : 'Enter your PIN to access settings'
-              }
-            </Text>
-
-            <TextInput
-              style={[
-                styles.pinInput,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  color: colors.text,
-                }
-              ]}
-              placeholder="Enter PIN"
-              placeholderTextColor={colors.textMuted}
-              value={pinInput}
-              onChangeText={setPinInput}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-            />
-
-            {pinMode === 'set' && (
-              <TextInput
-                style={[
-                  styles.pinInput,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                    color: colors.text,
-                  }
-                ]}
-                placeholder="Confirm PIN"
-                placeholderTextColor={colors.textMuted}
-                value={confirmPinInput}
-                onChangeText={setConfirmPinInput}
-                keyboardType="number-pad"
-                secureTextEntry
-                maxLength={6}
-              />
-            )}
-
-            {pinError && (
-              <Text style={styles.pinError}>{pinError}</Text>
-            )}
-
-            <Pressable
-              onPress={handlePinSubmit}
-              style={[styles.modalButton, { backgroundColor: colors.primary }]}
-            >
-              <Text style={styles.modalButtonText}>
-                {pinMode === 'set' ? 'Set PIN' : 'Unlock'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       {/* Add Domain Modal */}
       <Modal
@@ -538,7 +352,7 @@ export default function ParentalControlsScreen() {
 
             <TextInput
               style={[
-                styles.pinInput,
+                styles.domainInput,
                 {
                   backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                   color: colors.text,
@@ -612,19 +426,6 @@ const styles = StyleSheet.create({
   mainCardSubtitle: {
     fontSize: 13,
     marginTop: 2,
-  },
-  lockButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  lockButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   statsCard: {
     flexDirection: 'row',
@@ -753,19 +554,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 20,
   },
-  pinInput: {
+  domainInput: {
     height: 50,
     borderRadius: 12,
     paddingHorizontal: 16,
-    fontSize: 18,
-    marginBottom: 12,
-    textAlign: 'center',
-    letterSpacing: 4,
-  },
-  pinError: {
-    color: '#EF4444',
-    fontSize: 13,
-    textAlign: 'center',
+    fontSize: 16,
     marginBottom: 12,
   },
   modalButton: {

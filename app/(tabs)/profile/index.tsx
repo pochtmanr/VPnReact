@@ -35,6 +35,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ScrollShadow } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useVPN } from '@/context/VPNContext';
+import { useParentalControls } from '@/context/ParentalControlsContext';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -97,12 +99,16 @@ function DeviceItem({
   deviceType,
   lastActive,
   isCurrentDevice,
+  isVpnConnected,
+  isParentalEnabled,
   onRemove,
 }: {
   deviceName: string;
   deviceType: string;
   lastActive: string;
   isCurrentDevice: boolean;
+  isVpnConnected?: boolean;
+  isParentalEnabled?: boolean;
   onRemove?: () => void;
 }) {
   const { colors, isDark } = useTheme();
@@ -143,6 +149,23 @@ function DeviceItem({
         <Text style={[styles.deviceMeta, { color: colors.textSecondary }]}>
           {deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} • {timeAgo}
         </Text>
+        {/* Status indicators for current device */}
+        {isCurrentDevice && (
+          <View style={styles.statusIndicators}>
+            {isVpnConnected && (
+              <View style={[styles.statusBadge, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                <Shield size={12} color="#22C55E" />
+                <Text style={[styles.statusBadgeText, { color: '#22C55E' }]}>VPN Active</Text>
+              </View>
+            )}
+            {isParentalEnabled && (
+              <View style={[styles.statusBadge, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <Shield size={12} color="#3B82F6" />
+                <Text style={[styles.statusBadgeText, { color: '#3B82F6' }]}>Child Mode</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
       {!isCurrentDevice && onRemove && (
         <Pressable onPress={onRemove} style={styles.removeButton}>
@@ -181,8 +204,12 @@ export default function ProfileScreen() {
     deleteAccount,
     isAuthenticated,
   } = useAuth();
+  const { connectionStatus } = useVPN();
+  const { isEnabled: isParentalEnabled } = useParentalControls();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+
+  const isVpnConnected = connectionStatus === 'connected';
 
   const getThemeLabel = () => {
     switch (themeMode) {
@@ -413,6 +440,8 @@ export default function ProfileScreen() {
                       deviceType={device.device_type}
                       lastActive={device.last_active_at}
                       isCurrentDevice={deviceSession?.device_id === device.device_id}
+                      isVpnConnected={deviceSession?.device_id === device.device_id ? isVpnConnected : false}
+                      isParentalEnabled={deviceSession?.device_id === device.device_id ? isParentalEnabled : false}
                       onRemove={() => handleRemoveDevice(device.device_id, device.device_name)}
                     />
                   </View>
@@ -698,5 +727,24 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 13,
+  },
+  // Status Indicators
+  statusIndicators: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
