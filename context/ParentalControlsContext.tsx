@@ -129,11 +129,50 @@ interface ParentalControlsContextType {
 const ParentalControlsContext = createContext<ParentalControlsContextType | undefined>(undefined);
 
 // AdGuard Home API configuration
+// Use internal VPN IP when connected, public IP otherwise
 const ADGUARD_API = {
-  baseUrl: 'http://72.61.87.54:3000',
+  // Try internal VPN IP first (works when VPN connected), fallback to public IP
+  baseUrls: ['http://10.0.0.1:3000', 'http://72.61.87.54:3000'],
   username: 'admin',
   password: 'VpnAdmin123',
 };
+
+// Helper to make API request with fallback URLs
+async function adguardFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
+  const headers = {
+    'Authorization': `Basic ${auth}`,
+    ...options.headers,
+  };
+
+  let lastError: Error | null = null;
+
+  for (const baseUrl of ADGUARD_API.baseUrls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch(`${baseUrl}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok || response.status === 401) {
+        // Success or auth issue (not network issue)
+        return response;
+      }
+    } catch (error) {
+      console.log(`AdGuard API request to ${baseUrl} failed:`, error);
+      lastError = error as Error;
+      // Try next URL
+    }
+  }
+
+  throw lastError || new Error('All AdGuard API endpoints failed');
+}
 
 export function ParentalControlsProvider({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
@@ -266,27 +305,16 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   // Clear all AdGuard rules when parental controls are disabled
   const clearAdGuardRules = async () => {
     try {
-      const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
-
       // Clear all custom filtering rules
-      const response = await fetch(`${ADGUARD_API.baseUrl}/control/filtering/set_rules`, {
+      const response = await adguardFetch('/control/filtering/set_rules', {
         method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rules: [] }),
       });
 
       // Disable safe browsing and parental features
-      await fetch(`${ADGUARD_API.baseUrl}/control/safebrowsing/disable`, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}` },
-      });
-      await fetch(`${ADGUARD_API.baseUrl}/control/parental/disable`, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}` },
-      });
+      await adguardFetch('/control/safebrowsing/disable', { method: 'POST' });
+      await adguardFetch('/control/parental/disable', { method: 'POST' });
 
       if (!response.ok) {
         console.error('AdGuard clear rules error:', response.status);
@@ -301,22 +329,14 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   // Sync blocking rules with AdGuard Home
   const syncWithAdGuard = async (categories: ContentCategory[], domains: string[]) => {
     try {
-      const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
-
       // Build filtering rules based on categories
       const rules: string[] = [];
 
       // Add category-based blocking (AdGuard uses special syntax)
       if (categories.includes('adult')) {
         // AdGuard has built-in safe browsing for adult content
-        await fetch(`${ADGUARD_API.baseUrl}/control/safebrowsing/enable`, {
-          method: 'POST',
-          headers: { 'Authorization': `Basic ${auth}` },
-        });
-        await fetch(`${ADGUARD_API.baseUrl}/control/parental/enable`, {
-          method: 'POST',
-          headers: { 'Authorization': `Basic ${auth}` },
-        });
+        await adguardFetch('/control/safebrowsing/enable', { method: 'POST' });
+        await adguardFetch('/control/parental/enable', { method: 'POST' });
       }
 
       // Add custom blocked domains
@@ -339,12 +359,9 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
       }
 
       // Apply custom filtering rules
-      const response = await fetch(`${ADGUARD_API.baseUrl}/control/filtering/set_rules`, {
+      const response = await adguardFetch('/control/filtering/set_rules', {
         method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rules }),
       });
 
@@ -361,11 +378,7 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   // Refresh blocking stats from AdGuard
   const refreshStats = useCallback(async () => {
     try {
-      const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
-
-      const response = await fetch(`${ADGUARD_API.baseUrl}/control/stats`, {
-        headers: { 'Authorization': `Basic ${auth}` },
-      });
+      const response = await adguardFetch('/control/stats');
 
       if (response.ok) {
         const data = await response.json();
