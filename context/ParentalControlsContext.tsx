@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 
@@ -104,6 +104,8 @@ interface ParentalControlsContextType {
   scheduledAccess: ScheduledAccess | null;
   blockingStats: BlockingStats | null;
   loading: boolean;
+  isToggling: boolean; // Track if a toggle operation is in progress
+  error: string | null; // Last error message for user feedback
 
   // Category Management
   toggleCategory: (category: ContentCategory) => Promise<void>;
@@ -124,6 +126,9 @@ interface ParentalControlsContextType {
 
   // Stats
   refreshStats: () => Promise<void>;
+
+  // Error handling
+  clearError: () => void;
 }
 
 const ParentalControlsContext = createContext<ParentalControlsContextType | undefined>(undefined);
@@ -137,8 +142,12 @@ const ADGUARD_API = {
   password: 'VpnAdmin123',
 };
 
-// Helper to make API request with fallback URLs
-async function adguardFetch(path: string, options: RequestInit = {}): Promise<Response> {
+// Helper to make API request with fallback URLs and proper abort support
+async function adguardFetch(
+  path: string,
+  options: RequestInit = {},
+  externalSignal?: AbortSignal
+): Promise<Response> {
   const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
   const headers = {
     'Authorization': `Basic ${auth}`,
@@ -148,26 +157,46 @@ async function adguardFetch(path: string, options: RequestInit = {}): Promise<Re
   let lastError: Error | null = null;
 
   for (const baseUrl of ADGUARD_API.baseUrls) {
+    // Check if externally aborted before trying
+    if (externalSignal?.aborted) {
+      throw new DOMException('Request aborted', 'AbortError');
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      const response = await fetch(`${baseUrl}${path}`, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
+      // Link external signal to our controller
+      const abortHandler = () => controller.abort();
+      externalSignal?.addEventListener('abort', abortHandler);
 
-      clearTimeout(timeoutId);
+      try {
+        const response = await fetch(`${baseUrl}${path}`, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
 
-      if (response.ok || response.status === 401) {
-        // Success or auth issue (not network issue)
-        return response;
+        clearTimeout(timeoutId);
+
+        if (response.ok || response.status === 401) {
+          // Success or auth issue (not network issue)
+          return response;
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        externalSignal?.removeEventListener('abort', abortHandler);
       }
     } catch (error) {
-      console.log(`AdGuard API request to ${baseUrl} failed:`, error);
+      // Don't log abort errors as they're intentional
+      if ((error as Error).name !== 'AbortError') {
+        console.log(`AdGuard API request to ${baseUrl} failed:`, error);
+      }
       lastError = error as Error;
-      // Try next URL
+      // Try next URL unless aborted
+      if ((error as Error).name === 'AbortError') {
+        throw error;
+      }
     }
   }
 
@@ -185,6 +214,21 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   const [scheduledAccess, setScheduledAccessState] = useState<ScheduledAccess | null>(null);
   const [blockingStats, setBlockingStats] = useState<BlockingStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // AbortController ref for cleanup on unmount
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Clear error helper
+  const clearError = useCallback(() => setError(null), []);
 
   // Load settings on mount
   useEffect(() => {
@@ -291,88 +335,136 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
 
   // Enable/Disable Parental Controls
   const toggleParentalControls = useCallback(async (enabled: boolean) => {
-    setIsEnabled(enabled);
-    await AsyncStorage.setItem(STORAGE_KEYS.PARENTAL_ENABLED, String(enabled));
-
-    if (enabled) {
-      await syncWithAdGuard(blockedCategories, customBlockedDomains);
-    } else {
-      // Clear all AdGuard rules when disabling
-      await clearAdGuardRules();
+    // Prevent double toggling
+    if (isToggling) {
+      console.log('Toggle already in progress, ignoring');
+      return;
     }
-  }, [blockedCategories, customBlockedDomains]);
+
+    // Cancel any pending request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    setIsToggling(true);
+    setError(null); // Clear previous errors
+    const previousEnabled = isEnabled;
+
+    try {
+      // Optimistically update UI state
+      setIsEnabled(enabled);
+
+      // Try to sync with AdGuard
+      if (enabled) {
+        await syncWithAdGuard(blockedCategories, customBlockedDomains, signal);
+      } else {
+        await clearAdGuardRules(signal);
+      }
+
+      // Only persist if API call succeeded
+      await AsyncStorage.setItem(STORAGE_KEYS.PARENTAL_ENABLED, String(enabled));
+      console.log(`Parental controls ${enabled ? 'enabled' : 'disabled'} successfully`);
+    } catch (err) {
+      // Don't revert or show error if aborted (user cancelled)
+      if ((err as Error).name === 'AbortError') {
+        console.log('Toggle operation was cancelled');
+        return;
+      }
+
+      // Revert state on failure
+      console.error('Error toggling parental controls:', err);
+      setIsEnabled(previousEnabled);
+
+      // Set user-friendly error message
+      const message = err instanceof Error ? err.message : 'Failed to update parental controls';
+      setError(message);
+
+      throw err; // Re-throw so UI can handle it
+    } finally {
+      setIsToggling(false);
+    }
+  }, [blockedCategories, customBlockedDomains, isEnabled, isToggling]);
 
   // Clear all AdGuard rules when parental controls are disabled
-  const clearAdGuardRules = async () => {
-    try {
-      // Clear all custom filtering rules
-      const response = await adguardFetch('/control/filtering/set_rules', {
+  const clearAdGuardRules = async (signal?: AbortSignal) => {
+    // Clear all custom filtering rules
+    const response = await adguardFetch(
+      '/control/filtering/set_rules',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rules: [] }),
-      });
+      },
+      signal
+    );
 
-      // Disable safe browsing and parental features
-      await adguardFetch('/control/safebrowsing/disable', { method: 'POST' });
-      await adguardFetch('/control/parental/disable', { method: 'POST' });
+    // Disable safe browsing and parental features (parallel for speed)
+    await Promise.all([
+      adguardFetch('/control/safebrowsing/disable', { method: 'POST' }, signal),
+      adguardFetch('/control/parental/disable', { method: 'POST' }, signal),
+    ]);
 
-      if (!response.ok) {
-        console.error('AdGuard clear rules error:', response.status);
-      }
-
-      console.log('AdGuard rules cleared');
-    } catch (error) {
-      console.error('Error clearing AdGuard rules:', error);
+    if (!response.ok) {
+      throw new Error(`Failed to clear rules: ${response.status}`);
     }
+
+    console.log('AdGuard rules cleared');
   };
 
   // Sync blocking rules with AdGuard Home
-  const syncWithAdGuard = async (categories: ContentCategory[], domains: string[]) => {
-    try {
-      // Build filtering rules based on categories
-      const rules: string[] = [];
+  const syncWithAdGuard = async (
+    categories: ContentCategory[],
+    domains: string[],
+    signal?: AbortSignal
+  ) => {
+    // Build filtering rules based on categories
+    const rules: string[] = [];
 
-      // Add category-based blocking (AdGuard uses special syntax)
-      if (categories.includes('adult')) {
-        // AdGuard has built-in safe browsing for adult content
-        await adguardFetch('/control/safebrowsing/enable', { method: 'POST' });
-        await adguardFetch('/control/parental/enable', { method: 'POST' });
-      }
+    // Add category-based blocking (AdGuard uses special syntax)
+    if (categories.includes('adult')) {
+      // AdGuard has built-in safe browsing for adult content (parallel for speed)
+      await Promise.all([
+        adguardFetch('/control/safebrowsing/enable', { method: 'POST' }, signal),
+        adguardFetch('/control/parental/enable', { method: 'POST' }, signal),
+      ]);
+    }
 
-      // Add custom blocked domains
-      for (const domain of domains) {
-        rules.push(`||${domain}^`);
-      }
+    // Add custom blocked domains
+    for (const domain of domains) {
+      rules.push(`||${domain}^`);
+    }
 
-      // Category-specific domain patterns
-      if (categories.includes('social_media')) {
-        rules.push('||facebook.com^', '||instagram.com^', '||twitter.com^', '||tiktok.com^', '||snapchat.com^');
-      }
-      if (categories.includes('gaming')) {
-        rules.push('||steam.com^', '||epicgames.com^', '||roblox.com^', '||minecraft.net^');
-      }
-      if (categories.includes('streaming')) {
-        rules.push('||netflix.com^', '||youtube.com^', '||twitch.tv^', '||hulu.com^', '||disneyplus.com^');
-      }
-      if (categories.includes('gambling')) {
-        rules.push('||bet365.com^', '||draftkings.com^', '||fanduel.com^', '||pokerstars.com^');
-      }
+    // Category-specific domain patterns
+    if (categories.includes('social_media')) {
+      rules.push('||facebook.com^', '||instagram.com^', '||twitter.com^', '||tiktok.com^', '||snapchat.com^');
+    }
+    if (categories.includes('gaming')) {
+      rules.push('||steam.com^', '||epicgames.com^', '||roblox.com^', '||minecraft.net^');
+    }
+    if (categories.includes('streaming')) {
+      rules.push('||netflix.com^', '||youtube.com^', '||twitch.tv^', '||hulu.com^', '||disneyplus.com^');
+    }
+    if (categories.includes('gambling')) {
+      rules.push('||bet365.com^', '||draftkings.com^', '||fanduel.com^', '||pokerstars.com^');
+    }
 
-      // Apply custom filtering rules
-      const response = await adguardFetch('/control/filtering/set_rules', {
+    // Apply custom filtering rules
+    const response = await adguardFetch(
+      '/control/filtering/set_rules',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rules }),
-      });
+      },
+      signal
+    );
 
-      if (!response.ok) {
-        console.error('AdGuard API error:', response.status, await response.text());
-      }
-
-      console.log('AdGuard sync completed:', { categories, domains, rulesCount: rules.length, rules });
-    } catch (error) {
-      console.error('Error syncing with AdGuard:', error);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to sync rules: ${response.status} - ${errorText}`);
     }
+
+    console.log('AdGuard sync completed:', { categories, domains, rulesCount: rules.length });
   };
 
   // Refresh blocking stats from AdGuard
@@ -401,26 +493,53 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
     }
   }, []);
 
+  // Memoize context value to prevent unnecessary re-renders
+  // This is a React best practice for context providers
+  const contextValue = useMemo<ParentalControlsContextType>(
+    () => ({
+      isEnabled,
+      blockedCategories,
+      customBlockedDomains,
+      screenTimeLimit,
+      scheduledAccess,
+      blockingStats,
+      loading,
+      isToggling,
+      error,
+      toggleCategory,
+      setBlockedCategories,
+      addBlockedDomain,
+      removeBlockedDomain,
+      setScreenTimeLimit,
+      setScheduledAccess,
+      toggleParentalControls,
+      refreshStats,
+      clearError,
+    }),
+    [
+      isEnabled,
+      blockedCategories,
+      customBlockedDomains,
+      screenTimeLimit,
+      scheduledAccess,
+      blockingStats,
+      loading,
+      isToggling,
+      error,
+      toggleCategory,
+      setBlockedCategories,
+      addBlockedDomain,
+      removeBlockedDomain,
+      setScreenTimeLimit,
+      setScheduledAccess,
+      toggleParentalControls,
+      refreshStats,
+      clearError,
+    ]
+  );
+
   return (
-    <ParentalControlsContext.Provider
-      value={{
-        isEnabled,
-        blockedCategories,
-        customBlockedDomains,
-        screenTimeLimit,
-        scheduledAccess,
-        blockingStats,
-        loading,
-        toggleCategory,
-        setBlockedCategories,
-        addBlockedDomain,
-        removeBlockedDomain,
-        setScreenTimeLimit,
-        setScheduledAccess,
-        toggleParentalControls,
-        refreshStats,
-      }}
-    >
+    <ParentalControlsContext.Provider value={contextValue}>
       {children}
     </ParentalControlsContext.Provider>
   );

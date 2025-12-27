@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Switch,
   Pressable,
   TextInput,
   Alert,
   Modal,
+  RefreshControl,
+  InteractionManager,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Shield,
-  ShieldCheck,
   Plus,
   Trash2,
   EyeOff,
@@ -30,20 +30,28 @@ import {
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
 
 import { useTheme } from '@/context/ThemeContext';
+import { useVPN } from '@/context/VPNContext';
+import { useTier } from '@/context/TierContext';
 import {
   useParentalControls,
   CONTENT_CATEGORIES,
   ContentCategory,
+  CategoryInfo,
 } from '@/context/ParentalControlsContext';
+import { ScrollShadow, ActivationButton, QuickStatsRow } from '@/components/ui';
+import { UpgradeBanner } from '@/components/tier';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
-// Icon mapping for categories
+// =============================================================================
+// MEMOIZED SUB-COMPONENTS
+// =============================================================================
+
+// Category Icon - Pure function, no hooks needed
 const getCategoryIcon = (categoryId: ContentCategory, color: string) => {
   const iconProps = { size: 22, color };
   switch (categoryId) {
     case 'adult':
-      return <Ban {...iconProps} />;
     case 'gambling':
       return <Ban {...iconProps} />;
     case 'social_media':
@@ -61,287 +69,446 @@ const getCategoryIcon = (categoryId: ContentCategory, color: string) => {
   }
 };
 
+// Category Row Item - Memoized
+interface CategoryRowProps {
+  category: CategoryInfo;
+  isBlocked: boolean;
+  onToggle: (category: ContentCategory) => void;
+  isDark: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+  disabled?: boolean;
+}
+
+const CategoryRow = memo(function CategoryRow({
+  category,
+  isBlocked,
+  onToggle,
+  isDark,
+  colors,
+  disabled = false,
+}: CategoryRowProps) {
+  const handleToggle = useCallback(() => {
+    if (!disabled) {
+      onToggle(category.id);
+    }
+  }, [category.id, onToggle, disabled]);
+
+  const iconBgColor = useMemo(
+    () => (isDark ? `${category.color}20` : `${category.color}15`),
+    [isDark, category.color]
+  );
+
+  const iconColor = disabled ? colors.textMuted : category.color;
+
+  return (
+    <View style={[styles.categoryRow, disabled && styles.disabledRow]}>
+      <View style={styles.categoryLeft}>
+        <View style={[styles.categoryIcon, { backgroundColor: iconBgColor }]}>
+          {getCategoryIcon(category.id, iconColor)}
+        </View>
+        <View style={styles.categoryText}>
+          <Text style={[styles.categoryName, { color: disabled ? colors.textMuted : colors.text }]}>
+            {category.name}
+          </Text>
+          <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+            {category.description}
+          </Text>
+        </View>
+      </View>
+      <Switch
+        value={isBlocked}
+        onValueChange={handleToggle}
+        trackColor={{ false: colors.border, true: '#3B82F6' }}
+        thumbColor={isBlocked ? '#fff' : isDark ? '#666' : '#f4f4f4'}
+        ios_backgroundColor={colors.border}
+        disabled={disabled}
+        style={disabled && { opacity: 0.5 }}
+      />
+    </View>
+  );
+});
+
+// Domain Row Item - Memoized
+interface DomainRowProps {
+  domain: string;
+  onRemove: (domain: string) => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+  disabled?: boolean;
+}
+
+const DomainRow = memo(function DomainRow({ domain, onRemove, colors, disabled = false }: DomainRowProps) {
+  const handleRemove = useCallback(() => {
+    if (!disabled) {
+      onRemove(domain);
+    }
+  }, [domain, onRemove, disabled]);
+
+  return (
+    <View style={[styles.domainRow, disabled && styles.disabledRow]}>
+      <Text style={[styles.domainText, { color: disabled ? colors.textMuted : colors.text }]}>{domain}</Text>
+      <Pressable onPress={handleRemove} style={styles.removeButton} disabled={disabled}>
+        <Trash2 size={18} color={disabled ? colors.textMuted : "#EF4444"} />
+      </Pressable>
+    </View>
+  );
+});
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function ParentalControlsScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { connectionStatus } = useVPN();
+  const { hasFeature } = useTier();
+  const isVPNConnected = connectionStatus === 'connected';
+  const hasParentalAccess = hasFeature('parental_controls');
+
   const {
     isEnabled,
     blockedCategories,
     customBlockedDomains,
     blockingStats,
-    loading,
     toggleCategory,
     addBlockedDomain,
     removeBlockedDomain,
     toggleParentalControls,
     refreshStats,
+    loading,
+    isToggling,
+    error,
+    clearError,
   } = useParentalControls();
 
   const [showAddDomainModal, setShowAddDomainModal] = useState(false);
   const [domainInput, setDomainInput] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Show error alert when error occurs
   useEffect(() => {
-    if (isEnabled) {
-      refreshStats();
+    if (error) {
+      Alert.alert(
+        'Connection Error',
+        'Unable to connect to the server. Please ensure VPN is connected and try again.',
+        [{ text: 'OK', onPress: clearError }]
+      );
     }
-  }, [isEnabled]);
+  }, [error, clearError]);
 
-  const handleAddDomain = async () => {
-    if (domainInput.trim()) {
-      await addBlockedDomain(domainInput.trim());
+  // Refresh stats when enabled (deferred to avoid blocking)
+  useEffect(() => {
+    if (isEnabled && !loading) {
+      // Defer stats refresh to after interactions complete
+      const task = InteractionManager.runAfterInteractions(() => {
+        refreshStats();
+      });
+      return () => task.cancel();
+    }
+  }, [isEnabled, loading, refreshStats]);
+
+  // Memoized handlers
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshStats();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshStats]);
+
+  // Toggle handler - context handles isToggling state and error recovery
+  const handleToggleParentalControls = useCallback(
+    async (newEnabled: boolean) => {
+      if (isToggling) return; // Prevent rapid toggling (context manages this)
+
+      try {
+        await toggleParentalControls(newEnabled);
+      } catch (err) {
+        // Error is already handled by context and shown via useEffect above
+        console.log('Toggle error handled by context');
+      }
+    },
+    [toggleParentalControls, isToggling]
+  );
+
+  const handleAddDomain = useCallback(async () => {
+    const trimmed = domainInput.trim();
+    if (trimmed) {
+      await addBlockedDomain(trimmed);
       setDomainInput('');
       setShowAddDomainModal(false);
     }
-  };
+  }, [domainInput, addBlockedDomain]);
 
-  const handleRemoveDomain = (domain: string) => {
-    Alert.alert(
-      'Remove Domain',
-      `Remove "${domain}" from blocked list?`,
-      [
+  const handleRemoveDomain = useCallback(
+    (domain: string) => {
+      Alert.alert('Remove Domain', `Remove "${domain}" from blocked list?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: () => removeBlockedDomain(domain),
         },
-      ]
-    );
-  };
+      ]);
+    },
+    [removeBlockedDomain]
+  );
+
+  const openAddDomainModal = useCallback(() => {
+    setShowAddDomainModal(true);
+  }, []);
+
+  const closeAddDomainModal = useCallback(() => {
+    setShowAddDomainModal(false);
+    setDomainInput('');
+  }, []);
+
+  // Memoized category toggle handler
+  const handleCategoryToggle = useCallback(
+    (categoryId: ContentCategory) => {
+      // Fire and forget - don't await to keep UI responsive
+      toggleCategory(categoryId).catch(console.error);
+    },
+    [toggleCategory]
+  );
+
+  // Memoized blocked categories set for O(1) lookup
+  const blockedCategoriesSet = useMemo(
+    () => new Set(blockedCategories),
+    [blockedCategories]
+  );
+
+  // Memoized card styles
+  const cardStyle = useMemo(
+    () => ({
+      backgroundColor: isDark
+        ? 'rgba(255, 255, 255, 0.05)'
+        : 'rgba(255, 255, 255, 0.8)',
+      borderColor: isDark
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.05)',
+    }),
+    [isDark]
+  );
+
+  const infoCardStyle = useMemo(
+    () => ({
+      backgroundColor: isDark
+        ? 'rgba(59, 130, 246, 0.1)'
+        : 'rgba(59, 130, 246, 0.08)',
+      borderColor: isDark
+        ? 'rgba(59, 130, 246, 0.2)'
+        : 'rgba(59, 130, 246, 0.15)',
+    }),
+    [isDark]
+  );
+
+  const infoTextColor = useMemo(
+    () => (isDark ? '#93C5FD' : '#1D4ED8'),
+    [isDark]
+  );
+
+  // Content container padding
+  const contentContainerStyle = useMemo(
+    () => ({
+      paddingTop: insets.top + 12,
+      paddingBottom: insets.bottom + 100,
+      paddingHorizontal: 20,
+    }),
+    [insets.top, insets.bottom]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <LinearGradient
-        colors={isDark
-          ? ['#000000', '#0a0a0a', '#000000']
-          : ['#ffffff', '#fafafa', '#f5f5f5']
+        colors={
+          isDark
+            ? ['#000000', '#0a0a0a', '#000000']
+            : ['#ffffff', '#fafafa', '#f5f5f5']
         }
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{
-          paddingTop: insets.top + 12,
-          paddingBottom: insets.bottom + 100,
-          paddingHorizontal: 20,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <AnimatedView
-          entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
-          style={styles.header}
+      <ScrollShadow size={60}>
+        <Animated.ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={contentContainerStyle}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
         >
-          <View>
+          {/* Header */}
+          <AnimatedView
+            entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
+            style={styles.header}
+          >
             <Text style={[styles.title, { color: colors.text }]}>
               Parental Controls
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Manage content filtering and restrictions
+              Protect your family online
             </Text>
-          </View>
-        </AnimatedView>
+          </AnimatedView>
 
-        {/* Main Toggle Card */}
-        <AnimatedView
-          entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-          style={[
-            styles.mainCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-            },
-          ]}
-        >
-          <View style={styles.mainCardContent}>
-            <View style={[
-              styles.mainCardIcon,
-              { backgroundColor: isEnabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(107, 114, 128, 0.15)' }
-            ]}>
-              {isEnabled ? (
-                <ShieldCheck size={32} color="#22C55E" />
-              ) : (
-                <Shield size={32} color="#6B7280" />
-              )}
-            </View>
-            <View style={styles.mainCardText}>
-              <Text style={[styles.mainCardTitle, { color: colors.text }]}>
-                {isEnabled ? 'Protection Active' : 'Protection Disabled'}
-              </Text>
-              <Text style={[styles.mainCardSubtitle, { color: colors.textSecondary }]}>
-                {isEnabled
-                  ? `${blockedCategories.length} categories blocked`
-                  : 'Enable to start filtering content'
-                }
-              </Text>
-            </View>
-            <Switch
-              value={isEnabled}
-              onValueChange={toggleParentalControls}
-              trackColor={{ false: colors.border, true: '#22C55E' }}
-              thumbColor={isEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-              ios_backgroundColor={colors.border}
+          {/* Upgrade Banner for Free Users */}
+          {!hasParentalAccess && (
+            <AnimatedView
+              entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
+              style={styles.upgradeBannerContainer}
+            >
+              <UpgradeBanner feature="parental_controls" />
+            </AnimatedView>
+          )}
+
+          {/* Hero Card with Interactive Activation Button */}
+          <AnimatedView
+            entering={FadeInDown.delay(hasParentalAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.heroCard, cardStyle, (!hasParentalAccess || !isVPNConnected) && styles.lockedSection]}
+          >
+            <ActivationButton
+              isEnabled={isEnabled}
+              onToggle={() => handleToggleParentalControls(!isEnabled)}
+              disabled={!hasParentalAccess || !isVPNConnected}
+              enabledSubtitle={`${blockedCategories.length} categories blocked`}
+              disabledSubtitle={
+                !hasParentalAccess
+                  ? "Upgrade to Pro to enable"
+                  : !isVPNConnected
+                    ? "Connect VPN first to enable"
+                    : "Tap to enable content filtering"
+              }
+              accentColor="#3B82F6"
             />
-          </View>
-        </AnimatedView>
 
-        {/* Stats Card (when enabled) */}
-        {isEnabled && blockingStats && (
+            {hasParentalAccess && isEnabled && isVPNConnected && blockingStats && (
+              <QuickStatsRow
+                stats={[
+                  { icon: Ban, iconColor: colors.error, value: blockingStats.totalBlocked, label: 'Blocked' },
+                  { icon: BarChart3, iconColor: '#3B82F6', value: blockedCategories.length, label: 'Categories' },
+                  { icon: Shield, iconColor: '#3B82F6', value: customBlockedDomains.length, label: 'Custom' },
+                ]}
+              />
+            )}
+          </AnimatedView>
+
+          {/* Content Categories */}
           <AnimatedView
             entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.statsCard,
-              {
-                backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
-                borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
-              },
-            ]}
+            style={[styles.sectionCard, cardStyle, (!isVPNConnected || !hasParentalAccess) && styles.disabledSection]}
           >
-            <BarChart3 size={20} color="#3B82F6" />
-            <View style={styles.statsContent}>
-              <Text style={[styles.statsTitle, { color: colors.text }]}>
-                {blockingStats.totalBlocked.toLocaleString()} requests blocked
-              </Text>
-              <Text style={[styles.statsSubtitle, { color: colors.textSecondary }]}>
-                Protecting your family from harmful content
-              </Text>
-            </View>
-          </AnimatedView>
-        )}
+            <Text style={[styles.sectionTitle, { color: (isVPNConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
+              Content Categories
+            </Text>
+            <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+              {!hasParentalAccess ? 'Upgrade to Pro to manage categories' : (isVPNConnected ? 'Select categories to block' : 'Connect VPN to manage categories')}
+            </Text>
 
-        {/* Content Categories */}
-        <AnimatedView
-          entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-            },
-          ]}
-        >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Content Categories
-          </Text>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Select categories to block when VPN is connected
-          </Text>
-
-          {CONTENT_CATEGORIES.map((category, index) => (
-            <View key={category.id}>
-              {index > 0 && (
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              )}
-              <View style={styles.categoryRow}>
-                <View style={styles.categoryLeft}>
-                  <View style={[
-                    styles.categoryIcon,
-                    { backgroundColor: `${category.color}20` }
-                  ]}>
-                    {getCategoryIcon(category.id, category.color)}
-                  </View>
-                  <View style={styles.categoryText}>
-                    <Text style={[styles.categoryName, { color: colors.text }]}>
-                      {category.name}
-                    </Text>
-                    <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
-                      {category.description}
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={blockedCategories.includes(category.id)}
-                  onValueChange={() => toggleCategory(category.id)}
-                  trackColor={{ false: colors.border, true: category.color }}
-                  thumbColor={blockedCategories.includes(category.id) ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-                  ios_backgroundColor={colors.border}
-                />
-              </View>
-            </View>
-          ))}
-        </AnimatedView>
-
-        {/* Custom Blocked Domains */}
-        <AnimatedView
-          entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-            },
-          ]}
-        >
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Custom Blocked Sites
-              </Text>
-              <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-                Add specific websites to block
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setShowAddDomainModal(true)}
-              style={[
-                styles.addButton,
-                { backgroundColor: colors.primary }
-              ]}
-            >
-              <Plus size={18} color="#fff" />
-            </Pressable>
-          </View>
-
-          {customBlockedDomains.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-                No custom sites blocked yet
-              </Text>
-            </View>
-          ) : (
-            customBlockedDomains.map((domain, index) => (
-              <View key={domain}>
+            {CONTENT_CATEGORIES.map((category, index) => (
+              <React.Fragment key={category.id}>
                 {index > 0 && (
                   <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 )}
-                <View style={styles.domainRow}>
-                  <Text style={[styles.domainText, { color: colors.text }]}>
-                    {domain}
-                  </Text>
-                  <Pressable
-                    onPress={() => handleRemoveDomain(domain)}
-                    style={styles.removeButton}
-                  >
-                    <Trash2 size={18} color="#EF4444" />
-                  </Pressable>
-                </View>
+                <CategoryRow
+                  category={category}
+                  isBlocked={blockedCategoriesSet.has(category.id)}
+                  onToggle={handleCategoryToggle}
+                  isDark={isDark}
+                  colors={colors}
+                  disabled={!isVPNConnected || !hasParentalAccess}
+                />
+              </React.Fragment>
+            ))}
+          </AnimatedView>
+
+          {/* Custom Blocked Domains */}
+          <AnimatedView
+            entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.sectionCard, cardStyle, (!isVPNConnected || !hasParentalAccess) && styles.disabledSection]}
+          >
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: (isVPNConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
+                  Custom Blocked Sites
+                </Text>
+                <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+                  {!hasParentalAccess ? 'Upgrade to Pro to manage sites' : (isVPNConnected ? 'Add specific websites to block' : 'Connect VPN to manage sites')}
+                </Text>
               </View>
-            ))
-          )}
-        </AnimatedView>
-      </ScrollView>
+              <Pressable
+                onPress={openAddDomainModal}
+                style={[styles.addButton, { backgroundColor: (isVPNConnected && hasParentalAccess) ? '#3B82F6' : colors.textMuted }]}
+                disabled={!isVPNConnected || !hasParentalAccess}
+              >
+                <Plus size={18} color="#fff" />
+              </Pressable>
+            </View>
+
+            {customBlockedDomains.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
+                  No custom sites blocked yet
+                </Text>
+              </View>
+            ) : (
+              customBlockedDomains.map((domain, index) => (
+                <React.Fragment key={domain}>
+                  {index > 0 && (
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  )}
+                  <DomainRow
+                    domain={domain}
+                    onRemove={handleRemoveDomain}
+                    colors={colors}
+                    disabled={!isVPNConnected || !hasParentalAccess}
+                  />
+                </React.Fragment>
+              ))
+            )}
+          </AnimatedView>
+
+          {/* Info Card */}
+          <AnimatedView
+            entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.infoCard, infoCardStyle]}
+          >
+            <Shield size={18} color="#3B82F6" />
+            <Text style={[styles.infoText, { color: infoTextColor }]}>
+              Content filtering is applied when connected to VPN. Categories use
+              AdGuard DNS rules for system-wide protection.
+            </Text>
+          </AnimatedView>
+        </Animated.ScrollView>
+      </ScrollShadow>
 
       {/* Add Domain Modal */}
       <Modal
         visible={showAddDomainModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowAddDomainModal(false)}
+        onRequestClose={closeAddDomainModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }
-          ]}>
+        <Pressable style={styles.modalOverlay} onPress={closeAddDomainModal}>
+          <Pressable
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Block Website
               </Text>
-              <Pressable onPress={() => setShowAddDomainModal(false)}>
+              <Pressable onPress={closeAddDomainModal} hitSlop={8}>
                 <X size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -354,9 +521,11 @@ export default function ParentalControlsScreen() {
               style={[
                 styles.domainInput,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.05)',
                   color: colors.text,
-                }
+                },
               ]}
               placeholder="example.com"
               placeholderTextColor={colors.textMuted}
@@ -365,20 +534,26 @@ export default function ParentalControlsScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
+              returnKeyType="done"
+              onSubmitEditing={handleAddDomain}
             />
 
             <Pressable
               onPress={handleAddDomain}
-              style={[styles.modalButton, { backgroundColor: colors.primary }]}
+              style={[styles.modalButton, { backgroundColor: '#3B82F6' }]}
             >
               <Text style={styles.modalButtonText}>Block Site</Text>
             </Pressable>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -395,58 +570,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     marginTop: 4,
   },
-  mainCard: {
-    borderRadius: 20,
+  // Hero Card
+  heroCard: {
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
   },
-  mainCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mainCardIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mainCardText: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  mainCardTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  mainCardSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  statsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-    gap: 12,
-  },
-  statsContent: {
-    flex: 1,
-  },
-  statsTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  statsSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
+  // Section Card
   sectionCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -467,6 +604,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 16,
   },
+  // Category Row
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,6 +639,19 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 56,
   },
+  disabledRow: {
+    opacity: 0.6,
+  },
+  disabledSection: {
+    opacity: 0.7,
+  },
+  lockedSection: {
+    opacity: 0.5,
+  },
+  upgradeBannerContainer: {
+    marginBottom: 16,
+  },
+  // Add Button
   addButton: {
     width: 36,
     height: 36,
@@ -508,6 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Empty State
   emptyState: {
     paddingVertical: 20,
     alignItems: 'center',
@@ -515,6 +667,7 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 14,
   },
+  // Domain Row
   domainRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -527,6 +680,21 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 8,
   },
+  // Info Card
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

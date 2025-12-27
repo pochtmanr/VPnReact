@@ -1,8 +1,12 @@
 // AdGuard Home API Service
 // Connects to the AdGuard Home DNS server running on the VPN server
 
-const ADGUARD_BASE_URL = 'http://72.61.87.54:3000';
-const ADGUARD_AUTH = btoa('admin:VpnAdmin123');
+// Use internal VPN IP when connected, public IP otherwise
+const ADGUARD_API = {
+  baseUrls: ['http://10.0.0.1:3000', 'http://72.61.87.54:3000'],
+  username: 'admin',
+  password: 'VpnAdmin123',
+};
 
 interface AdGuardStats {
   num_dns_queries: number;
@@ -45,14 +49,47 @@ export interface AdBlockStats {
   filterRulesCount: number;
 }
 
+// Helper to make API request with fallback URLs and timeout
+async function adguardFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
+  const headers = {
+    'Authorization': `Basic ${auth}`,
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  let lastError: Error | null = null;
+
+  for (const baseUrl of ADGUARD_API.baseUrls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch(`${baseUrl}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok || response.status === 401) {
+        // Success or auth issue (not network issue)
+        return response;
+      }
+    } catch (error) {
+      console.log(`AdGuard API request to ${baseUrl} failed:`, error);
+      lastError = error as Error;
+      // Try next URL
+    }
+  }
+
+  throw lastError || new Error('All AdGuard API endpoints failed');
+}
+
 async function fetchAdGuard<T>(endpoint: string): Promise<T | null> {
   try {
-    const response = await fetch(`${ADGUARD_BASE_URL}${endpoint}`, {
-      headers: {
-        'Authorization': `Basic ${ADGUARD_AUTH}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await adguardFetch(endpoint);
 
     if (!response.ok) {
       console.warn(`AdGuard API error: ${response.status}`);
@@ -68,12 +105,8 @@ async function fetchAdGuard<T>(endpoint: string): Promise<T | null> {
 
 async function postAdGuard(endpoint: string, body?: object): Promise<boolean> {
   try {
-    const response = await fetch(`${ADGUARD_BASE_URL}${endpoint}`, {
+    const response = await adguardFetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Basic ${ADGUARD_AUTH}`,
-        'Content-Type': 'application/json',
-      },
       body: body ? JSON.stringify(body) : undefined,
     });
 

@@ -158,11 +158,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 32,
+    paddingBottom: 20,
+    marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
   },
   backButton: {
     width: 40,

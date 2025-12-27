@@ -12,35 +12,24 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  Easing,
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/context/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const AnimatedView = Animated.createAnimatedComponent(View);
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // Feature Chip Component
 interface FeatureChipProps {
   icon: React.ElementType;
   label: string;
-  delay: number;
 }
 
-const FeatureChip = ({ icon: Icon, label, delay }: FeatureChipProps) => {
+const FeatureChip = ({ icon: Icon, label }: FeatureChipProps) => {
   return (
-    <AnimatedView
-      entering={FadeInDown.delay(delay).duration(400).easing(Easing.out(Easing.ease))}
-      style={styles.featureChip}
-    >
+    <View style={styles.featureChip}>
       <Icon size={16} color="#FFFFFF" />
       <Text style={styles.featureChipText}>{label}</Text>
-    </AnimatedView>
+    </View>
   );
 };
 
@@ -90,53 +79,40 @@ export default function WelcomeScreen() {
         ]}
       >
         {/* Top Badge */}
-        <AnimatedView
-          entering={FadeInDown.delay(100).duration(500).easing(Easing.out(Easing.ease))}
-          style={styles.topBadge}
-        >
+        <View style={styles.topBadge}>
           <BlurView intensity={40} tint="dark" style={styles.topBadgeBlur}>
             <CheckCircle2 size={14} color={colors.success} />
             <Text style={styles.topBadgeText}>Trusted by 10M+ users</Text>
           </BlurView>
-        </AnimatedView>
+        </View>
 
         {/* Spacer */}
         <View style={{ flex: 1 }} />
 
         {/* Hero Section */}
-        <AnimatedView
-          entering={FadeInDown.delay(200).duration(600).easing(Easing.out(Easing.ease))}
-          style={styles.heroSection}
-        >
+        <View style={styles.heroSection}>
           <Text style={styles.heroTitle}>
             Your Privacy,{'\n'}
-            <Text style={{ color: colors.primary }}>Secured</Text>
+            <Text style={{ color: '#3B82F6' }}>Secured</Text>
           </Text>
           <Text style={styles.heroSubtitle}>
             Military-grade encryption to protect your online activity. Browse freely, stay anonymous.
           </Text>
-        </AnimatedView>
+        </View>
 
         {/* Feature Chips */}
-        <AnimatedView
-          entering={FadeInDown.delay(350).duration(500).easing(Easing.out(Easing.ease))}
-          style={styles.featuresRow}
-        >
-          {features.map((feature, index) => (
+        <View style={styles.featuresRow}>
+          {features.map((feature) => (
             <FeatureChip
               key={feature.label}
               icon={feature.icon}
               label={feature.label}
-              delay={400 + index * 80}
             />
           ))}
-        </AnimatedView>
+        </View>
 
         {/* CTA Section */}
-        <AnimatedView
-          entering={FadeInUp.delay(600).duration(500).springify()}
-          style={styles.ctaSection}
-        >
+        <View style={styles.ctaSection}>
           {/* Glass Card */}
           <View style={styles.ctaCard}>
             <BlurView intensity={30} tint="dark" style={styles.ctaCardBlur}>
@@ -160,7 +136,7 @@ export default function WelcomeScreen() {
                 </View>
 
                 {/* Primary Button */}
-                <AnimatedPressable
+                <Pressable
                   style={({ pressed }) => [
                     styles.primaryButton,
                     {
@@ -171,7 +147,7 @@ export default function WelcomeScreen() {
                   onPress={() => router.push('/(auth)/account')}
                 >
                   <LinearGradient
-                    colors={[colors.primary, '#4A8BC4']}
+                    colors={['#3B82F6', '#2563EB']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.buttonGradient}
@@ -179,7 +155,7 @@ export default function WelcomeScreen() {
                     <Text style={styles.primaryButtonText}>Start Protecting</Text>
                     <ArrowRight size={20} color="#FFFFFF" />
                   </LinearGradient>
-                </AnimatedPressable>
+                </Pressable>
 
                 {/* Secondary info */}
                 <Text style={styles.freeText}>Free servers available - No credit card required</Text>
@@ -193,12 +169,12 @@ export default function WelcomeScreen() {
               By continuing, you agree to our{' '}
             </Text>
             <Pressable>
-              <Text style={[styles.footerLink, { color: colors.primary }]}>
+              <Text style={[styles.footerLink, { color: '#3B82F6' }]}>
                 Terms & Privacy
               </Text>
             </Pressable>
           </View>
-        </AnimatedView>
+        </View>
       </View>
     </View>
   );

@@ -37,6 +37,19 @@ export default function ProfileLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="subscription"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="thank-you"
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+        }}
+      />
     </Stack>
   );
 }

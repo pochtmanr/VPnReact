@@ -1,105 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  RefreshControl,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ShieldOff,
-  Shield,
-  ShieldCheck,
-  Bug,
-  Check,
-  Globe,
-  Smartphone,
-  Wifi,
-  Crown,
-  Ban,
-  Activity,
-  Database,
-} from 'lucide-react-native';
-import {
-  getAdBlockStats,
-  setSafeBrowsingEnabled,
-  setParentalEnabled,
   AdBlockStats,
+  getAdBlockStats,
 } from '@/lib/adguard';
-import Animated, {
-  FadeInDown,
-  Easing,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import {
+  Activity,
+  Ban,
+  Check,
+  Database,
+  Globe,
+  ShieldCheck,
+  Smartphone,
+  Wifi
+} from 'lucide-react-native';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  InteractionManager,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { UpgradeBanner } from '@/components/tier';
+import { ActivationButton, QuickStatsRow, ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
+import { useTier } from '@/context/TierContext';
 import { useVPN } from '@/context/VPNContext';
-import { ScrollShadow } from '@/components/ui';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
-
-interface ProtectionToggleProps {
-  icon: React.ElementType;
-  label: string;
-  description: string;
-  enabled: boolean;
-  onToggle: () => void;
-  iconColor: string;
-  activeColor?: string;
-  disabled?: boolean;
-}
-
-function ProtectionToggle({
-  icon: Icon,
-  label,
-  description,
-  enabled,
-  onToggle,
-  iconColor,
-  activeColor,
-  disabled,
-}: ProtectionToggleProps) {
-  const { colors, isDark } = useTheme();
-  const effectiveColor = enabled && activeColor ? activeColor : iconColor;
-
-  return (
-    <View style={[styles.toggleItem, disabled && { opacity: 0.5 }]}>
-      <View
-        style={[
-          styles.toggleIcon,
-          {
-            backgroundColor: isDark
-              ? `${effectiveColor}20`
-              : `${effectiveColor}15`,
-          },
-        ]}
-      >
-        <Icon size={20} color={effectiveColor} />
-      </View>
-      <View style={styles.toggleContent}>
-        <Text style={[styles.toggleLabel, { color: colors.text }]}>{label}</Text>
-        <Text style={[styles.toggleDescription, { color: colors.textSecondary }]}>
-          {description}
-        </Text>
-      </View>
-      <Switch
-        value={enabled}
-        onValueChange={onToggle}
-        trackColor={{ false: colors.border, true: colors.success }}
-        thumbColor={enabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-        ios_backgroundColor={colors.border}
-        disabled={disabled}
-      />
-    </View>
-  );
-}
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -108,67 +40,88 @@ interface StatCardProps {
   color: string;
 }
 
-function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
+const StatCard = memo(function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
   const { colors, isDark } = useTheme();
 
+  const cardStyle = useMemo(() => ({
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+  }), [isDark]);
+
+  const iconBgColor = useMemo(
+    () => isDark ? `${color}20` : `${color}15`,
+    [isDark, color]
+  );
+
   return (
-    <View
-      style={[
-        styles.statCard,
-        {
-          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.statIconContainer,
-          { backgroundColor: isDark ? `${color}20` : `${color}15` },
-        ]}
-      >
+    <View style={[styles.statCard, cardStyle]}>
+      <View style={[styles.statIconContainer, { backgroundColor: iconBgColor }]}>
         <Icon size={20} color={color} />
       </View>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
-}
+});
+
+// Format numbers for display (moved outside component to avoid recreation)
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toLocaleString();
+};
 
 export default function AdblockScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { adBlockEnabled, setAdBlockEnabled, connectionStatus } = useVPN();
+  const { hasFeature } = useTier();
+  const isVPNConnected = connectionStatus === 'connected';
+  const hasAdBlockAccess = hasFeature('ad_blocking');
 
   // Real stats from AdGuard Home API
   const [stats, setStats] = useState<AdBlockStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Protection states synced with AdGuard
-  const [malwareBlockEnabled, setMalwareBlockEnabled] = useState(false);
-  const [adultContentBlock, setAdultContentBlock] = useState(false);
+  // Ref for tracking if component is mounted (prevents state updates after unmount)
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Fetch stats from AdGuard Home
   const fetchStats = useCallback(async () => {
     try {
       const data = await getAdBlockStats();
-      setStats(data);
-      setMalwareBlockEnabled(data.safeBrowsingEnabled);
-      setAdultContentBlock(data.parentalEnabled);
+      if (isMountedRef.current) {
+        setStats(data);
+      }
     } catch (error) {
       console.warn('Failed to fetch AdGuard stats:', error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setRefreshing(false);
+      }
     }
   }, []);
 
+  // Defer initial stats fetch to after interactions
   useEffect(() => {
-    fetchStats();
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchStats();
+    });
+
     // Refresh stats every 30 seconds when connected
     const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+
+    return () => {
+      task.cancel();
+      clearInterval(interval);
+    };
   }, [fetchStats]);
 
   const onRefresh = useCallback(() => {
@@ -176,85 +129,38 @@ export default function AdblockScreen() {
     fetchStats();
   }, [fetchStats]);
 
-  // Toggle handlers that call AdGuard API
-  const handleMalwareToggle = async () => {
-    const newValue = !malwareBlockEnabled;
-    setMalwareBlockEnabled(newValue);
-    const success = await setSafeBrowsingEnabled(newValue);
-    if (!success) {
-      setMalwareBlockEnabled(!newValue); // Revert on failure
-    }
-  };
+  // Memoize toggle handler
+  const handleToggle = useCallback(() => {
+    setAdBlockEnabled(!adBlockEnabled);
+  }, [adBlockEnabled, setAdBlockEnabled]);
 
-  const handleAdultContentToggle = async () => {
-    const newValue = !adultContentBlock;
-    setAdultContentBlock(newValue);
-    const success = await setParentalEnabled(newValue);
-    if (!success) {
-      setAdultContentBlock(!newValue); // Revert on failure
-    }
-  };
+  // Memoize gradient colors
+  const gradientColors = useMemo(() =>
+    isDark
+      ? ['#000000', '#0a0a0a', '#000000'] as const
+      : ['#ffffff', '#fafafa', '#f5f5f5'] as const,
+    [isDark]
+  );
 
-  // Pulse animation for the shield when protection is active
-  const pulseScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.5);
+  // Memoize content container style
+  const contentContainerStyle = useMemo(() => ({
+    paddingTop: insets.top + 12,
+    paddingBottom: insets.bottom + 100,
+    paddingHorizontal: 20,
+  }), [insets.top, insets.bottom]);
 
-  const isProtectionActive = adBlockEnabled;
-
-  useEffect(() => {
-    if (isProtectionActive) {
-      pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.03, { duration: 1500 }),
-          withTiming(1, { duration: 1500 })
-        ),
-        -1,
-        true
-      );
-      glowOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.8, { duration: 1500 }),
-          withTiming(0.4, { duration: 1500 })
-        ),
-        -1,
-        true
-      );
-    } else {
-      pulseScale.value = withTiming(1, { duration: 300 });
-      glowOpacity.value = withTiming(0, { duration: 300 });
-    }
-  }, [isProtectionActive]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
-  const activeProtections = [
-    adBlockEnabled,
-    malwareBlockEnabled,
-    adultContentBlock,
-  ].filter(Boolean).length;
-
-  // Format numbers for display
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toLocaleString();
-  };
+  // Memoize card style
+  const heroCardStyle = useMemo(() => ({
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+  }), [isDark]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <LinearGradient
-        colors={isDark
-          ? ['#000000', '#0a0a0a', '#000000']
-          : ['#ffffff', '#fafafa', '#f5f5f5']
-        }
+        colors={gradientColors}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -262,11 +168,7 @@ export default function AdblockScreen() {
       <ScrollShadow size={60}>
         <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={{
-            paddingTop: insets.top + 12,
-            paddingBottom: insets.bottom + 100,
-            paddingHorizontal: 20,
-          }}
+          contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -288,216 +190,87 @@ export default function AdblockScreen() {
                   DNS-level protection
                 </Text>
               </View>
-              <View style={[styles.proBadge, { backgroundColor: isDark ? '#FFD70020' : '#FFD70015' }]}>
-                <Crown size={14} color="#FFD700" />
-                <Text style={styles.proBadgeText}>PRO</Text>
-              </View>
+             
             </View>
           </AnimatedView>
 
-          {/* Hero Status Card */}
+          {/* Upgrade Banner for Free Users */}
+          {!hasAdBlockAccess && (
+            <AnimatedView
+              entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
+              style={styles.upgradeBannerContainer}
+            >
+              <UpgradeBanner feature="ad_blocking" />
+            </AnimatedView>
+          )}
+
+          {/* Hero Card with Interactive Activation Button */}
           <AnimatedView
-            entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.heroCard,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              },
-            ]}
+            entering={FadeInDown.delay(hasAdBlockAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.heroCard, heroCardStyle, (!hasAdBlockAccess || !isVPNConnected) && styles.lockedSection]}
           >
-            {/* Glow effect behind shield */}
-            {isProtectionActive && (
-              <Animated.View style={[styles.glowEffect, glowStyle]}>
-                <LinearGradient
-                  colors={['transparent', colors.success + '40', 'transparent']}
-                  style={styles.glowGradient}
-                />
-              </Animated.View>
-            )}
-
-            <Animated.View style={[styles.heroIconContainer, pulseStyle]}>
-              <LinearGradient
-                colors={isProtectionActive
-                  ? [colors.success, '#22C55E']
-                  : [colors.textMuted, '#6B7280']
-                }
-                style={styles.heroIconGradient}
-              >
-                {isProtectionActive ? (
-                  <ShieldCheck size={52} color="#fff" />
-                ) : (
-                  <ShieldOff size={52} color="#fff" />
-                )}
-              </LinearGradient>
-            </Animated.View>
-
-            <Text style={[styles.heroTitle, { color: colors.text }]}>
-              {isProtectionActive ? 'Protection Active' : 'Protection Disabled'}
-            </Text>
-            <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>
-              {isProtectionActive
-                ? `${activeProtections} protection layer${activeProtections !== 1 ? 's' : ''} active`
-                : 'Enable protection to block ads and trackers'
+            {/* Interactive Activation Button */}
+            <ActivationButton
+              isEnabled={adBlockEnabled}
+              onToggle={handleToggle}
+              disabled={!hasAdBlockAccess || !isVPNConnected}
+              enabledSubtitle="Tap to disable ad blocking"
+              disabledSubtitle={
+                !hasAdBlockAccess
+                  ? "Upgrade to Pro to enable"
+                  : !isVPNConnected
+                    ? "Connect VPN first to enable"
+                    : "Tap to enable ad blocking"
               }
-            </Text>
+              accentColor="#EF4444"
+            />
 
-            {/* Quick Stats Row - Real Data */}
-            <View style={styles.quickStatsRow}>
-              <View style={styles.quickStat}>
-                <Ban size={16} color={colors.error} />
-                <Text style={[styles.quickStatValue, { color: colors.text }]}>
-                  {stats ? formatNumber(stats.totalBlocked) : '-'}
-                </Text>
-                <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Blocked</Text>
-              </View>
-              <View style={[styles.quickStatDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.quickStat}>
-                <Activity size={16} color={colors.primary} />
-                <Text style={[styles.quickStatValue, { color: colors.text }]}>
-                  {stats ? `${stats.blockRate}%` : '-'}
-                </Text>
-                <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Block Rate</Text>
-              </View>
-              <View style={[styles.quickStatDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.quickStat}>
-                <Database size={16} color={colors.success} />
-                <Text style={[styles.quickStatValue, { color: colors.text }]}>
-                  {stats ? formatNumber(stats.filterRulesCount) : '-'}
-                </Text>
-                <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>Rules</Text>
-              </View>
-            </View>
+            {/* Quick Stats Row - only show when enabled AND VPN connected */}
+            {hasAdBlockAccess && adBlockEnabled && isVPNConnected && (
+              <QuickStatsRow
+                stats={[
+                  { icon: Ban, iconColor: colors.error, value: stats ? formatNumber(stats.totalBlocked) : '-', label: 'Blocked' },
+                  { icon: Activity, iconColor: '#3B82F6', value: stats ? `${stats.blockRate}%` : '-', label: 'Block Rate' },
+                  { icon: Database, iconColor: '#3B82F6', value: stats ? formatNumber(stats.filterRulesCount) : '-', label: 'Rules' },
+                ]}
+              />
+            )}
           </AnimatedView>
 
-          {/* Stats Grid - Real Data Only */}
+          {/* Stats Grid */}
           <AnimatedView
             entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
-            style={styles.statsGrid}
+            style={[styles.statsGrid, !isVPNConnected && styles.disabledSection]}
           >
             <StatCard
               icon={Ban}
               value={stats ? formatNumber(stats.totalBlocked) : '-'}
               label="Ads Blocked"
-              color={colors.error}
+              color={isVPNConnected ? colors.error : colors.textMuted}
             />
             <StatCard
               icon={Activity}
               value={stats ? formatNumber(stats.totalQueries) : '-'}
               label="DNS Queries"
-              color={colors.primary}
+              color={isVPNConnected ? '#3B82F6' : colors.textMuted}
             />
-          </AnimatedView>
-
-          {/* Main Protection Toggle */}
-          <AnimatedView
-            entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.mainToggleCard,
-              {
-                backgroundColor: isDark
-                  ? adBlockEnabled ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 255, 255, 0.05)'
-                  : adBlockEnabled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark
-                  ? adBlockEnabled ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)'
-                  : adBlockEnabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(0, 0, 0, 0.05)',
-              },
-            ]}
-          >
-            <View style={styles.mainToggleContent}>
-              <View
-                style={[
-                  styles.mainToggleIcon,
-                  {
-                    backgroundColor: isDark
-                      ? `${adBlockEnabled ? colors.success : colors.error}20`
-                      : `${adBlockEnabled ? colors.success : colors.error}15`,
-                  },
-                ]}
-              >
-                {adBlockEnabled ? (
-                  <Shield size={28} color={colors.success} />
-                ) : (
-                  <ShieldOff size={28} color={colors.error} />
-                )}
-              </View>
-              <View style={styles.mainToggleText}>
-                <Text style={[styles.mainToggleLabel, { color: colors.text }]}>
-                  Ad Blocking
-                </Text>
-                <Text style={[styles.mainToggleDescription, { color: colors.textSecondary }]}>
-                  {adBlockEnabled
-                    ? 'Using AdGuard DNS for blocking'
-                    : 'Enable to block advertisements'
-                  }
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={adBlockEnabled}
-              onValueChange={setAdBlockEnabled}
-              trackColor={{ false: colors.border, true: colors.success }}
-              thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-              ios_backgroundColor={colors.border}
-              style={styles.mainToggleSwitch}
-            />
-          </AnimatedView>
-
-          {/* Protection Settings - Real Features Only */}
-          <AnimatedView
-            entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.settingsCard,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              },
-            ]}
-          >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Protection Settings</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              Additional AdGuard Home features
-            </Text>
-
-            <View style={styles.togglesList}>
-              <ProtectionToggle
-                icon={Bug}
-                label="Malware Protection"
-                description="Block malicious websites & phishing"
-                enabled={malwareBlockEnabled}
-                onToggle={handleMalwareToggle}
-                iconColor={colors.warning}
-                activeColor={colors.success}
-                disabled={connectionStatus !== 'connected'}
-              />
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <ProtectionToggle
-                icon={ShieldOff}
-                label="Adult Content Filter"
-                description="Block adult websites (Parental Control)"
-                enabled={adultContentBlock}
-                onToggle={handleAdultContentToggle}
-                iconColor={colors.error}
-                activeColor={colors.success}
-                disabled={connectionStatus !== 'connected'}
-              />
-            </View>
           </AnimatedView>
 
           {/* Coverage Info */}
           <AnimatedView
-            entering={FadeInDown.delay(150).duration(300).easing(Easing.out(Easing.ease))}
+            entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
             style={[
               styles.coverageCard,
               {
                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
               },
+              !isVPNConnected && styles.disabledSection,
             ]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Coverage</Text>
+            <Text style={[styles.sectionTitle, { color: isVPNConnected ? colors.text : colors.textMuted }]}>Coverage</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              Protection works across your entire device
+              {isVPNConnected ? 'Protection works across your entire device' : 'Connect VPN to enable coverage'}
             </Text>
 
             <View style={styles.coverageList}>
@@ -505,46 +278,46 @@ export default function AdblockScreen() {
                 <View
                   style={[
                     styles.coverageIcon,
-                    { backgroundColor: isDark ? `${colors.primary}20` : `${colors.primary}15` },
+                    { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' },
                   ]}
                 >
-                  <Globe size={20} color={colors.primary} />
+                  <Globe size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: colors.text }]}>All Browsers</Text>
-                <Check size={18} color={colors.success} />
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>All Browsers</Text>
+                <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
               <View style={[styles.coverageDivider, { backgroundColor: colors.border }]} />
               <View style={styles.coverageItem}>
                 <View
                   style={[
                     styles.coverageIcon,
-                    { backgroundColor: isDark ? `${colors.success}20` : `${colors.success}15` },
+                    { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' },
                   ]}
                 >
-                  <Smartphone size={20} color={colors.success} />
+                  <Smartphone size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: colors.text }]}>All Apps</Text>
-                <Check size={18} color={colors.success} />
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>All Apps</Text>
+                <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
               <View style={[styles.coverageDivider, { backgroundColor: colors.border }]} />
               <View style={styles.coverageItem}>
                 <View
                   style={[
                     styles.coverageIcon,
-                    { backgroundColor: isDark ? `${colors.info}20` : `${colors.info}15` },
+                    { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' },
                   ]}
                 >
-                  <Wifi size={20} color={colors.info} />
+                  <Wifi size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: colors.text }]}>System-Wide</Text>
-                <Check size={18} color={colors.success} />
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>System-Wide</Text>
+                <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
             </View>
           </AnimatedView>
 
           {/* Connection Status Info */}
           <AnimatedView
-            entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))}
+            entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
             style={[
               styles.infoCard,
               {
@@ -560,7 +333,7 @@ export default function AdblockScreen() {
             {connectionStatus === 'connected' ? (
               <ShieldCheck size={18} color={colors.success} />
             ) : (
-              <Shield size={18} color="#3B82F6" />
+              <ShieldCheck size={18} color="#3B82F6" />
             )}
             <Text style={[
               styles.infoText,
@@ -620,63 +393,13 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: 24,
     borderWidth: 1,
-    padding: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
     alignItems: 'center',
     marginBottom: 16,
     overflow: 'hidden',
   },
-  glowEffect: {
-    position: 'absolute',
-    top: -50,
-    left: -50,
-    right: -50,
-    bottom: -50,
-  },
-  glowGradient: {
-    flex: 1,
-    borderRadius: 200,
-  },
-  heroIconContainer: {
-    marginBottom: 16,
-  },
-  heroIconGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  heroDescription: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  quickStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
-  quickStat: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  quickStatValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  quickStatLabel: {
-    fontSize: 11,
-  },
-  quickStatDivider: {
-    width: 1,
-    height: 40,
-  },
+  // Stats Grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -705,48 +428,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 13,
   },
-  mainToggleCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  mainToggleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 14,
-  },
-  mainToggleIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mainToggleText: {
-    flex: 1,
-  },
-  mainToggleLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  mainToggleDescription: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  mainToggleSwitch: {
-    transform: [{ scale: 1.1 }],
-  },
-  settingsCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
+  // Section Titles
   sectionTitle: {
     fontSize: 17,
     fontWeight: '600',
@@ -756,37 +438,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
   },
-  togglesList: {
-    gap: 0,
-  },
-  toggleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 12,
-  },
-  toggleIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleContent: {
-    flex: 1,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  toggleDescription: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    marginLeft: 54,
-  },
+  // Coverage Card
   coverageCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -818,6 +470,16 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 54,
   },
+  disabledSection: {
+    opacity: 0.7,
+  },
+  lockedSection: {
+    opacity: 0.5,
+  },
+  upgradeBannerContainer: {
+    marginBottom: 16,
+  },
+  // Info Card
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

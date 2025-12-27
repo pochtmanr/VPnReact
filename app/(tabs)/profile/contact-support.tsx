@@ -1,34 +1,37 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  Alert,
-  Linking,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
-  Mail,
-  Twitter,
+  Bug,
   ChevronDown,
   ChevronUp,
   Clock,
-  User,
+  Mail,
+  MessageCircle,
+  Send,
 } from 'lucide-react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, {
-  FadeInDown,
   Easing,
+  FadeInDown,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { supabase } from '@/lib/supabase';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
@@ -106,12 +109,12 @@ function FAQItem({ question, answer }: FAQItemProps) {
 export default function ContactSupportScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { account } = useAuth();
   const router = useRouter();
 
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bugDescription, setBugDescription] = useState('');
+  const [isSubmittingBug, setIsSubmittingBug] = useState(false);
+  const [bugReportExpanded, setBugReportExpanded] = useState(false);
 
   const faqs = [
     {
@@ -132,31 +135,47 @@ export default function ContactSupportScreen() {
     },
   ];
 
-  const handleSubmit = async () => {
-    if (!subject.trim() || !message.trim()) {
-      Alert.alert('Missing Information', 'Please fill in both subject and message fields.');
+  const handleSubmitBugReport = useCallback(async () => {
+    if (!bugDescription.trim()) {
+      Alert.alert('Missing Information', 'Please describe the bug you encountered.');
       return;
     }
 
-    setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setSubject('');
-    setMessage('');
+    setIsSubmittingBug(true);
+    try {
+      const { error } = await supabase.from('bug_reports').insert({
+        account_id: account?.account_id || null,
+        description: bugDescription.trim(),
+        app_version: '1.0.0',
+        platform: 'ios',
+      });
 
-    Alert.alert(
-      'Message Sent',
-      "Thank you for contacting us. We'll respond within 24-48 hours.",
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
-  };
+      if (error) {
+        console.error('Bug report error:', error);
+        Alert.alert('Error', 'Failed to submit bug report. Please try again.');
+        return;
+      }
+
+      setBugDescription('');
+      setBugReportExpanded(false);
+      Alert.alert(
+        'Thank You!',
+        'Your bug report has been submitted. We appreciate your feedback!',
+      );
+    } catch (err) {
+      console.error('Bug report error:', err);
+      Alert.alert('Error', 'Failed to submit bug report. Please try again.');
+    } finally {
+      setIsSubmittingBug(false);
+    }
+  }, [bugDescription, account?.account_id]);
 
   const handleEmailSupport = () => {
     Linking.openURL('mailto:support@vpnshield.app?subject=Support Request');
   };
 
-  const handleTwitter = () => {
-    Linking.openURL('https://twitter.com/vpnshield');
+  const handleTelegram = () => {
+    Linking.openURL('https://t.me/vpnshield_bot');
   };
 
   // Render back button
@@ -203,7 +222,7 @@ export default function ContactSupportScreen() {
         <View style={styles.header}>
           {renderBackButton()}
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Contact Support
+            Help & Support
           </Text>
           <View style={{ width: 40 }} />
         </View>
@@ -229,106 +248,95 @@ export default function ContactSupportScreen() {
             iconColor={colors.primary}
           />
           <SupportOption
-            icon={Twitter}
-            label="Twitter"
-            subtitle="@vpnshield"
-            onPress={handleTwitter}
-            iconColor="#1DA1F2"
+            icon={MessageCircle}
+            label="Telegram"
+            subtitle="@vpnshield_bot"
+            onPress={handleTelegram}
+            iconColor="#0088CC"
           />
         </AnimatedView>
 
-        {/* Contact Form Card */}
+        {/* Bug Report Card */}
         <AnimatedView
           entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
           style={[
-            styles.formCard,
+            styles.bugReportCard,
             {
               backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Send a Message</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-            We typically respond within 24-48 hours
-          </Text>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>SUBJECT</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                    color: colors.text,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  },
-                ]}
-                value={subject}
-                onChangeText={setSubject}
-                placeholder="What's this about?"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>MESSAGE</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                    color: colors.text,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  },
-                ]}
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Describe your issue or question..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={5}
-                textAlignVertical="top"
-              />
-            </View>
-
-            {user && (
+          <Pressable
+            onPress={() => setBugReportExpanded(!bugReportExpanded)}
+            style={styles.bugReportHeader}
+          >
+            <View style={styles.bugReportHeaderLeft}>
               <View
                 style={[
-                  styles.emailPreview,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)' },
+                  styles.bugIcon,
+                  { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.15)' },
                 ]}
               >
-                <User size={16} color={colors.textMuted} />
-                <Text style={[styles.emailPreviewText, { color: colors.textMuted }]}>
-                  Response will be sent to {user.email}
+                <Bug size={20} color="#EF4444" />
+              </View>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Report a Bug</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                  Help us improve the app
                 </Text>
               </View>
+            </View>
+            {bugReportExpanded ? (
+              <ChevronUp size={20} color={colors.textMuted} />
+            ) : (
+              <ChevronDown size={20} color={colors.textMuted} />
             )}
+          </Pressable>
 
-            <Pressable
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={({ pressed }) => [
-                styles.submitButton,
-                pressed && { opacity: 0.9 },
-                isSubmitting && { opacity: 0.6 },
-              ]}
-            >
-              <LinearGradient
-                colors={['#4F9CD6', '#3B7FC4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitButtonGradient}
+          {bugReportExpanded && (
+            <View style={styles.bugReportContent}>
+              <TextInput
+                style={[
+                  styles.bugInput,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    color: colors.text,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                ]}
+                value={bugDescription}
+                onChangeText={setBugDescription}
+                placeholder="Describe the bug you encountered..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+
+              <Pressable
+                onPress={handleSubmitBugReport}
+                disabled={isSubmittingBug || !bugDescription.trim()}
+                style={({ pressed }) => [
+                  styles.submitBugButton,
+                  {
+                    backgroundColor: bugDescription.trim() ? '#3B82F6' : colors.border,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                  isSubmittingBug && { opacity: 0.6 },
+                ]}
               >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Sending...' : 'Send Message'}
-                </Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
+                {isSubmittingBug ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Send size={18} color="#fff" />
+                    <Text style={styles.submitBugButtonText}>Submit Report</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
         </AnimatedView>
 
         {/* FAQ Card */}
@@ -436,67 +444,63 @@ const styles = StyleSheet.create({
   supportSubtitle: {
     fontSize: 12,
   },
-  // Form Card
-  formCard: {
+  // Bug Report Card
+  bugReportCard: {
     borderRadius: 20,
     borderWidth: 1,
     padding: 16,
     marginBottom: 16,
   },
+  bugReportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bugReportHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bugIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bugReportContent: {
+    marginTop: 16,
+    gap: 12,
+  },
+  bugInput: {
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 100,
+  },
+  submitBugButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  submitBugButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Section Titles
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
   },
   sectionSubtitle: {
     fontSize: 13,
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  form: {
-    gap: 16,
-  },
-  inputContainer: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  input: {
-    fontSize: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  textArea: {
-    minHeight: 120,
-    paddingTop: 14,
-  },
-  emailPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-  },
-  emailPreviewText: {
-    fontSize: 13,
-  },
-  submitButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  submitButtonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: 2,
   },
   // FAQ Card
   faqCard: {

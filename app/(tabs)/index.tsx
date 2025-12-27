@@ -23,6 +23,8 @@ import {
   Eye,
   ChevronRight,
   Download,
+  Users,
+  Clock,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -33,13 +35,18 @@ import Animated, {
   withSequence,
   withTiming,
   withSpring,
+  cancelAnimation,
 } from 'react-native-reanimated';
+import { useIsFocused } from '@react-navigation/native';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useVPN } from '@/context/VPNContext';
+import { useParentalControls } from '@/context/ParentalControlsContext';
+import { useTier } from '@/context/TierContext';
 import ServerBottomSheet, { ServerBottomSheetRef } from '@/components/ServerBottomSheet';
-import { ScrollShadow } from '@/components/ui';
+import { ScrollShadow, QuickStatsRow } from '@/components/ui';
+import { UpgradeBanner } from '@/components/tier';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -56,12 +63,22 @@ interface ConnectionButtonProps {
 
 function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, serverLocation }: ConnectionButtonProps) {
   const { colors, isDark } = useTheme();
+  const isFocused = useIsFocused();
 
   const scale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
 
+  // Stop animations when tab is not focused to prevent performance issues
   useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(pulseScale);
+      cancelAnimation(glowOpacity);
+      pulseScale.value = 1;
+      glowOpacity.value = isConnected ? 0.25 : 0;
+      return;
+    }
+
     if (isConnected) {
       // Subtle pulsing glow when connected
       pulseScale.value = withRepeat(
@@ -94,7 +111,12 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
       pulseScale.value = withTiming(1, { duration: 300 });
       glowOpacity.value = withTiming(0, { duration: 300 });
     }
-  }, [isConnected, isConnecting]);
+
+    return () => {
+      cancelAnimation(pulseScale);
+      cancelAnimation(glowOpacity);
+    };
+  }, [isConnected, isConnecting, isFocused, pulseScale, glowOpacity]);
 
   const handlePress = () => {
     if (isConnecting) return;
@@ -137,7 +159,7 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
           styles.buttonGlow,
           glowStyle,
           {
-            backgroundColor: isConnected ? colors.success : isConnecting ? colors.warning : 'transparent',
+            backgroundColor: isConnected ? colors.success : isConnecting ? '#3B82F6' : 'transparent',
           },
         ]}
       />
@@ -150,9 +172,9 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
       >
         <LinearGradient
           colors={isConnected
-            ? [colors.success, '#1B9B5E']
+            ? [colors.success, '#16A34A']
             : isConnecting
-              ? [colors.warning, '#D97706']
+              ? ['#3B82F6', '#2563EB']
               : isDark
                 ? ['#3A3A3E', '#2A2A2E']
                 : ['#F5F5F7', '#E8E8ED']
@@ -171,7 +193,7 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
 
       {/* Status label */}
       <Text style={[styles.buttonStatusTitle, {
-        color: isConnected ? colors.success : isConnecting ? colors.warning : colors.text
+        color: isConnected ? colors.success : isConnecting ? '#3B82F6' : colors.text
       }]}>
         {isConnecting
           ? 'Connecting'
@@ -202,7 +224,7 @@ function getGreeting() {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { account, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const {
     servers,
     selectedServer,
@@ -219,6 +241,13 @@ export default function HomeScreen() {
     refreshServers,
     installVPNProfile,
   } = useVPN();
+  const {
+    isEnabled: parentalEnabled,
+    toggleParentalControls,
+  } = useParentalControls();
+  const { hasFeature, isPro, tierDisplayName } = useTier();
+  const hasParentalAccess = hasFeature('parental_controls');
+  const hasAdBlockAccess = hasFeature('ad_blocking');
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -258,8 +287,8 @@ export default function HomeScreen() {
   }, [toggleFavorite]);
 
   const isPremiumLocked = useCallback((server: typeof servers[0]) =>
-    server.is_premium && account?.subscription_tier === 'free',
-    [account?.subscription_tier]
+    server.is_premium && !isPro,
+    [isPro]
   );
 
   // Helper to get country flag emoji from country code
@@ -312,25 +341,41 @@ export default function HomeScreen() {
             entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.header}
           >
-            <View>
-              <Text style={[styles.greeting, { color: colors.text }]}>
-                {getGreeting()}
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {isConnected
-                  ? 'Your connection is secure'
-                  : 'Connect to protect your privacy'}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.tierBadge,
-                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
-              ]}
-            >
-              <Text style={[styles.tierText, { color: colors.textSecondary }]}>
-                {account?.subscription_tier?.toUpperCase() || 'FREE'}
-              </Text>
+            <View style={styles.headerRow}>
+              <View>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                  {getGreeting()}
+                </Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                  {isConnected
+                    ? 'Your connection is secure'
+                    : 'Connect to protect your privacy'}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.tierBadge,
+                  {
+                    backgroundColor: isPro
+                      ? (isDark ? '#FFD70020' : '#FFD70015')
+                      : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'),
+                  },
+                ]}
+              >
+                {isPro && (
+                  <Shield size={14} color="#FFD700" />
+                )}
+                <Text
+                  style={[
+                    styles.tierText,
+                    {
+                      color: isPro ? '#FFD700' : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {tierDisplayName.toUpperCase()}
+                </Text>
+              </View>
             </View>
           </AnimatedView>
 
@@ -402,28 +447,29 @@ export default function HomeScreen() {
               serverLocation={selectedServer ? `${selectedServer.city}, ${selectedServer.country}` : undefined}
             />
 
-            {/* Connection Stats (when connected) */}
-            {isConnected && selectedServer && (
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <MapPin size={16} color={colors.primary} />
-                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>Server</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{selectedServer.city}</Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Gauge size={16} color={colors.info} />
-                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>Latency</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{selectedServer.latency_ms || '--'}ms</Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Wifi size={16} color={colors.success} />
-                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>Status</Text>
-                  <Text style={[styles.statValue, { color: colors.success }]}>Secure</Text>
-                </View>
-              </View>
-            )}
+            {/* Connection Stats - Always visible */}
+            <QuickStatsRow
+              stats={[
+                {
+                  icon: MapPin,
+                  iconColor: isConnected ? colors.primary : colors.textMuted,
+                  value: selectedServer ? selectedServer.city : '--',
+                  label: 'Server',
+                },
+                {
+                  icon: Gauge,
+                  iconColor: isConnected ? colors.info : colors.textMuted,
+                  value: selectedServer ? `${selectedServer.latency_ms || '--'}ms` : '--',
+                  label: 'Latency',
+                },
+                {
+                  icon: Clock,
+                  iconColor: isConnected ? colors.success : colors.textMuted,
+                  value: isConnected ? 'Active' : 'Idle',
+                  label: 'Status',
+                },
+              ]}
+            />
           </AnimatedView>
 
           {/* Server Selection Button */}
@@ -470,9 +516,19 @@ export default function HomeScreen() {
             </Pressable>
           </AnimatedView>
 
+          {/* Upgrade Banner for Free Users */}
+          {!isPro && (
+            <AnimatedView
+              entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
+              style={styles.upgradeBannerContainer}
+            >
+              <UpgradeBanner />
+            </AnimatedView>
+          )}
+
           {/* Quick Settings */}
           <AnimatedView
-            entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
+            entering={FadeInDown.delay(isPro ? 125 : 150).duration(300).easing(Easing.out(Easing.ease))}
             style={[
               styles.togglesCard,
               {
@@ -483,25 +539,79 @@ export default function HomeScreen() {
           >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Settings</Text>
 
-            {/* Ad Blocker */}
-            <View style={styles.settingRow}>
+            {/* Parental Controls - Primary Position */}
+            <View style={[styles.settingRow, (!isConnected || !hasParentalAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
-                  <Eye size={20} color="#EF4444" />
+                <View style={[
+                  styles.settingIcon,
+                  {
+                    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                    opacity: (isConnected && hasParentalAccess) ? 1 : 0.5,
+                  }
+                ]}>
+                  <Users size={20} color={(isConnected && hasParentalAccess) ? '#3B82F6' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Ad Blocker</Text>
+                  <Text style={[styles.settingLabel, { color: (isConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
+                    Parental Controls
+                  </Text>
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {isConnected ? 'Reconnect to apply changes' : 'Block ads & trackers'}
+                    {!hasParentalAccess
+                      ? 'Upgrade to Pro to enable'
+                      : !isConnected
+                        ? 'Connect VPN to enable'
+                        : parentalEnabled
+                          ? 'Content filtering active'
+                          : 'Protect children from harmful content'}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={parentalEnabled}
+                onValueChange={toggleParentalControls}
+                disabled={!isConnected || !hasParentalAccess}
+                trackColor={{ false: colors.border, true: '#3B82F6' }}
+                thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
+                ios_backgroundColor={colors.border}
+                style={{ opacity: (isConnected && hasParentalAccess) ? 1 : 0.5 }}
+              />
+            </View>
+
+            <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
+
+            {/* Ad Blocker */}
+            <View style={[styles.settingRow, (!isConnected || !hasAdBlockAccess) && styles.settingRowDisabled]}>
+              <View style={styles.settingLeft}>
+                <View style={[
+                  styles.settingIcon,
+                  {
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+                    opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5,
+                  }
+                ]}>
+                  <Eye size={20} color={(isConnected && hasAdBlockAccess) ? '#EF4444' : colors.textMuted} />
+                </View>
+                <View style={styles.settingText}>
+                  <Text style={[styles.settingLabel, { color: (isConnected && hasAdBlockAccess) ? colors.text : colors.textMuted }]}>
+                    Ad Blocker
+                  </Text>
+                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                    {!hasAdBlockAccess
+                      ? 'Upgrade to Pro to enable'
+                      : !isConnected
+                        ? 'Connect VPN to enable'
+                        : 'Block ads & trackers'}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={adBlockEnabled}
                 onValueChange={setAdBlockEnabled}
-                trackColor={{ false: colors.border, true: '#EF4444' }}
+                disabled={!isConnected || !hasAdBlockAccess}
+                trackColor={{ false: colors.border, true: '#3B82F6' }}
                 thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                 ios_backgroundColor={colors.border}
+                style={{ opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5 }}
               />
             </View>
 
@@ -509,11 +619,11 @@ export default function HomeScreen() {
               <View
                 style={[
                   styles.loginPrompt,
-                  { backgroundColor: isDark ? 'rgba(255, 149, 0, 0.1)' : 'rgba(255, 149, 0, 0.08)' },
+                  { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)' },
                 ]}
               >
-                <Lock size={14} color={colors.warning} />
-                <Text style={[styles.loginPromptText, { color: colors.warning }]}>
+                <Lock size={14} color={colors.primary} />
+                <Text style={[styles.loginPromptText, { color: colors.primary }]}>
                   Sign in to save your preferences
                 </Text>
               </View>
@@ -565,27 +675,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    marginBottom: 20,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
-  greeting: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: '700',
   },
-  subtitle: {
-    fontSize: 14,
+  headerSubtitle: {
+    fontSize: 16,
     marginTop: 4,
   },
   tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 20,
+    gap: 4,
   },
   tierText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 16,
@@ -682,31 +797,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
   },
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 11,
-    marginTop: 4,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-  },
   // Server Select Button
   serverSelectButton: {
     flexDirection: 'row',
@@ -758,6 +848,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
   },
+  settingRowDisabled: {
+    opacity: 0.7,
+  },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -798,6 +891,9 @@ const styles = StyleSheet.create({
   loginPromptText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  upgradeBannerContainer: {
+    marginBottom: 16,
   },
   // Info Card
   infoCard: {

@@ -21,7 +21,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, {
-  FadeIn,
   FadeInDown,
   FadeInUp,
   Easing,
@@ -30,6 +29,7 @@ import Animated, {
   withRepeat,
   withTiming,
   withSequence,
+  withDelay,
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/context/ThemeContext';
@@ -58,32 +58,51 @@ const FloatingOrb = ({
 }: FloatingOrbProps) => {
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
-  const opacity = useSharedValue(0.35);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withRepeat(
-      withSequence(
-        withTiming(-35, { duration, easing: Easing.inOut(Easing.ease) }),
-        withTiming(35, { duration, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
+    // Initial fade in
+    opacity.value = withDelay(
+      delay,
+      withTiming(0.35, { duration: 1500, easing: Easing.out(Easing.ease) })
     );
-    translateX.value = withRepeat(
-      withSequence(
-        withTiming(25, { duration: duration * 1.2, easing: Easing.inOut(Easing.ease) }),
-        withTiming(-25, { duration: duration * 1.2, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
+
+    // Start animations after fade in
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(-35, { duration, easing: Easing.inOut(Easing.ease) }),
+          withTiming(35, { duration, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
     );
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.5, { duration: duration * 0.5 }),
-        withTiming(0.25, { duration: duration * 0.5 })
-      ),
-      -1,
-      true
+    translateX.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(25, { duration: duration * 1.2, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-25, { duration: duration * 1.2, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
+    );
+
+    // Pulse opacity after initial fade in
+    const opacityPulseDelay = delay + 1500;
+    opacity.value = withDelay(
+      opacityPulseDelay,
+      withRepeat(
+        withSequence(
+          withTiming(0.5, { duration: duration * 0.5 }),
+          withTiming(0.25, { duration: duration * 0.5 })
+        ),
+        -1,
+        true
+      )
     );
   }, []);
 
@@ -97,7 +116,6 @@ const FloatingOrb = ({
 
   return (
     <AnimatedView
-      entering={FadeIn.delay(delay).duration(1500)}
       style={[
         {
           position: 'absolute',

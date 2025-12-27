@@ -56,6 +56,18 @@ CREATE TABLE IF NOT EXISTS public.user_favorites (
     UNIQUE(user_id, server_id)
 );
 
+-- Bug Reports table
+CREATE TABLE IF NOT EXISTS public.bug_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id TEXT,
+    description TEXT NOT NULL,
+    app_version TEXT,
+    platform TEXT CHECK (platform IN ('ios', 'android', 'web')),
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Row Level Security (RLS) Policies
 
 -- Enable RLS on all tables
@@ -63,6 +75,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vpn_servers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.connection_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bug_reports ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view their own profile"
@@ -105,6 +118,11 @@ CREATE POLICY "Users can delete their own favorites"
     ON public.user_favorites FOR DELETE
     USING (auth.uid() = user_id);
 
+-- Bug Reports policies (anyone can insert, only admins can read)
+CREATE POLICY "Anyone can insert bug reports"
+    ON public.bug_reports FOR INSERT
+    WITH CHECK (true);
+
 -- Function to automatically create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -137,6 +155,10 @@ CREATE TRIGGER update_profiles_updated_at
 
 CREATE TRIGGER update_vpn_servers_updated_at
     BEFORE UPDATE ON public.vpn_servers
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_bug_reports_updated_at
+    BEFORE UPDATE ON public.bug_reports
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Enable Realtime for connection_logs (skip if already added)
