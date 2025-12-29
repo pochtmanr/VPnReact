@@ -10,10 +10,12 @@ import 'react-native-reanimated';
 
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { RevenueCatProvider, useRevenueCat } from '@/context/RevenueCatContext';
 import { TierProvider } from '@/context/TierContext';
 import { VPNProvider } from '@/context/VPNContext';
 import { ParentalControlsProvider } from '@/context/ParentalControlsContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { GlobalPaywallModal } from '@/components/tier';
 
 export {
   ErrorBoundary,
@@ -98,6 +100,7 @@ function RootLayoutNav() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <GlobalPaywallModal />
     </NavigationThemeProvider>
   );
 }
@@ -125,13 +128,15 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <TierProvider>
-          <VPNProvider>
-            <ParentalControlsProvider>
-              <RootLayoutNav />
-            </ParentalControlsProvider>
-          </VPNProvider>
-        </TierProvider>
+        <RevenueCatProvider>
+          <TierProvider>
+            <VPNProvider>
+              <ParentalControlsProvider>
+                <RootLayoutNav />
+              </ParentalControlsProvider>
+            </VPNProvider>
+          </TierProvider>
+        </RevenueCatProvider>
       </AuthProvider>
     </ThemeProvider>
   );

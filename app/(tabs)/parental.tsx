@@ -31,7 +31,6 @@ import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useVPN } from '@/context/VPNContext';
-import { useTier } from '@/context/TierContext';
 import {
   useParentalControls,
   CONTENT_CATEGORIES,
@@ -39,7 +38,7 @@ import {
   CategoryInfo,
 } from '@/context/ParentalControlsContext';
 import { ScrollShadow, ActivationButton, QuickStatsRow } from '@/components/ui';
-import { UpgradeBanner } from '@/components/tier';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -93,9 +92,12 @@ const CategoryRow = memo(function CategoryRow({
     }
   }, [category.id, onToggle, disabled]);
 
+  // When disabled, use muted colors for icon background
   const iconBgColor = useMemo(
-    () => (isDark ? `${category.color}20` : `${category.color}15`),
-    [isDark, category.color]
+    () => disabled
+      ? (isDark ? 'rgba(128, 128, 128, 0.15)' : 'rgba(128, 128, 128, 0.1)')
+      : (isDark ? `${category.color}20` : `${category.color}15`),
+    [isDark, category.color, disabled]
   );
 
   const iconColor = disabled ? colors.textMuted : category.color;
@@ -110,19 +112,19 @@ const CategoryRow = memo(function CategoryRow({
           <Text style={[styles.categoryName, { color: disabled ? colors.textMuted : colors.text }]}>
             {category.name}
           </Text>
-          <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+          <Text style={[styles.categoryDescription, { color: disabled ? colors.textMuted : colors.textSecondary }]}>
             {category.description}
           </Text>
         </View>
       </View>
       <Switch
-        value={isBlocked}
+        value={disabled ? false : isBlocked}
         onValueChange={handleToggle}
         trackColor={{ false: colors.border, true: '#3B82F6' }}
-        thumbColor={isBlocked ? '#fff' : isDark ? '#666' : '#f4f4f4'}
+        thumbColor={isBlocked && !disabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
         ios_backgroundColor={colors.border}
         disabled={disabled}
-        style={disabled && { opacity: 0.5 }}
+        style={{ opacity: disabled ? 0.4 : 1 }}
       />
     </View>
   );
@@ -144,9 +146,9 @@ const DomainRow = memo(function DomainRow({ domain, onRemove, colors, disabled =
   }, [domain, onRemove, disabled]);
 
   return (
-    <View style={[styles.domainRow, disabled && styles.disabledRow]}>
+    <View style={[styles.domainRow, disabled && styles.disabledRowStrong]}>
       <Text style={[styles.domainText, { color: disabled ? colors.textMuted : colors.text }]}>{domain}</Text>
-      <Pressable onPress={handleRemove} style={styles.removeButton} disabled={disabled}>
+      <Pressable onPress={handleRemove} style={[styles.removeButton, { opacity: disabled ? 0.4 : 1 }]} disabled={disabled}>
         <Trash2 size={18} color={disabled ? colors.textMuted : "#EF4444"} />
       </Pressable>
     </View>
@@ -161,9 +163,18 @@ export default function ParentalControlsScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { connectionStatus } = useVPN();
-  const { hasFeature } = useTier();
   const isVPNConnected = connectionStatus === 'connected';
-  const hasParentalAccess = hasFeature('parental_controls');
+
+  // Feature gating with automatic paywall
+  const {
+    hasAccess: hasParentalAccess,
+    requestAccess,
+    isGating,
+    getDisabledReason,
+  } = useFeatureGate('parental_controls', {
+    requiresVPN: true,
+    isVPNConnected,
+  });
 
   const {
     isEnabled,
@@ -217,19 +228,32 @@ export default function ParentalControlsScreen() {
     }
   }, [refreshStats]);
 
-  // Toggle handler - context handles isToggling state and error recovery
+  // Toggle handler with paywall gating
   const handleToggleParentalControls = useCallback(
     async (newEnabled: boolean) => {
-      if (isToggling) return; // Prevent rapid toggling (context manages this)
+      if (isToggling || isGating) return; // Prevent rapid toggling
+
+      // If turning off, always allow
+      if (!newEnabled) {
+        try {
+          await toggleParentalControls(false);
+        } catch (err) {
+          console.log('Toggle error handled by context');
+        }
+        return;
+      }
+
+      // If turning on, check access (shows paywall if needed)
+      const granted = await requestAccess();
+      if (!granted) return;
 
       try {
-        await toggleParentalControls(newEnabled);
+        await toggleParentalControls(true);
       } catch (err) {
-        // Error is already handled by context and shown via useEffect above
         console.log('Toggle error handled by context');
       }
     },
-    [toggleParentalControls, isToggling]
+    [toggleParentalControls, isToggling, isGating, requestAccess]
   );
 
   const handleAddDomain = useCallback(async () => {
@@ -359,33 +383,18 @@ export default function ParentalControlsScreen() {
             </Text>
           </AnimatedView>
 
-          {/* Upgrade Banner for Free Users */}
-          {!hasParentalAccess && (
-            <AnimatedView
-              entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-              style={styles.upgradeBannerContainer}
-            >
-              <UpgradeBanner feature="parental_controls" />
-            </AnimatedView>
-          )}
-
           {/* Hero Card with Interactive Activation Button */}
           <AnimatedView
             entering={FadeInDown.delay(hasParentalAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
             style={[styles.heroCard, cardStyle, (!hasParentalAccess || !isVPNConnected) && styles.lockedSection]}
           >
+            {/* Tappable even when locked to show paywall */}
             <ActivationButton
               isEnabled={isEnabled}
               onToggle={() => handleToggleParentalControls(!isEnabled)}
-              disabled={!hasParentalAccess || !isVPNConnected}
+              disabled={isGating || isToggling} // Only disable during paywall/toggle
               enabledSubtitle={`${blockedCategories.length} categories blocked`}
-              disabledSubtitle={
-                !hasParentalAccess
-                  ? "Upgrade to Pro to enable"
-                  : !isVPNConnected
-                    ? "Connect VPN first to enable"
-                    : "Tap to enable content filtering"
-              }
+              disabledSubtitle={getDisabledReason() || "Tap to enable content filtering"}
               accentColor="#3B82F6"
             />
 
@@ -401,79 +410,105 @@ export default function ParentalControlsScreen() {
           </AnimatedView>
 
           {/* Content Categories */}
-          <AnimatedView
-            entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
-            style={[styles.sectionCard, cardStyle, (!isVPNConnected || !hasParentalAccess) && styles.disabledSection]}
-          >
-            <Text style={[styles.sectionTitle, { color: (isVPNConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
-              Content Categories
-            </Text>
-            <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-              {!hasParentalAccess ? 'Upgrade to Pro to manage categories' : (isVPNConnected ? 'Select categories to block' : 'Connect VPN to manage categories')}
-            </Text>
+          {(() => {
+            // Determine if categories section should be disabled and why
+            const isCategoriesDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
+            const getCategoriesDescription = () => {
+              if (!hasParentalAccess) return 'Upgrade to Pro to manage categories';
+              if (!isEnabled) return 'Enable Parental Controls above to manage categories';
+              if (!isVPNConnected) return 'Connect VPN to manage categories';
+              return 'Select categories to block';
+            };
 
-            {CONTENT_CATEGORIES.map((category, index) => (
-              <React.Fragment key={category.id}>
-                {index > 0 && (
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                )}
-                <CategoryRow
-                  category={category}
-                  isBlocked={blockedCategoriesSet.has(category.id)}
-                  onToggle={handleCategoryToggle}
-                  isDark={isDark}
-                  colors={colors}
-                  disabled={!isVPNConnected || !hasParentalAccess}
-                />
-              </React.Fragment>
-            ))}
-          </AnimatedView>
-
-          {/* Custom Blocked Domains */}
-          <AnimatedView
-            entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
-            style={[styles.sectionCard, cardStyle, (!isVPNConnected || !hasParentalAccess) && styles.disabledSection]}
-          >
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: (isVPNConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
-                  Custom Blocked Sites
+            return (
+              <AnimatedView
+                entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
+                style={[styles.sectionCard, cardStyle, isCategoriesDisabled && styles.disabledSection]}
+              >
+                <Text style={[styles.sectionTitle, { color: isCategoriesDisabled ? colors.textMuted : colors.text }]}>
+                  Content Categories
                 </Text>
                 <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-                  {!hasParentalAccess ? 'Upgrade to Pro to manage sites' : (isVPNConnected ? 'Add specific websites to block' : 'Connect VPN to manage sites')}
+                  {getCategoriesDescription()}
                 </Text>
-              </View>
-              <Pressable
-                onPress={openAddDomainModal}
-                style={[styles.addButton, { backgroundColor: (isVPNConnected && hasParentalAccess) ? '#3B82F6' : colors.textMuted }]}
-                disabled={!isVPNConnected || !hasParentalAccess}
-              >
-                <Plus size={18} color="#fff" />
-              </Pressable>
-            </View>
 
-            {customBlockedDomains.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-                  No custom sites blocked yet
-                </Text>
-              </View>
-            ) : (
-              customBlockedDomains.map((domain, index) => (
-                <React.Fragment key={domain}>
-                  {index > 0 && (
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                  )}
-                  <DomainRow
-                    domain={domain}
-                    onRemove={handleRemoveDomain}
-                    colors={colors}
-                    disabled={!isVPNConnected || !hasParentalAccess}
-                  />
-                </React.Fragment>
-              ))
-            )}
-          </AnimatedView>
+                {CONTENT_CATEGORIES.map((category, index) => (
+                  <React.Fragment key={category.id}>
+                    {index > 0 && (
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    )}
+                    <CategoryRow
+                      category={category}
+                      isBlocked={blockedCategoriesSet.has(category.id)}
+                      onToggle={handleCategoryToggle}
+                      isDark={isDark}
+                      colors={colors}
+                      disabled={isCategoriesDisabled}
+                    />
+                  </React.Fragment>
+                ))}
+              </AnimatedView>
+            );
+          })()}
+
+          {/* Custom Blocked Domains */}
+          {(() => {
+            // Determine if domains section should be disabled and why
+            const isDomainsDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
+            const getDomainsDescription = () => {
+              if (!hasParentalAccess) return 'Upgrade to Pro to manage sites';
+              if (!isEnabled) return 'Enable Parental Controls above to manage sites';
+              if (!isVPNConnected) return 'Connect VPN to manage sites';
+              return 'Add specific websites to block';
+            };
+
+            return (
+              <AnimatedView
+                entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
+                style={[styles.sectionCard, cardStyle, isDomainsDisabled && styles.disabledSection]}
+              >
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: isDomainsDisabled ? colors.textMuted : colors.text }]}>
+                      Custom Blocked Sites
+                    </Text>
+                    <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+                      {getDomainsDescription()}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={openAddDomainModal}
+                    style={[styles.addButton, { backgroundColor: isDomainsDisabled ? colors.textMuted : '#3B82F6', opacity: isDomainsDisabled ? 0.5 : 1 }]}
+                    disabled={isDomainsDisabled}
+                  >
+                    <Plus size={18} color="#fff" />
+                  </Pressable>
+                </View>
+
+                {customBlockedDomains.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
+                      No custom sites blocked yet
+                    </Text>
+                  </View>
+                ) : (
+                  customBlockedDomains.map((domain, index) => (
+                    <React.Fragment key={domain}>
+                      {index > 0 && (
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                      )}
+                      <DomainRow
+                        domain={domain}
+                        onRemove={handleRemoveDomain}
+                        colors={colors}
+                        disabled={isDomainsDisabled}
+                      />
+                    </React.Fragment>
+                  ))
+                )}
+              </AnimatedView>
+            );
+          })()}
 
           {/* Info Card */}
           <AnimatedView
@@ -640,16 +675,16 @@ const styles = StyleSheet.create({
     marginLeft: 56,
   },
   disabledRow: {
-    opacity: 0.6,
+    opacity: 0.5,
+  },
+  disabledRowStrong: {
+    opacity: 0.4,
   },
   disabledSection: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   lockedSection: {
     opacity: 0.5,
-  },
-  upgradeBannerContainer: {
-    marginBottom: 16,
   },
   // Add Button
   addButton: {

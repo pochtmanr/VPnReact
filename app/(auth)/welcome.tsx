@@ -1,9 +1,8 @@
-import { BlurView } from 'expo-blur';
+import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm-plex-serif';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowRight, CheckCircle2, Globe, Lock, Shield, Zap } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Dimensions,
   Image,
@@ -12,37 +11,105 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { useTheme } from '@/context/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Feature Chip Component
-interface FeatureChipProps {
-  icon: React.ElementType;
-  label: string;
-}
+const PHRASES = [
+  'to privacy.',
+  'to be let alone.',
+  'to disappear.',
+  'to be forgotten.',
+  'to say no.',
+  'to silence.',
+  'to be unseen.',
+  'to be untracked.',
+  'to digital sovereignty.',
+  'to hold their own keys.',
+  'to watch the watchmen.',
+  'to none of your business.',
+  'to anonymity.',
+  'to secrecy.',
+  'to be invisible.',
+  'to go dark.',
+  'to close the curtains.',
+  'to lock the door.',
+  'to keep secrets.',
+  'to own their data.',
+  'to leave no trace.',
+  'to a private life.',
+  'to an exit.',
+  'to be unreachable.',
+  'to refuse.',
+  'to encrypt.',
+  'to a closed door.',
+];
 
-const FeatureChip = ({ icon: Icon, label }: FeatureChipProps) => {
-  return (
-    <View style={styles.featureChip}>
-      <Icon size={16} color="#FFFFFF" />
-      <Text style={styles.featureChipText}>{label}</Text>
-    </View>
-  );
-};
+const PHRASE_HEIGHT = 44;
+const HOLD_DURATION = 3000;
+const SLIDE_DURATION = 600;
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const translateY = useSharedValue(0);
 
-  const features = [
-    { icon: Shield, label: 'Secure' },
-    { icon: Zap, label: 'Fast' },
-    { icon: Globe, label: 'Global' },
-    { icon: Lock, label: 'Private' },
-  ];
+  const [fontsLoaded] = useFonts({
+    IBMPlexSerif_400Regular_Italic,
+  });
+
+  // Single declarative animation - runs entirely on UI thread
+  useEffect(() => {
+    if (!fontsLoaded) return;
+
+    // Build the full animation sequence once
+    // Each step: hold, then slide to next
+    const steps = PHRASES.map((_, index) => {
+      const targetY = -index * PHRASE_HEIGHT;
+      return withDelay(
+        HOLD_DURATION,
+        withTiming(targetY, {
+          duration: SLIDE_DURATION,
+          easing: Easing.inOut(Easing.cubic),
+        })
+      );
+    });
+
+    // Start at 0, then sequence through all phrases, then loop
+    translateY.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 0 }), // Start position
+        ...steps.slice(1), // Skip first (already at 0), animate to rest
+        withDelay(
+          HOLD_DURATION,
+          withTiming(0, { duration: SLIDE_DURATION, easing: Easing.inOut(Easing.cubic) })
+        ) // Return to start
+      ),
+      -1, // Infinite loop
+      false // Don't reverse
+    );
+  }, [fontsLoaded, translateY]);
+
+  // Single animated style - only translateY, GPU-accelerated
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -50,9 +117,7 @@ export default function WelcomeScreen() {
 
       {/* Background Image */}
       <Image
-        source={{
-          uri: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80',
-        }}
+        source={require('@/assets/images/welcome.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       />
@@ -60,12 +125,12 @@ export default function WelcomeScreen() {
       {/* Gradient Overlay */}
       <LinearGradient
         colors={[
-          'rgba(0, 0, 0, 0.2)',
-          'rgba(0, 0, 0, 0.4)',
-          'rgba(0, 0, 0, 0.75)',
+          'rgba(0, 0, 0, 0.3)',
+          'rgba(0, 0, 0, 0.5)',
+          'rgba(0, 0, 0, 0.8)',
           '#000000',
         ]}
-        locations={[0, 0.3, 0.65, 1]}
+        locations={[0, 0.3, 0.6, 1]}
         style={styles.gradientOverlay}
       />
 
@@ -78,100 +143,57 @@ export default function WelcomeScreen() {
           },
         ]}
       >
-        {/* Top Badge */}
-        <View style={styles.topBadge}>
-          <BlurView intensity={40} tint="dark" style={styles.topBadgeBlur}>
-            <CheckCircle2 size={14} color={colors.success} />
-            <Text style={styles.topBadgeText}>Trusted by 10M+ users</Text>
-          </BlurView>
-        </View>
+        {/* Centered Text Section */}
+        <View style={styles.animationContainer}>
+          {/* Static Row - Never re-renders */}
+          <Text style={styles.staticText}>Everybody has a right</Text>
 
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>
-            Your Privacy,{'\n'}
-            <Text style={{ color: '#3B82F6' }}>Secured</Text>
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            Military-grade encryption to protect your online activity. Browse freely, stay anonymous.
-          </Text>
-        </View>
-
-        {/* Feature Chips */}
-        <View style={styles.featuresRow}>
-          {features.map((feature) => (
-            <FeatureChip
-              key={feature.label}
-              icon={feature.icon}
-              label={feature.label}
-            />
-          ))}
-        </View>
-
-        {/* CTA Section */}
-        <View style={styles.ctaSection}>
-          {/* Glass Card */}
-          <View style={styles.ctaCard}>
-            <BlurView intensity={30} tint="dark" style={styles.ctaCardBlur}>
-              <View style={styles.ctaCardContent}>
-                {/* Benefit row */}
-                <View style={styles.benefitRow}>
-                  <View style={styles.benefitItem}>
-                    <Text style={styles.benefitValue}>100+</Text>
-                    <Text style={styles.benefitLabel}>Servers</Text>
-                  </View>
-                  <View style={styles.benefitDivider} />
-                  <View style={styles.benefitItem}>
-                    <Text style={styles.benefitValue}>50+</Text>
-                    <Text style={styles.benefitLabel}>Countries</Text>
-                  </View>
-                  <View style={styles.benefitDivider} />
-                  <View style={styles.benefitItem}>
-                    <Text style={styles.benefitValue}>0</Text>
-                    <Text style={styles.benefitLabel}>Logs</Text>
-                  </View>
-                </View>
-
-                {/* Primary Button */}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    {
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                      opacity: pressed ? 0.9 : 1,
-                    },
-                  ]}
-                  onPress={() => router.push('/(auth)/account')}
-                >
-                  <LinearGradient
-                    colors={['#3B82F6', '#2563EB']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.buttonGradient}
-                  >
-                    <Text style={styles.primaryButtonText}>Start Protecting</Text>
-                    <ArrowRight size={20} color="#FFFFFF" />
-                  </LinearGradient>
-                </Pressable>
-
-                {/* Secondary info */}
-                <Text style={styles.freeText}>Free servers available - No credit card required</Text>
-              </View>
-            </BlurView>
+          {/* Vertical Carousel - Single translateY animation */}
+          <View style={styles.carouselMask}>
+            <Animated.View style={[styles.carouselTrack, animatedStyle]}>
+              {PHRASES.map((phrase, index) => (
+                <Text key={index} style={styles.animatedText}>
+                  {phrase}
+                </Text>
+              ))}
+            </Animated.View>
           </View>
+        </View>
 
-          {/* Footer */}
+        {/* Bottom Section */}
+        <View style={styles.bottomSection}>
+          {/* CTA Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              {
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+            onPress={() => router.push('/(auth)/account')}
+          >
+            <LinearGradient
+              colors={['#3B82F6', '#2563EB']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.primaryButtonText}>Continue</Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Terms of Service */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               By continuing, you agree to our{' '}
             </Text>
             <Pressable>
-              <Text style={[styles.footerLink, { color: '#3B82F6' }]}>
-                Terms & Privacy
-              </Text>
+              <Text style={styles.footerLink}>Terms of Service</Text>
+            </Pressable>
+            <Text style={styles.footerText}> and </Text>
+            <Pressable>
+              <Text style={styles.footerLink}>Privacy Policy</Text>
             </Pressable>
           </View>
         </View>
@@ -196,111 +218,47 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
+    justifyContent: 'space-between',
   },
-  // Top Badge
-  topBadge: {
-    alignSelf: 'center',
-  },
-  topBadgeBlur: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 100,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  topBadgeText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  // Hero Section
-  heroSection: {
-    marginBottom: 24,
-  },
-  heroTitle: {
-    fontSize: 44,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1.5,
-    lineHeight: 52,
-    marginBottom: 16,
-  },
-  heroSubtitle: {
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.65)',
-    lineHeight: 26,
-    maxWidth: '90%',
-  },
-  // Feature Chips
-  featuresRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 32,
-  },
-  featureChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  featureChipText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  // CTA Section
-  ctaSection: {
-    gap: 16,
-  },
-  ctaCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  ctaCardBlur: {
-    overflow: 'hidden',
-  },
-  ctaCardContent: {
-    padding: 24,
-    gap: 20,
-  },
-  // Benefits Row
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  benefitItem: {
-    alignItems: 'center',
+  // Animation Section
+  animationContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
   },
-  benefitValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  staticText: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
     letterSpacing: -0.5,
   },
-  benefitLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 4,
-    fontWeight: '500',
+  // Carousel - clips overflow, shows one phrase at a time
+  carouselMask: {
+    height: PHRASE_HEIGHT,
+    overflow: 'hidden',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
-  benefitDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  // Track - contains all phrases stacked vertically
+  carouselTrack: {
+    alignItems: 'center',
+  },
+  animatedText: {
+    height: PHRASE_HEIGHT,
+    fontSize: 32,
+    fontFamily: 'IBMPlexSerif_400Regular_Italic',
+    fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    lineHeight: PHRASE_HEIGHT,
+  },
+  // Bottom Section
+  bottomSection: {
+    gap: 20,
+    paddingBottom: 8,
   },
   // Primary Button
   primaryButton: {
@@ -312,7 +270,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
-    gap: 10,
     borderRadius: 9999,
   },
   primaryButtonText: {
@@ -320,25 +277,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  // Free text
-  freeText: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.45)',
-  },
   // Footer
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 4,
   },
   footerText: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.4)',
   },
   footerLink: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#3B82F6',
   },
 });

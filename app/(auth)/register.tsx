@@ -98,7 +98,7 @@ export default function RegisterScreen() {
               <Ionicons name="person-add" size={40} color="#FFFFFF" />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join VPN Shield today</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join Doppler VPN today</Text>
           </View>
 
           {/* Register Form */}

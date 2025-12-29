@@ -15,6 +15,7 @@ import {
   Shield,
   ShieldCheck,
   ShieldOff,
+  ShieldAlert,
   MapPin,
   Gauge,
   Globe,
@@ -25,6 +26,7 @@ import {
   Download,
   Users,
   Clock,
+  RotateCcw,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -44,9 +46,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useVPN } from '@/context/VPNContext';
 import { useParentalControls } from '@/context/ParentalControlsContext';
 import { useTier } from '@/context/TierContext';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
 import ServerBottomSheet, { ServerBottomSheetRef } from '@/components/ServerBottomSheet';
 import { ScrollShadow, QuickStatsRow } from '@/components/ui';
-import { UpgradeBanner } from '@/components/tier';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -56,12 +58,15 @@ const BUTTON_SIZE = 160;
 interface ConnectionButtonProps {
   isConnected: boolean;
   isConnecting: boolean;
+  isError: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
+  onRetry: () => void;
   serverLocation?: string;
+  errorMessage?: string | null;
 }
 
-function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, serverLocation }: ConnectionButtonProps) {
+function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDisconnect, onRetry, serverLocation, errorMessage }: ConnectionButtonProps) {
   const { colors, isDark } = useTheme();
   const isFocused = useIsFocused();
 
@@ -107,6 +112,10 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
         true
       );
       glowOpacity.value = withTiming(0.35, { duration: 300 });
+    } else if (isError) {
+      // Error state - subtle red glow
+      pulseScale.value = withTiming(1, { duration: 300 });
+      glowOpacity.value = withTiming(0.4, { duration: 300 });
     } else {
       pulseScale.value = withTiming(1, { duration: 300 });
       glowOpacity.value = withTiming(0, { duration: 300 });
@@ -116,7 +125,7 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
       cancelAnimation(pulseScale);
       cancelAnimation(glowOpacity);
     };
-  }, [isConnected, isConnecting, isFocused, pulseScale, glowOpacity]);
+  }, [isConnected, isConnecting, isError, isFocused, pulseScale, glowOpacity]);
 
   const handlePress = () => {
     if (isConnecting) return;
@@ -127,7 +136,9 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
       withSpring(1, { damping: 12, stiffness: 400 })
     );
 
-    if (isConnected) {
+    if (isError) {
+      onRetry();
+    } else if (isConnected) {
       onDisconnect();
     } else {
       onConnect();
@@ -147,9 +158,60 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
     ? '#FFFFFF'
     : isConnecting
       ? '#FFFFFF'
-      : colors.textMuted;
+      : isError
+        ? '#FFFFFF'
+        : colors.textMuted;
 
-  const StatusIcon = isConnected ? ShieldCheck : isConnecting ? Wifi : ShieldOff;
+  const StatusIcon = isConnected
+    ? ShieldCheck
+    : isConnecting
+      ? Wifi
+      : isError
+        ? ShieldAlert
+        : ShieldOff;
+
+  // Determine colors based on state
+  const glowColor = isConnected
+    ? colors.success
+    : isConnecting
+      ? '#3B82F6'
+      : isError
+        ? '#EF4444'
+        : 'transparent';
+
+  const gradientColors: [string, string] = isConnected
+    ? [colors.success, '#16A34A']
+    : isConnecting
+      ? ['#3B82F6', '#2563EB']
+      : isError
+        ? ['#EF4444', '#DC2626']
+        : isDark
+          ? ['#3A3A3E', '#2A2A2E']
+          : ['#F5F5F7', '#E8E8ED'];
+
+  const statusTitleColor = isConnected
+    ? colors.success
+    : isConnecting
+      ? '#3B82F6'
+      : isError
+        ? '#EF4444'
+        : colors.text;
+
+  const statusTitle = isConnecting
+    ? 'Connecting'
+    : isConnected
+      ? 'Protected'
+      : isError
+        ? 'Connection Failed'
+        : 'Not Connected';
+
+  const statusSubtitle = isConnecting
+    ? 'Establishing secure connection...'
+    : isConnected
+      ? serverLocation || 'Tap to disconnect'
+      : isError
+        ? 'Tap to retry'
+        : 'Tap to connect';
 
   return (
     <View style={styles.buttonContainer}>
@@ -158,9 +220,7 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
         style={[
           styles.buttonGlow,
           glowStyle,
-          {
-            backgroundColor: isConnected ? colors.success : isConnecting ? '#3B82F6' : 'transparent',
-          },
+          { backgroundColor: glowColor },
         ]}
       />
 
@@ -171,14 +231,7 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
         style={[styles.connectionButton, buttonStyle]}
       >
         <LinearGradient
-          colors={isConnected
-            ? [colors.success, '#16A34A']
-            : isConnecting
-              ? ['#3B82F6', '#2563EB']
-              : isDark
-                ? ['#3A3A3E', '#2A2A2E']
-                : ['#F5F5F7', '#E8E8ED']
-          }
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
@@ -192,23 +245,13 @@ function ConnectionButton({ isConnected, isConnecting, onConnect, onDisconnect, 
       </AnimatedPressable>
 
       {/* Status label */}
-      <Text style={[styles.buttonStatusTitle, {
-        color: isConnected ? colors.success : isConnecting ? '#3B82F6' : colors.text
-      }]}>
-        {isConnecting
-          ? 'Connecting'
-          : isConnected
-            ? 'Protected'
-            : 'Not Connected'}
+      <Text style={[styles.buttonStatusTitle, { color: statusTitleColor }]}>
+        {statusTitle}
       </Text>
 
       {/* Server location or action hint */}
       <Text style={[styles.buttonStatusSubtitle, { color: colors.textSecondary }]}>
-        {isConnecting
-          ? 'Establishing secure connection...'
-          : isConnected
-            ? serverLocation || 'Tap to disconnect'
-            : 'Tap to connect'}
+        {statusSubtitle}
       </Text>
     </View>
   );
@@ -234,20 +277,43 @@ export default function HomeScreen() {
     isCheckingProfile,
     adBlockEnabled,
     setAdBlockEnabled,
+    measuredLatency,
+    connectionError,
     connect,
     disconnect,
     selectServer,
     toggleFavorite,
     refreshServers,
     installVPNProfile,
+    retryConnection,
   } = useVPN();
   const {
     isEnabled: parentalEnabled,
     toggleParentalControls,
+    isToggling: isParentalToggling,
   } = useParentalControls();
-  const { hasFeature, isPro, tierDisplayName } = useTier();
-  const hasParentalAccess = hasFeature('parental_controls');
-  const hasAdBlockAccess = hasFeature('ad_blocking');
+  const { isPro, tierDisplayName } = useTier();
+
+  // Feature gating with automatic paywall for Quick Settings
+  const {
+    hasAccess: hasParentalAccess,
+    requestAccess: requestParentalAccess,
+    isGating: isParentalGating,
+    getDisabledReason: getParentalDisabledReason,
+  } = useFeatureGate('parental_controls', {
+    requiresVPN: true,
+    isVPNConnected: connectionStatus === 'connected',
+  });
+
+  const {
+    hasAccess: hasAdBlockAccess,
+    requestAccess: requestAdBlockAccess,
+    isGating: isAdBlockGating,
+    getDisabledReason: getAdBlockDisabledReason,
+  } = useFeatureGate('ad_blocking', {
+    requiresVPN: true,
+    isVPNConnected: connectionStatus === 'connected',
+  });
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -257,6 +323,7 @@ export default function HomeScreen() {
   const isLoggedIn = isAuthenticated;
   const isConnected = connectionStatus === 'connected';
   const isConnecting = connectionStatus === 'connecting';
+  const isError = connectionStatus === 'error';
   const [isInstallingProfile, setIsInstallingProfile] = useState(false);
 
   // Handle VPN profile installation
@@ -304,6 +371,48 @@ export default function HomeScreen() {
   const openServerSheet = () => {
     bottomSheetRef.current?.open();
   };
+
+  // Parental controls toggle with paywall gating
+  const handleParentalToggle = useCallback(async (newValue: boolean) => {
+    if (isParentalToggling || isParentalGating) return;
+
+    // If turning off, always allow
+    if (!newValue) {
+      try {
+        await toggleParentalControls(false);
+      } catch (err) {
+        console.log('Toggle error handled by context');
+      }
+      return;
+    }
+
+    // If turning on, check access (shows paywall if needed)
+    const granted = await requestParentalAccess();
+    if (!granted) return;
+
+    try {
+      await toggleParentalControls(true);
+    } catch (err) {
+      console.log('Toggle error handled by context');
+    }
+  }, [isParentalToggling, isParentalGating, toggleParentalControls, requestParentalAccess]);
+
+  // Ad block toggle with paywall gating
+  const handleAdBlockToggle = useCallback(async (newValue: boolean) => {
+    if (isAdBlockGating) return;
+
+    // If turning off, always allow
+    if (!newValue) {
+      setAdBlockEnabled(false);
+      return;
+    }
+
+    // If turning on, check access (shows paywall if needed)
+    const granted = await requestAdBlockAccess();
+    if (granted) {
+      setAdBlockEnabled(true);
+    }
+  }, [isAdBlockGating, setAdBlockEnabled, requestAdBlockAccess]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -442,89 +551,96 @@ export default function HomeScreen() {
             <ConnectionButton
               isConnected={isConnected}
               isConnecting={isConnecting}
+              isError={isError}
               onConnect={connect}
               onDisconnect={disconnect}
+              onRetry={retryConnection}
               serverLocation={selectedServer ? `${selectedServer.city}, ${selectedServer.country}` : undefined}
+              errorMessage={connectionError}
             />
 
-            {/* Connection Stats - Always visible */}
+            {/* Connection Stats - Only show real values when connected */}
             <QuickStatsRow
               stats={[
                 {
                   icon: MapPin,
                   iconColor: isConnected ? colors.primary : colors.textMuted,
-                  value: selectedServer ? selectedServer.city : '--',
+                  // Only show location when connected (not pre-filled)
+                  value: isConnected && selectedServer ? selectedServer.city : '--',
                   label: 'Server',
                 },
                 {
                   icon: Gauge,
                   iconColor: isConnected ? colors.info : colors.textMuted,
-                  value: selectedServer ? `${selectedServer.latency_ms || '--'}ms` : '--',
+                  // Only show latency when connected AND we have a real measurement
+                  value: isConnected && measuredLatency !== null ? `${measuredLatency}ms` : '--',
                   label: 'Latency',
                 },
                 {
                   icon: Clock,
-                  iconColor: isConnected ? colors.success : colors.textMuted,
-                  value: isConnected ? 'Active' : 'Idle',
+                  iconColor: isConnected ? colors.success : isError ? colors.error : colors.textMuted,
+                  value: isConnected ? 'Active' : isConnecting ? 'Connecting' : isError ? 'Error' : 'Idle',
                   label: 'Status',
                 },
               ]}
             />
           </AnimatedView>
 
-          {/* Server Selection Button */}
+          {/* Server Selection Button - Disabled during connection */}
           <AnimatedView
             entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
           >
             <Pressable
               onPress={openServerSheet}
+              disabled={isConnecting || isConnected}
               style={({ pressed }) => [
                 styles.serverSelectButton,
                 {
                   backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  opacity: pressed ? 0.8 : 1,
+                  opacity: (isConnecting || isConnected) ? 0.6 : pressed ? 0.8 : 1,
                 },
               ]}
             >
               <View style={styles.serverSelectLeft}>
+                {/* Show country flag as primary icon when server selected, otherwise globe */}
                 <View
                   style={[
                     styles.serverSelectIcon,
                     { backgroundColor: isDark ? `${colors.primary}20` : `${colors.primary}15` },
                   ]}
                 >
-                  <Globe size={22} color={colors.primary} />
+                  {selectedServer ? (
+                    <Text style={styles.serverIconFlag}>{getCountryFlag(selectedServer.country_code)}</Text>
+                  ) : (
+                    <Globe size={22} color={colors.primary} />
+                  )}
                 </View>
                 <View>
-                  <Text style={[styles.serverSelectLabel, { color: colors.text }]}>
+                  <Text style={[
+                    styles.serverSelectLabel,
+                    { color: (isConnecting || isConnected) ? colors.textMuted : colors.text }
+                  ]}>
                     {selectedServer ? selectedServer.city : 'Select Server'}
                   </Text>
                   <Text style={[styles.serverSelectSubLabel, { color: colors.textSecondary }]}>
-                    {selectedServer
-                      ? `${selectedServer.country} • ${selectedServer.latency_ms || '--'}ms`
-                      : `${servers.length} servers available`}
+                    {(isConnecting || isConnected)
+                      ? 'Disconnect to change server'
+                      : selectedServer
+                        ? selectedServer.country
+                        : `${servers.length} servers available`}
                   </Text>
                 </View>
               </View>
               <View style={styles.serverSelectRight}>
-                {selectedServer && (
-                  <Text style={styles.serverSelectFlag}>{getCountryFlag(selectedServer.country_code)}</Text>
+                {(isConnecting || isConnected) ? (
+                  <Lock size={18} color={colors.textMuted} />
+                ) : (
+                  <ChevronRight size={20} color={colors.textMuted} />
                 )}
-                <ChevronRight size={20} color={colors.textMuted} />
               </View>
             </Pressable>
           </AnimatedView>
-
-          {/* Upgrade Banner for Free Users */}
-          {!isPro && (
-            <AnimatedView
-              entering={FadeInDown.delay(125).duration(300).easing(Easing.out(Easing.ease))}
-              style={styles.upgradeBannerContainer}
-            >
-              <UpgradeBanner />
-            </AnimatedView>
-          )}
 
           {/* Quick Settings */}
           <AnimatedView
@@ -539,7 +655,7 @@ export default function HomeScreen() {
           >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Settings</Text>
 
-            {/* Parental Controls - Primary Position */}
+            {/* Parental Controls - Tappable to show paywall when locked */}
             <View style={[styles.settingRow, (!isConnected || !hasParentalAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
                 <View style={[
@@ -556,30 +672,25 @@ export default function HomeScreen() {
                     Parental Controls
                   </Text>
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {!hasParentalAccess
-                      ? 'Upgrade to Pro to enable'
-                      : !isConnected
-                        ? 'Connect VPN to enable'
-                        : parentalEnabled
-                          ? 'Content filtering active'
-                          : 'Protect children from harmful content'}
+                    {getParentalDisabledReason() ||
+                      (parentalEnabled ? 'Content filtering active' : 'Protect children from harmful content')}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={parentalEnabled}
-                onValueChange={toggleParentalControls}
-                disabled={!isConnected || !hasParentalAccess}
+                onValueChange={handleParentalToggle}
+                disabled={isParentalGating || isParentalToggling}
                 trackColor={{ false: colors.border, true: '#3B82F6' }}
                 thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                 ios_backgroundColor={colors.border}
-                style={{ opacity: (isConnected && hasParentalAccess) ? 1 : 0.5 }}
+                style={{ opacity: (isParentalGating || isParentalToggling) ? 0.5 : 1 }}
               />
             </View>
 
             <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
 
-            {/* Ad Blocker */}
+            {/* Ad Blocker - Tappable to show paywall when locked */}
             <View style={[styles.settingRow, (!isConnected || !hasAdBlockAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
                 <View style={[
@@ -596,22 +707,18 @@ export default function HomeScreen() {
                     Ad Blocker
                   </Text>
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {!hasAdBlockAccess
-                      ? 'Upgrade to Pro to enable'
-                      : !isConnected
-                        ? 'Connect VPN to enable'
-                        : 'Block ads & trackers'}
+                    {getAdBlockDisabledReason() || 'Block ads & trackers'}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={adBlockEnabled}
-                onValueChange={setAdBlockEnabled}
-                disabled={!isConnected || !hasAdBlockAccess}
+                onValueChange={handleAdBlockToggle}
+                disabled={isAdBlockGating}
                 trackColor={{ false: colors.border, true: '#3B82F6' }}
                 thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                 ios_backgroundColor={colors.border}
-                style={{ opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5 }}
+                style={{ opacity: isAdBlockGating ? 0.5 : 1 }}
               />
             </View>
 
@@ -835,6 +942,9 @@ const styles = StyleSheet.create({
   serverSelectFlag: {
     fontSize: 24,
   },
+  serverIconFlag: {
+    fontSize: 28,
+  },
   // Quick Settings Card
   togglesCard: {
     borderRadius: 20,
@@ -891,9 +1001,6 @@ const styles = StyleSheet.create({
   loginPromptText: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  upgradeBannerContainer: {
-    marginBottom: 16,
   },
   // Info Card
   infoCard: {

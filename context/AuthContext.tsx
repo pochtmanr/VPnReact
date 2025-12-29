@@ -9,6 +9,15 @@ import { Platform } from 'react-native';
 const ACCOUNT_STORAGE_KEY = '@vpn_account_id';
 const DEVICE_ID_STORAGE_KEY = '@vpn_device_id';
 
+// Delete account result with subscription blocking info
+interface DeleteAccountResult {
+  success: boolean;
+  error?: string;
+  // When blocked by active subscription:
+  subscriptionTier?: string;
+  expiresAt?: string;
+}
+
 interface AuthContextType {
   account: Account | null;
   deviceSession: DeviceSession | null;
@@ -19,13 +28,17 @@ interface AuthContextType {
   createAccount: () => Promise<{ success: boolean; accountId?: string; error?: string }>;
   loginWithAccountId: (accountId: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: () => Promise<DeleteAccountResult>;
   // Device operations
   refreshDevices: () => Promise<void>;
   removeDevice: (deviceId: string) => Promise<{ success: boolean; error?: string }>;
   // Computed
   deviceCount: number;
   maxDevices: number;
+  // Main device logic
+  mainDevice: DeviceSession | null;
+  isCurrentDeviceMain: boolean;
+  canManageDevices: boolean; // True if current device is the main device
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -308,7 +321,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Delete account permanently
-  const deleteAccount = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  // Blocked if user has active subscription (must cancel first)
+  const deleteAccount = useCallback(async (): Promise<DeleteAccountResult> => {
     if (!account || !isSupabaseConfigured) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -320,10 +334,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error deleting account:', error);
+        // Check for specific PostgREST error codes
+        if (error.code === 'PGRST202') {
+          return { success: false, error: 'Service temporarily unavailable. Please try again later.' };
+        }
         return { success: false, error: error.message };
       }
 
-      const result = data as { success: boolean; error?: string };
+      // Parse response with subscription blocking info
+      const result = data as {
+        success: boolean;
+        error?: string;
+        subscription_tier?: string;
+        expires_at?: string;
+      };
+
+      // Handle active subscription block
+      if (!result.success && result.error === 'active_subscription') {
+        return {
+          success: false,
+          error: 'active_subscription',
+          subscriptionTier: result.subscription_tier,
+          expiresAt: result.expires_at,
+        };
+      }
 
       if (result.success) {
         // Clear local storage
@@ -336,12 +370,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDevices([]);
       }
 
-      return result;
-    } catch (error) {
+      return { success: result.success, error: result.error };
+    } catch (error: any) {
       console.error('Error deleting account:', error);
+      // Handle network errors
+      if (error?.message?.includes('Network') || error?.message?.includes('fetch')) {
+        return { success: false, error: 'network error' };
+      }
       return { success: false, error: 'Failed to delete account' };
     }
   }, [account]);
+
+  // Compute main device - first device with is_main flag, or fallback to oldest device
+  const mainDevice = devices.find(d => d.is_main) ||
+    (devices.length > 0 ? devices.reduce((oldest, current) =>
+      new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
+    ) : null);
+
+  // Check if current device is the main device
+  const isCurrentDeviceMain = !!(mainDevice && deviceSession && mainDevice.device_id === deviceSession.device_id);
+
+  // Only main device can manage (remove) other devices
+  const canManageDevices = isCurrentDeviceMain;
 
   const value: AuthContextType = {
     account,
@@ -357,6 +407,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     removeDevice,
     deviceCount: devices.length,
     maxDevices: account?.max_devices ?? 10,
+    mainDevice,
+    isCurrentDeviceMain,
+    canManageDevices,
   };
 
   return (

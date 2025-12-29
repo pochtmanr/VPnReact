@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "VPN Shield",
-    "slug": "vpn-shield",
-    "version": "1.0.0",
+    "name": "Doppler VPN",
+    "slug": "doppler-vpn",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vpnshield",
@@ -17,7 +17,7 @@
       "infoPlist": {
         "NSVPNNetworkExtensionUsageDescription": "This app uses VPN to protect your privacy and secure your internet connection.",
         "NSLocalNetworkUsageDescription": "This app requires access to network features for VPN functionality",
-        "UIBackgroundModes": ["network-authentication", "network", "fetch", "remote-notification"]
+        "UIBackgroundModes": ["fetch", "remote-notification"]
       },
       "entitlements": {
         "com.apple.developer.networking.networkextension": [

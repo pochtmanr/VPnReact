@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,6 +13,7 @@
 		0C1098FCDCC85B8039515678 /* x25519.c in Sources */ = {isa = PBXBuildFile; fileRef = 2E7CDEA62BBC1A8B2843F713 /* x25519.c */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		297CEDDE91DA735EB0AB8B2E /* String+ArrayConversion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29E9693FA0B0889FD8C1BD1 /* String+ArrayConversion.swift */; };
+		386A671F2F00AB2E00015B9A /* DooplerLogo.icon in Resources */ = {isa = PBXBuildFile; fileRef = 386A671E2F00AB2D00015B9A /* DooplerLogo.icon */; };
 		3A4607C62677137B84DD04A5 /* DNSServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46886BBD326EE33963E2F4D5 /* DNSServer.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		4002E8F870EDA13CA92DA96D /* InterfaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C21C954E1CB705994AF6786 /* InterfaceConfiguration.swift */; };
@@ -69,8 +70,9 @@
 		22A02EB9B17CCF160B2F4320 /* libPods-VPNShield.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VPNShield.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2457FB3A25DF4A728AF1CCC2 /* VPNShieldTunnel.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = VPNShieldTunnel.entitlements; sourceTree = "<group>"; };
 		2AFF47A46C3F6F878EAB12DC /* PeerConfiguration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PeerConfiguration.swift; path = ../../WireGuardKit/PeerConfiguration.swift; sourceTree = "<group>"; };
-		2E7CDEA62BBC1A8B2843F713 /* x25519.c */ = {isa = PBXFileReference; includeInIndex = 1; name = x25519.c; path = ../../WireGuardKitC/x25519.c; sourceTree = "<group>"; };
+		2E7CDEA62BBC1A8B2843F713 /* x25519.c */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.c; name = x25519.c; path = ../../WireGuardKitC/x25519.c; sourceTree = "<group>"; };
 		3694F4A4330B1D733C293992 /* TunnelConfiguration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TunnelConfiguration.swift; path = ../../WireGuardKit/TunnelConfiguration.swift; sourceTree = "<group>"; };
+		386A671E2F00AB2D00015B9A /* DooplerLogo.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = DooplerLogo.icon; sourceTree = "<group>"; };
 		46886BBD326EE33963E2F4D5 /* DNSServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DNSServer.swift; path = ../../WireGuardKit/DNSServer.swift; sourceTree = "<group>"; };
 		47149E8D78371547D2AA1B37 /* wireguard.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = wireguard.h; path = ../../WireGuardKitGo/wireguard.h; sourceTree = "<group>"; };
 		4B30EAC0A0DF712184D59B3E /* IPAddressRange.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IPAddressRange.swift; path = ../../WireGuardKit/IPAddressRange.swift; sourceTree = "<group>"; };
@@ -93,7 +95,7 @@
 		B8A9885F4A7231329DBDA351 /* WireGuardAdapter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WireGuardAdapter.swift; path = ../../WireGuardKit/WireGuardAdapter.swift; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		CA13116A8F1E5F7D1CAF1275 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = VPNShield/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		CB1418992E029E58F72F351C /* key.c */ = {isa = PBXFileReference; includeInIndex = 1; name = key.c; path = ../../WireGuardKitC/key.c; sourceTree = "<group>"; };
+		CB1418992E029E58F72F351C /* key.c */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.c; name = key.c; path = ../../WireGuardKitC/key.c; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F03BD35325D6101BAC2CC141 /* IPAddress+AddrInfo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "IPAddress+AddrInfo.swift"; path = "../../WireGuardKit/IPAddress+AddrInfo.swift"; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = VPNShield/AppDelegate.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 				F11748442D0722820044C1D9 /* VPNShield-Bridging-Header.h */,
 				WGVPN_FILE_H /* WireGuardVpn.h */,
 				WGVPN_FILE_M /* WireGuardVpn.m */,
+				386A671E2F00AB2D00015B9A /* DooplerLogo.icon */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -285,11 +288,11 @@
 /* Begin PBXLegacyTarget section */
 		386A67112EFEFF9100015B9A /* WireGuardGoBridgeiOS */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION)";
+			buildArgumentsString = "";
 			buildConfigurationList = 386A67122EFEFF9100015B9A /* Build configuration list for PBXLegacyTarget "WireGuardGoBridgeiOS" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/bin/make;
+			buildToolPath = "$(SRCROOT)/wireguard-apple/Sources/WireGuardKitGo/build-wireguard.sh";
 			buildWorkingDirectory = "$(SRCROOT)/wireguard-apple/Sources/WireGuardKitGo";
 			dependencies = (
 			);
@@ -382,6 +385,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
+				386A671F2F00AB2E00015B9A /* DooplerLogo.icon in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				44A6F553AAAC622F25F5479D /* PrivacyInfo.xcprivacy in Resources */,
@@ -488,10 +492,12 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/PurchasesHybridCommon/PurchasesHybridCommon.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCat/RevenueCat.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/react-native-maps/ReactNativeMapsPrivacy.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
@@ -501,10 +507,12 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoConstants_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoDevice_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/PurchasesHybridCommon.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ReactNativeMapsPrivacy.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -652,6 +660,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib/swift",
 					"$(inherited)",
 					"$(SRCROOT)/wireguard-apple/Sources/WireGuardKitGo/out",
 				);
@@ -824,6 +833,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib/swift",
 					"$(inherited)",
 					"$(SRCROOT)/wireguard-apple/Sources/WireGuardKitGo/out",
 				);

@@ -11,7 +11,7 @@ import {
   MessageCircle,
   Send,
 } from 'lucide-react-native';
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -39,12 +39,11 @@ const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 interface SupportOptionProps {
   icon: React.ElementType;
   label: string;
-  subtitle: string;
   onPress: () => void;
   iconColor?: string;
 }
 
-function SupportOption({ icon: Icon, label, subtitle, onPress, iconColor }: SupportOptionProps) {
+function SupportOption({ icon: Icon, label, onPress, iconColor }: SupportOptionProps) {
   const { colors, isDark } = useTheme();
   const defaultIconColor = iconColor || colors.primary;
 
@@ -69,7 +68,7 @@ function SupportOption({ icon: Icon, label, subtitle, onPress, iconColor }: Supp
         <Icon size={24} color={defaultIconColor} />
       </View>
       <Text style={[styles.supportLabel, { color: colors.text }]}>{label}</Text>
-      <Text style={[styles.supportSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
+
     </Pressable>
   );
 }
@@ -171,11 +170,11 @@ export default function ContactSupportScreen() {
   }, [bugDescription, account?.account_id]);
 
   const handleEmailSupport = () => {
-    Linking.openURL('mailto:support@vpnshield.app?subject=Support Request');
+    Linking.openURL('mailto:support@simnetiq.store?subject=Support Request');
   };
 
   const handleTelegram = () => {
-    Linking.openURL('https://t.me/vpnshield_bot');
+    Linking.openURL('https://t.me/doppler_vpn_bot');
   };
 
   // Render back button
@@ -243,14 +242,14 @@ export default function ContactSupportScreen() {
           <SupportOption
             icon={Mail}
             label="Email Us"
-            subtitle="support@vpnshield.app"
+  
             onPress={handleEmailSupport}
             iconColor={colors.primary}
           />
           <SupportOption
             icon={MessageCircle}
             label="Telegram"
-            subtitle="@vpnshield_bot"
+ 
             onPress={handleTelegram}
             iconColor="#0088CC"
           />

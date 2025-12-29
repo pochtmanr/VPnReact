@@ -69,10 +69,10 @@ export function useVPNConnection(): VPNConnectionHook {
     try {
       const ovpnConfig = {
         ovpnString: server.config_data,
-        notificationTitle: 'VPN Shield',
+        notificationTitle: 'VPN Simnetiq',
         compatMode: Platform.OS === 'ios' ? 'ovpn_connect' : 'default',
         providerBundleIdentifier: 'com.yourapp.vpnextension',
-        localizedDescription: 'VPN Shield Connection',
+        localizedDescription: 'VPN Simnetiq Connection',
       };
 
       await RNSimpleOpenvpn.connect(ovpnConfig);

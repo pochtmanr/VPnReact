@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { useRevenueCat } from './RevenueCatContext';
 
 // =============================================================================
 // TIER DEFINITIONS
@@ -110,6 +111,10 @@ interface TierContextType {
   tier: SubscriptionTier;
   tierDisplayName: string;
 
+  // Loading state
+  isLoading: boolean;
+  isInitialized: boolean;
+
   // Tier checks
   isPro: boolean;
   isPremium: boolean;
@@ -145,10 +150,28 @@ interface TierProviderProps {
 export function TierProvider({ children }: TierProviderProps) {
   const { account } = useAuth();
 
-  // Get current tier from account, default to free
+  // Try to get tier from RevenueCat (primary source), fallback to database
+  let revenueCatTier: SubscriptionTier = 'free';
+  let revenueCatLoading = false;
+  let revenueCatInitialized = false;
+  try {
+    const revenueCat = useRevenueCat();
+    revenueCatTier = revenueCat.currentTier;
+    revenueCatLoading = revenueCat.isLoading;
+    revenueCatInitialized = revenueCat.isInitialized;
+  } catch {
+    // RevenueCatProvider not mounted yet, use database tier
+  }
+
+  // Get current tier - RevenueCat takes priority if initialized, otherwise use database
   const tier: SubscriptionTier = useMemo(() => {
+    // RevenueCat is the source of truth for subscription status
+    if (revenueCatTier !== 'free') {
+      return revenueCatTier;
+    }
+    // Fallback to database tier (for web or when RevenueCat not configured)
     return (account?.subscription_tier as SubscriptionTier) || 'free';
-  }, [account?.subscription_tier]);
+  }, [revenueCatTier, account?.subscription_tier]);
 
   // Tier display name
   const tierDisplayName = useMemo(() => TIER_DISPLAY_NAMES[tier], [tier]);
@@ -206,6 +229,8 @@ export function TierProvider({ children }: TierProviderProps) {
   const value = useMemo<TierContextType>(() => ({
     tier,
     tierDisplayName,
+    isLoading: revenueCatLoading,
+    isInitialized: revenueCatInitialized,
     isPro,
     isPremium,
     isFree,
@@ -220,6 +245,8 @@ export function TierProvider({ children }: TierProviderProps) {
   }), [
     tier,
     tierDisplayName,
+    revenueCatLoading,
+    revenueCatInitialized,
     isPro,
     isPremium,
     isFree,

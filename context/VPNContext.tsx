@@ -41,6 +41,10 @@ interface VPNContextType {
   isCheckingProfile: boolean;
   adBlockEnabled: boolean;
   setAdBlockEnabled: (enabled: boolean) => void;
+  // Live latency measurement (only valid when connected)
+  measuredLatency: number | null;
+  // Connection error message (when status is 'error')
+  connectionError: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   selectServer: (server: VPNServer) => void;
@@ -48,6 +52,7 @@ interface VPNContextType {
   refreshServers: () => Promise<void>;
   installVPNProfile: () => Promise<boolean>;
   checkProfileInstalled: () => Promise<boolean>;
+  retryConnection: () => Promise<void>;
 }
 
 const VPNContext = createContext<VPNContextType | undefined>(undefined);
@@ -68,6 +73,9 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [adBlockEnabled, setAdBlockEnabledState] = useState(false);
+  const [measuredLatency, setMeasuredLatency] = useState<number | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const latencyIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // DNS servers - AdGuard DNS when ad blocking is enabled, regular DNS otherwise
   const AD_BLOCK_DNS = ['10.0.0.1']; // VPN server running AdGuard Home
@@ -101,6 +109,93 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error saving ad block setting:', error);
     }
+  }, []);
+
+  // Measure latency by pinging a public endpoint through the VPN tunnel
+  const measureLatency = useCallback(async (): Promise<number | null> => {
+    if (!selectedServer || connectionStatus !== 'connected') {
+      return null;
+    }
+
+    try {
+      const startTime = Date.now();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      // Ping a fast, reliable public endpoint to measure round-trip through VPN
+      // Using Cloudflare's DNS endpoint which responds quickly
+      try {
+        await fetch('https://1.1.1.1/cdn-cgi/trace', {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+      } catch {
+        // If Cloudflare fails, try Google
+        try {
+          await fetch('https://www.google.com/generate_204', {
+            method: 'HEAD',
+            signal: controller.signal,
+            cache: 'no-store',
+          });
+        } catch {
+          // Both failed, use server's stored latency as fallback
+          clearTimeout(timeoutId);
+          return selectedServer.latency_ms || null;
+        }
+      }
+
+      clearTimeout(timeoutId);
+      const latency = Date.now() - startTime;
+
+      // Sanity check - if over 2 seconds, something's wrong
+      if (latency > 2000) {
+        return selectedServer.latency_ms || null;
+      }
+
+      return latency;
+    } catch (error) {
+      console.log('Latency measurement failed:', error);
+      // Fallback to server's stored latency
+      return selectedServer.latency_ms || null;
+    }
+  }, [selectedServer, connectionStatus]);
+
+  // Start periodic latency measurement when connected
+  const startLatencyMeasurement = useCallback(() => {
+    // Clear any existing interval
+    if (latencyIntervalRef.current) {
+      clearInterval(latencyIntervalRef.current);
+    }
+
+    // Measure immediately
+    measureLatency().then(latency => {
+      if (latency !== null) {
+        setMeasuredLatency(latency);
+      }
+    });
+
+    // Then measure every 10 seconds
+    latencyIntervalRef.current = setInterval(async () => {
+      const latency = await measureLatency();
+      if (latency !== null) {
+        setMeasuredLatency(latency);
+      }
+    }, 10000);
+  }, [measureLatency]);
+
+  // Stop latency measurement
+  const stopLatencyMeasurement = useCallback(() => {
+    if (latencyIntervalRef.current) {
+      clearInterval(latencyIntervalRef.current);
+      latencyIntervalRef.current = null;
+    }
+    setMeasuredLatency(null);
+  }, []);
+
+  // Clear connection error
+  const clearConnectionError = useCallback(() => {
+    setConnectionError(null);
   }, []);
 
   // Initialize WireGuard module
@@ -417,6 +512,8 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   async function connectSimulation() {
     if (!selectedServer) return;
 
+    // Clear any previous error
+    setConnectionError(null);
     setConnectionStatus('connecting');
     await addLog('connecting', `Connecting to ${selectedServer.city}, ${selectedServer.country}...`);
 
@@ -425,6 +522,9 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
 
     setConnectionStatus('connected');
     setConnectionStartTime(new Date());
+
+    // Start latency measurement after connection
+    startLatencyMeasurement();
 
     const modeLabel = Platform.OS === 'web' ? 'Web' : 'Simulator/Demo';
     await addLog('connected', `Connected to ${selectedServer.city}. (${modeLabel} mode)`);
@@ -439,6 +539,8 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       return connectSimulation();
     }
 
+    // Clear any previous error
+    setConnectionError(null);
     setConnectionStatus('connecting');
     await addLog('connecting', `Connecting to ${selectedServer.city}, ${selectedServer.country}...`);
 
@@ -477,16 +579,31 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
 
       setConnectionStatus('connected');
       setConnectionStartTime(new Date());
+
+      // Start latency measurement after connection
+      startLatencyMeasurement();
+
       await addLog('connected', `Connected to ${selectedServer.city}. Your traffic is now encrypted.`);
     } catch (error) {
       console.error('VPN connection error:', error);
-      setConnectionStatus('disconnected');
-      await addLog('error', `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setConnectionError(errorMessage);
+      setConnectionStatus('error');
+      await addLog('error', `Connection failed: ${errorMessage}`);
     }
+  }
+
+  // Retry connection after error
+  async function retryConnection() {
+    clearConnectionError();
+    await connect();
   }
 
   // Simulation mode disconnect
   async function disconnectSimulation() {
+    // Stop latency measurement
+    stopLatencyMeasurement();
+
     setConnectionStatus('disconnecting');
     await addLog('disconnecting', 'Disconnecting...');
 
@@ -499,6 +616,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
 
     setConnectionStatus('disconnected');
     setConnectionStartTime(null);
+    setConnectionError(null);
 
     const modeLabel = Platform.OS === 'web' ? 'Web' : 'Simulator/Demo';
     await addLog('disconnected', `Disconnected. (${modeLabel} mode)`, { duration_seconds: duration });
@@ -507,6 +625,9 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   // Disconnect from VPN
   async function disconnect() {
     if (!selectedServer) return;
+
+    // Stop latency measurement
+    stopLatencyMeasurement();
 
     // Use simulation for web only
     if (Platform.OS === 'web') {
@@ -527,11 +648,13 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
 
       setConnectionStatus('disconnected');
       setConnectionStartTime(null);
+      setConnectionError(null);
       await addLog('disconnected', 'VPN disconnected.', { duration_seconds: duration });
     } catch (error) {
       console.error('VPN disconnect error:', error);
       setConnectionStatus('disconnected');
       setConnectionStartTime(null);
+      setConnectionError(null);
     }
   }
 
@@ -574,6 +697,8 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         isCheckingProfile,
         adBlockEnabled,
         setAdBlockEnabled,
+        measuredLatency,
+        connectionError,
         connect,
         disconnect,
         selectServer,
@@ -581,6 +706,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         refreshServers,
         installVPNProfile,
         checkProfileInstalled,
+        retryConnection,
       }}
     >
       {children}

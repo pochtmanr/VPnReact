@@ -25,11 +25,10 @@ import {
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { UpgradeBanner } from '@/components/tier';
 import { ActivationButton, QuickStatsRow, ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
-import { useTier } from '@/context/TierContext';
 import { useVPN } from '@/context/VPNContext';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -75,9 +74,18 @@ export default function AdblockScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { adBlockEnabled, setAdBlockEnabled, connectionStatus } = useVPN();
-  const { hasFeature } = useTier();
   const isVPNConnected = connectionStatus === 'connected';
-  const hasAdBlockAccess = hasFeature('ad_blocking');
+
+  // Feature gating with automatic paywall
+  const {
+    hasAccess: hasAdBlockAccess,
+    requestAccess,
+    isGating,
+    getDisabledReason,
+  } = useFeatureGate('ad_blocking', {
+    requiresVPN: true,
+    isVPNConnected,
+  });
 
   // Real stats from AdGuard Home API
   const [stats, setStats] = useState<AdBlockStats | null>(null);
@@ -129,10 +137,20 @@ export default function AdblockScreen() {
     fetchStats();
   }, [fetchStats]);
 
-  // Memoize toggle handler
-  const handleToggle = useCallback(() => {
-    setAdBlockEnabled(!adBlockEnabled);
-  }, [adBlockEnabled, setAdBlockEnabled]);
+  // Toggle handler with paywall gating
+  const handleToggle = useCallback(async () => {
+    // If turning off, always allow
+    if (adBlockEnabled) {
+      setAdBlockEnabled(false);
+      return;
+    }
+
+    // If turning on, check access (shows paywall if needed)
+    const granted = await requestAccess();
+    if (granted) {
+      setAdBlockEnabled(true);
+    }
+  }, [adBlockEnabled, setAdBlockEnabled, requestAccess]);
 
   // Memoize gradient colors
   const gradientColors = useMemo(() =>
@@ -194,34 +212,18 @@ export default function AdblockScreen() {
             </View>
           </AnimatedView>
 
-          {/* Upgrade Banner for Free Users */}
-          {!hasAdBlockAccess && (
-            <AnimatedView
-              entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-              style={styles.upgradeBannerContainer}
-            >
-              <UpgradeBanner feature="ad_blocking" />
-            </AnimatedView>
-          )}
-
           {/* Hero Card with Interactive Activation Button */}
           <AnimatedView
             entering={FadeInDown.delay(hasAdBlockAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
             style={[styles.heroCard, heroCardStyle, (!hasAdBlockAccess || !isVPNConnected) && styles.lockedSection]}
           >
-            {/* Interactive Activation Button */}
+            {/* Interactive Activation Button - tappable even when locked to show paywall */}
             <ActivationButton
               isEnabled={adBlockEnabled}
               onToggle={handleToggle}
-              disabled={!hasAdBlockAccess || !isVPNConnected}
+              disabled={isGating} // Only disable during paywall presentation
               enabledSubtitle="Tap to disable ad blocking"
-              disabledSubtitle={
-                !hasAdBlockAccess
-                  ? "Upgrade to Pro to enable"
-                  : !isVPNConnected
-                    ? "Connect VPN first to enable"
-                    : "Tap to enable ad blocking"
-              }
+              disabledSubtitle={getDisabledReason() || "Tap to enable ad blocking"}
               accentColor="#EF4444"
             />
 
@@ -475,9 +477,6 @@ const styles = StyleSheet.create({
   },
   lockedSection: {
     opacity: 0.5,
-  },
-  upgradeBannerContainer: {
-    marginBottom: 16,
   },
   // Info Card
   infoCard: {

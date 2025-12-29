@@ -1,7 +1,31 @@
 {
   "images" : [
     {
-      "filename" : "dasdads.jpg",
+      "filename" : "WhiteLogo.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "BlackLogo.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "BlackLogo 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "vww.png",
+      "filename" : "NoBgLogo.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "vww 1.png",
+      "filename" : "NoBgLogo 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "vww 2.png",
+      "filename" : "NoBgLogo 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

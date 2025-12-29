@@ -35,6 +35,7 @@ export interface Database {
           device_id: string; // Unique device identifier
           device_name: string; // e.g., "iPhone 15 Pro", "Chrome Extension"
           device_type: 'ios' | 'android' | 'chrome' | 'firefox' | 'web';
+          is_main: boolean; // First registered device becomes main device
           last_active_at: string;
           created_at: string;
         };
@@ -44,6 +45,7 @@ export interface Database {
           device_id: string;
           device_name: string;
           device_type: 'ios' | 'android' | 'chrome' | 'firefox' | 'web';
+          is_main?: boolean;
           last_active_at?: string;
           created_at?: string;
         };
@@ -53,6 +55,7 @@ export interface Database {
           device_id?: string;
           device_name?: string;
           device_type?: 'ios' | 'android' | 'chrome' | 'firefox' | 'web';
+          is_main?: boolean;
           last_active_at?: string;
           created_at?: string;
         };

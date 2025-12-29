@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:VPNShield/StoreKitConfig.storekit">
+   </FileRef>
+   <FileRef
       location = "group:VPNShield.xcodeproj">
    </FileRef>
    <FileRef

@@ -127,7 +127,7 @@ export default function AccountScreen() {
     if (generatedId) {
       try {
         await Share.share({
-          message: `My VPN Shield Account ID: ${generatedId}\n\nUse this ID to access VPN Shield on any device.`,
+          message: `My Doppler VPN Account ID: ${generatedId}\n\nUse this ID to access Doppler VPN on any device.`,
         });
       } catch (err) {
         console.error('Error sharing:', err);
@@ -393,7 +393,7 @@ export default function AccountScreen() {
       >
         <Text style={styles.modeTitle}>Enter Account ID</Text>
         <Text style={styles.modeSubtitle}>
-          Enter your account ID to access VPN Shield on this device
+          Enter your account ID to access Doppler VPN on this device
         </Text>
 
         <AnimatedView
@@ -477,7 +477,7 @@ export default function AccountScreen() {
         >
           <BlurView intensity={40} tint="dark" style={styles.headerBadgeBlur}>
             <Shield size={14} color={colors.primary} />
-            <Text style={styles.headerBadgeText}>VPN Shield</Text>
+            <Text style={styles.headerBadgeText}>Doppler VPN</Text>
           </BlurView>
         </AnimatedView>
 

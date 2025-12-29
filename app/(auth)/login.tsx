@@ -1,49 +1,38 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
+import { MotiView } from 'moti';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { MotiView } from 'moti';
 
 import { MinimalInput } from '@/components/ui';
-import { spacing, typography, borderRadius } from '@/constants/theme';
+import { borderRadius, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { loginWithAccountId } = useAuth();
+  const [accountId, setAccountId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [error, setError] = useState<string | undefined>();
 
   function validateForm() {
-    const newErrors: { email?: string; password?: string } = {};
-
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
+    if (!accountId.trim()) {
+      setError('Account ID is required');
+      return false;
     }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setError(undefined);
+    return true;
   }
 
   async function handleLogin() {
@@ -51,11 +40,11 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const { error } = await signIn(email, password);
-      if (error) {
-        Alert.alert('Login Error', error.message);
+      const result = await loginWithAccountId(accountId.trim());
+      if (!result.success && result.error) {
+        Alert.alert('Login Error', result.error);
       }
-    } catch (error) {
+    } catch (err) {
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -84,6 +73,9 @@ export default function LoginScreen() {
               <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>Welcome back</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Enter your Account ID to continue
+            </Text>
           </MotiView>
 
           {/* Form Section */}
@@ -94,24 +86,14 @@ export default function LoginScreen() {
             style={styles.formContainer}
           >
             <MinimalInput
-              label="Email"
-              icon="mail-outline"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              label="Account ID"
+              icon="key-outline"
+              value={accountId}
+              onChangeText={setAccountId}
               autoCapitalize="none"
-              autoComplete="email"
-              error={errors.email}
-            />
-
-            <MinimalInput
-              label="Password"
-              icon="lock-closed-outline"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="password"
-              error={errors.password}
+              autoCorrect={false}
+              error={error}
+              placeholder="Enter your account ID"
             />
 
             <Pressable
@@ -150,7 +132,7 @@ export default function LoginScreen() {
             </Text>
             <Link href="/(auth)/register" asChild>
               <Pressable hitSlop={8}>
-                <Text style={[styles.linkText, { color: colors.primary }]}>Sign Up</Text>
+                <Text style={[styles.linkText, { color: colors.primary }]}>Create One</Text>
               </Pressable>
             </Link>
           </MotiView>
@@ -194,6 +176,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   formContainer: {
     marginBottom: spacing.xl,

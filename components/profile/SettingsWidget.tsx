@@ -1,10 +1,10 @@
-import React, { memo, useMemo, useState, useEffect } from 'react';
+import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  Alert,
+  Linking,
 } from 'react-native';
 import {
   Palette,
@@ -101,6 +101,14 @@ export const SettingsWidget = memo(function SettingsWidget({
     }
   }, [themeMode]);
 
+  const openPrivacyPolicy = useCallback(async () => {
+    await Linking.openURL('https://www.simnetiq.store/privacy-policy');
+  }, []);
+
+  const openTermsOfService = useCallback(async () => {
+    await Linking.openURL('https://www.simnetiq.store/terms-of-service');
+  }, []);
+
   return (
     <AnimatedView
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
@@ -139,14 +147,14 @@ export const SettingsWidget = memo(function SettingsWidget({
               icon={FileText}
               label="Privacy Policy"
               iconColor={colors.textSecondary}
-              onPress={() => Alert.alert('Privacy', 'View privacy policy')}
+              onPress={openPrivacyPolicy}
             />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <MenuItem
               icon={Info}
               label="Terms of Service"
               iconColor={colors.textSecondary}
-              onPress={() => Alert.alert('Terms', 'View terms of service')}
+              onPress={openTermsOfService}
             />
           </>
         )}

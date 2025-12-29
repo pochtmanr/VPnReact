@@ -2,14 +2,17 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowLeft,
+  Calendar,
   ChevronRight,
   Crown,
   ExternalLink,
   HelpCircle,
   RefreshCw,
   Shield,
+  Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -28,10 +31,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { TIER_DISPLAY_NAMES, useTier } from '@/context/TierContext';
-
-// TODO: Uncomment when RevenueCat is installed
-// import Purchases from 'react-native-purchases';
-// import { RevenueCatUI } from 'react-native-purchases-ui';
+import { useRevenueCat } from '@/context/RevenueCatContext';
+import { UpgradePrompt } from '@/components/tier/UpgradePrompt';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -41,6 +42,17 @@ export default function SubscriptionScreen() {
   const { tier, isPro } = useTier();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Get RevenueCat subscription info
+  const { activeSubscription, restorePurchases, refreshCustomerInfo, isLoading: isRevenueCatLoading } = useRevenueCat();
+
+  // Refresh subscription info when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshCustomerInfo();
+    }, [refreshCustomerInfo])
+  );
 
   // Open system subscription management (Apple's recommended approach)
   const handleManageSubscription = useCallback(async () => {
@@ -74,22 +86,33 @@ export default function SubscriptionScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      // TODO: Uncomment when RevenueCat is installed
-      // const customerInfo = await Purchases.restorePurchases();
-      // if (customerInfo.activeSubscriptions.length > 0) {
-      //   Alert.alert('Success', 'Your purchases have been restored!');
-      // } else {
-      //   Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
-      // }
+      const result = await restorePurchases();
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+      if (result.success) {
+        if (result.restored) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.push({
+            pathname: '/(auth)/subscription-success',
+            params: { restored: 'true' },
+          });
+        } else {
+          Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+        }
+      } else {
+        Alert.alert('Error', result.error || 'Failed to restore purchases.');
+      }
     } catch (error) {
       console.error('Error restoring purchases:', error);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  }, [restorePurchases, router]);
+
+  // Open upgrade modal
+  const handleUpgrade = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowUpgradeModal(true);
   }, []);
 
   const handleContactSupport = useCallback(() => {
@@ -181,21 +204,64 @@ export default function SubscriptionScreen() {
               </Text>
               {isPro && (
                 <View style={[styles.activeBadge, { backgroundColor: `${colors.success}15` }]}>
-                  <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
-                  <Text style={[styles.activeBadgeText, { color: colors.success }]}>Active</Text>
+                  {isRevenueCatLoading ? (
+                    <ActivityIndicator size="small" color={colors.success} style={{ marginRight: 4 }} />
+                  ) : (
+                    <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
+                  )}
+                  <Text style={[styles.activeBadgeText, { color: colors.success }]}>
+                    {isRevenueCatLoading ? 'Refreshing...' : 'Active'}
+                  </Text>
                 </View>
               )}
             </View>
 
+            {/* Active subscription info */}
+            {isPro && activeSubscription && (
+              <View style={styles.subscriptionDetails}>
+                <View style={styles.detailRow}>
+                  <Calendar size={16} color={colors.textSecondary} />
+                  <Text style={[styles.detailText, { color: colors.textSecondary }]}>
+                    {activeSubscription.expirationDate
+                      ? `Renews ${activeSubscription.expirationDate.toLocaleDateString()}`
+                      : 'Lifetime access'}
+                  </Text>
+                </View>
+                {activeSubscription.isInTrial && (
+                  <View style={[styles.trialBadge, { backgroundColor: `${colors.warning}15` }]}>
+                    <Sparkles size={14} color={colors.warning} />
+                    <Text style={[styles.trialText, { color: colors.warning }]}>Free Trial</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Upgrade CTA for free users */}
             {!isPro && (
-              <View style={styles.upgradeSection}>
+              <View style={[styles.upgradeSection, { borderTopColor: colors.border }]}>
                 <Text style={[styles.upgradeText, { color: colors.text }]}>
                   Upgrade to Pro
                 </Text>
                 <Text style={[styles.upgradeSubtext, { color: colors.textSecondary }]}>
                   Unlock all premium features
                 </Text>
+                <Pressable
+                  onPress={handleUpgrade}
+                  style={({ pressed }) => [
+                    styles.upgradeButton,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={['#FFD700', '#FFA500']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.upgradeButtonGradient}
+                  >
+                    <Crown size={18} color="#FFFFFF" />
+                    <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+                  </LinearGradient>
+                </Pressable>
               </View>
             )}
           </AnimatedView>
@@ -291,6 +357,12 @@ export default function SubscriptionScreen() {
           </AnimatedView>
         </Animated.ScrollView>
       </ScrollShadow>
+
+      {/* Upgrade Modal */}
+      <UpgradePrompt
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }
@@ -375,6 +447,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  subscriptionDetails: {
+    marginTop: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailText: {
+    fontSize: 14,
+  },
+  trialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  trialText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   upgradeSection: {
     marginTop: 20,
     paddingTop: 20,
@@ -390,6 +487,24 @@ const styles = StyleSheet.create({
   },
   upgradeSubtext: {
     fontSize: 14,
+  },
+  upgradeButton: {
+    marginTop: 16,
+    width: '100%',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  upgradeButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Management Card
   managementCard: {

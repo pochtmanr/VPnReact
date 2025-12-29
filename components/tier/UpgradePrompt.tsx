@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Linking,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ import {
   FEATURE_INFO,
   TIER_DISPLAY_NAMES,
 } from '@/context/TierContext';
+import { usePaywall, SubscriptionPackage } from '@/context/RevenueCatContext';
 
 interface UpgradePromptProps {
   /** Whether the modal is visible */
@@ -51,7 +52,8 @@ const PRO_FEATURES = [
 
 /**
  * Modal component that prompts users to upgrade to Pro.
- * Shows feature benefits and handles subscription flow.
+ * Shows feature benefits and package selection for subscription purchase.
+ * Uses RevenueCat core SDK (not RevenueCatUI which is incompatible with New Architecture).
  */
 export const UpgradePrompt = memo(function UpgradePrompt({
   visible,
@@ -62,6 +64,19 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 }: UpgradePromptProps) {
   const { colors, isDark } = useTheme();
   const { tier, getUpgradePath, getRequiredTierForFeature } = useTier();
+  const {
+    packages,
+    monthlyPackage,
+    yearlyPackage,
+    purchasePackage,
+    restorePurchases,
+    isLoading,
+    savingsPercentage,
+    isMockMode,
+  } = usePaywall();
+
+  const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   // Determine what tier is needed
   const requiredTier = feature
@@ -81,26 +96,50 @@ export const UpgradePrompt = memo(function UpgradePrompt({
     ? featureInfo.description
     : 'Get access to all premium features');
 
-  // Handle upgrade button press
-  const handleUpgrade = useCallback(async () => {
-    // TODO: Integrate with your payment provider (RevenueCat, Stripe, etc.)
-    // For now, show a placeholder alert
-    Alert.alert(
-      'Upgrade to Pro',
-      'Subscription flow will be implemented with your payment provider.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Learn More',
-          onPress: () => {
-            // Open pricing page or app store
-            // Linking.openURL('https://yourapp.com/pricing');
-          },
-        },
-      ]
-    );
-    onClose();
-  }, [onClose]);
+  // Handle package purchase
+  const handlePurchase = useCallback(async (pkg: SubscriptionPackage) => {
+    if (isMockMode) {
+      Alert.alert('Development Mode', 'Purchases are not available in development mode. Please build and run on a device.');
+      return;
+    }
+
+    setIsPurchasing(true);
+    try {
+      const result = await purchasePackage(pkg);
+      if (result.success) {
+        Alert.alert('Success', 'Thank you for subscribing!', [
+          { text: 'OK', onPress: onClose }
+        ]);
+      } else if (result.error && result.error !== 'Purchase cancelled') {
+        Alert.alert('Error', result.error);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to complete purchase. Please try again.');
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [purchasePackage, onClose, isMockMode]);
+
+  // Handle restore purchases
+  const handleRestore = useCallback(async () => {
+    setIsPurchasing(true);
+    try {
+      const result = await restorePurchases();
+      if (result.success) {
+        if (result.restored) {
+          Alert.alert('Success', 'Your purchases have been restored!', [
+            { text: 'OK', onPress: onClose }
+          ]);
+        } else {
+          Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+        }
+      } else if (result.error) {
+        Alert.alert('Error', result.error);
+      }
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [restorePurchases, onClose]);
 
   // Memoize styles
   const containerStyle = useMemo(() => ({
@@ -183,32 +222,81 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                 ))}
               </View>
 
-              {/* Upgrade button */}
-              <TouchableOpacity
-                style={styles.upgradeButton}
-                onPress={handleUpgrade}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#3B82F6', '#2563EB']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.upgradeButtonGradient}
-                >
-                  <Crown size={20} color="#FFFFFF" />
-                  <Text style={styles.upgradeButtonText}>
-                    Upgrade to {upgradeTierName}
+              {/* Package selection */}
+              <View style={styles.packageList}>
+                {yearlyPackage && (
+                  <TouchableOpacity
+                    style={[
+                      styles.packageOption,
+                      {
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                        borderColor: '#3B82F6',
+                        borderWidth: 2,
+                      },
+                    ]}
+                    onPress={() => handlePurchase(yearlyPackage)}
+                    disabled={isPurchasing || isLoading}
+                    activeOpacity={0.8}
+                  >
+                    {savingsPercentage && (
+                      <View style={styles.savingsBadge}>
+                        <Text style={styles.savingsText}>Save {savingsPercentage}%</Text>
+                      </View>
+                    )}
+                    <Text style={[styles.packageName, { color: colors.text }]}>
+                      Yearly
+                    </Text>
+                    <Text style={[styles.packagePrice, { color: colors.text }]}>
+                      {yearlyPackage.product.priceString}
+                    </Text>
+                    <Text style={[styles.packagePeriod, { color: colors.textSecondary }]}>
+                      per year
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {monthlyPackage && (
+                  <TouchableOpacity
+                    style={[
+                      styles.packageOption,
+                      {
+                        backgroundColor: featureItemBg,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        borderWidth: 1,
+                      },
+                    ]}
+                    onPress={() => handlePurchase(monthlyPackage)}
+                    disabled={isPurchasing || isLoading}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.packageName, { color: colors.text }]}>
+                      Monthly
+                    </Text>
+                    <Text style={[styles.packagePrice, { color: colors.text }]}>
+                      {monthlyPackage.product.priceString}
+                    </Text>
+                    <Text style={[styles.packagePeriod, { color: colors.textSecondary }]}>
+                      per month
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Loading indicator */}
+              {(isPurchasing || isLoading) && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                    Processing...
                   </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                </View>
+              )}
 
               {/* Restore purchases link */}
               <TouchableOpacity
                 style={styles.restoreButton}
-                onPress={() => {
-                  // TODO: Implement restore purchases
-                  Alert.alert('Restore Purchases', 'Checking for previous purchases...');
-                }}
+                onPress={handleRestore}
+                disabled={isPurchasing || isLoading}
               >
                 <Text style={[styles.restoreText, { color: colors.textSecondary }]}>
                   Restore Purchases
@@ -400,25 +488,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  upgradeButton: {
+  packageList: {
     width: '100%',
-    borderRadius: 14,
-    overflow: 'hidden',
+    gap: 12,
+    marginBottom: 16,
   },
-  upgradeButtonGradient: {
+  packageOption: {
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  savingsBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 12,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  savingsText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  packageName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  packagePrice: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  packagePeriod: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
     gap: 8,
+    marginBottom: 12,
   },
-  upgradeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
+  loadingText: {
+    fontSize: 14,
   },
   restoreButton: {
-    marginTop: 16,
     padding: 8,
   },
   restoreText: {
