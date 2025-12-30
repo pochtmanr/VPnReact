@@ -464,7 +464,7 @@ export default function HomeScreen() {
     toggleParentalControls,
     isToggling: isParentalToggling,
   } = useParentalControls();
-  const { isPro, tier } = useTier();
+  const { isPro } = useTier();
 
   // Feature gating with automatic paywall for Quick Settings
   const {
@@ -650,46 +650,14 @@ export default function HomeScreen() {
             entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.header}
           >
-            <View style={styles.headerRow}>
-              <View style={styles.headerLeft}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  {getGreeting(t)}
-                </Text>
-                <Text
-                  style={[styles.headerSubtitle, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {isConnected
-                    ? t('vpn.connection.secure')
-                    : t('vpn.connection.connectPrompt')}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tierBadge,
-                  {
-                    backgroundColor: isPro
-                      ? (isDark ? '#FFD70020' : '#FFD70015')
-                      : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'),
-                  },
-                ]}
-              >
-                {isPro && (
-                  <Shield size={14} color="#FFD700" />
-                )}
-                <Text
-                  style={[
-                    styles.tierText,
-                    {
-                      color: isPro ? '#FFD700' : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {t(`tier.${tier}`).toUpperCase()}
-                </Text>
-              </View>
-            </View>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {getGreeting(t)}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {isConnected
+                ? t('vpn.connection.secure')
+                : t('vpn.connection.connectPrompt')}
+            </Text>
           </AnimatedView>
 
           {/* VPN Profile Installation Banner */}
@@ -1021,37 +989,13 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: {
-    flex: 1,
-    marginEnd: 12,
-  },
-  headerTitle: {
+  title: {
     fontSize: 28,
     fontWeight: '700',
   },
-  headerSubtitle: {
+  subtitle: {
     fontSize: 16,
     marginTop: 4,
-  },
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 70,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-    flexShrink: 0,
-  },
-  tierText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 16,
