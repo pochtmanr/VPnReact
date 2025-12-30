@@ -14,14 +14,15 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
-import { Button, ScrollShadow } from '@/components/ui';
 import {
   AccountCard,
-  SubscriptionCard,
   DevicesWidget,
   SettingsWidget,
+  SubscriptionCard,
 } from '@/components/profile';
+import { Button, ScrollShadow } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -30,6 +31,7 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const {
     logout,
     deleteAccount,
@@ -179,9 +181,9 @@ export default function ProfileScreen() {
             entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.header}
           >
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile.title')}</Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              Manage your account
+              {t('profile.manageAccount')}
             </Text>
           </AnimatedView>
 
@@ -204,7 +206,7 @@ export default function ProfileScreen() {
               style={styles.accountActionsContainer}
             >
               <Button
-                title="Sign Out"
+                title={t('profile.signOut')}
                 variant="secondary"
                 size="large"
                 onPress={handleLogout}
@@ -212,7 +214,7 @@ export default function ProfileScreen() {
               />
 
               <Button
-                title="Delete Account"
+                title={t('profile.deleteAccount')}
                 variant="danger"
                 size="large"
                 onPress={handleDeleteAccount}

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   Image,
   Dimensions,
 } from 'react-native';
@@ -33,10 +32,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AnimatedView = Animated.createAnimatedComponent(View);
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // Floating Orb Component
 interface FloatingOrbProps {
@@ -176,24 +176,25 @@ const FeatureCard = ({ icon: Icon, title, description, iconColor, delay }: Featu
 export default function FeaturesScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const features = [
     {
       icon: ShieldCheck,
-      title: 'VPN Protection',
-      description: 'Encrypt your connection and hide your IP from trackers',
+      title: t('auth.features.vpnProtection.title'),
+      description: t('auth.features.vpnProtection.description'),
       color: colors.primary,
     },
     {
       icon: Ban,
-      title: 'Ad Blocker',
-      description: 'Block annoying ads and malware across all apps',
+      title: t('auth.features.adBlocker.title'),
+      description: t('auth.features.adBlocker.description'),
       color: '#EF4444',
     },
     {
       icon: Zap,
-      title: 'Fast Servers',
-      description: 'Connect to optimized servers with minimal speed loss',
+      title: t('auth.features.fastServers.title'),
+      description: t('auth.features.fastServers.description'),
       color: colors.success,
     },
   ];
@@ -273,12 +274,12 @@ export default function FeaturesScreen() {
           <View style={styles.headerBadge}>
             <BlurView intensity={40} tint="dark" style={styles.headerBadgeBlur}>
               <Sparkles size={14} color={colors.primary} />
-              <Text style={styles.headerBadgeText}>Premium Features</Text>
+              <Text style={styles.headerBadgeText}>{t('auth.features.title')}</Text>
             </BlurView>
           </View>
-          <Text style={styles.title}>What You Get</Text>
+          <Text style={styles.title}>{t('auth.features.subtitle')}</Text>
           <Text style={styles.subtitle}>
-            Everything you need for complete online privacy
+            {t('auth.features.description')}
           </Text>
         </AnimatedView>
 
@@ -305,17 +306,17 @@ export default function FeaturesScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.primary }]}>100+</Text>
-                <Text style={styles.statLabel}>Servers</Text>
+                <Text style={styles.statLabel}>{t('auth.features.stats.servers').replace('100+ ', '')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.primary }]}>50+</Text>
-                <Text style={styles.statLabel}>Countries</Text>
+                <Text style={styles.statLabel}>{t('auth.features.stats.countries').replace('50+ ', '')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.primary }]}>10M+</Text>
-                <Text style={styles.statLabel}>Users</Text>
+                <Text style={styles.statLabel}>{t('auth.features.stats.users').replace('10M+ ', '')}</Text>
               </View>
             </View>
           </BlurView>
@@ -330,31 +331,16 @@ export default function FeaturesScreen() {
           style={styles.ctaSection}
         >
           {/* Primary Button */}
-          <AnimatedPressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              {
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-                opacity: pressed ? 0.9 : 1,
-              },
-            ]}
+          <PrimaryButton
+            title={t('auth.features.startProtecting')}
             onPress={handleContinue}
-          >
-            <LinearGradient
-              colors={[colors.primary, '#4A8BC4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
-              <Text style={styles.primaryButtonText}>Start Protecting</Text>
-              <ArrowRight size={20} color="#FFFFFF" />
-            </LinearGradient>
-          </AnimatedPressable>
+            icon={<ArrowRight size={20} color="#FFFFFF" />}
+          />
 
           {/* Guarantee Row */}
           <View style={styles.guaranteeRow}>
             <ShieldCheck size={16} color={colors.success} />
-            <Text style={styles.guaranteeText}>No account required - Free to start</Text>
+            <Text style={styles.guaranteeText}>{t('auth.features.guarantee')}</Text>
           </View>
         </AnimatedView>
       </View>
@@ -500,22 +486,6 @@ const styles = StyleSheet.create({
   // CTA Section
   ctaSection: {
     gap: 16,
-  },
-  primaryButton: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 10,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
   },
   guaranteeRow: {
     flexDirection: 'row',

@@ -1,39 +1,45 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
 
+// Import i18n configuration (must be before any components that use translations)
+import '../i18n';
+
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { GlobalPaywallModal } from '@/components/tier';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { RevenueCatProvider, useRevenueCat } from '@/context/RevenueCatContext';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { ParentalControlsProvider } from '@/context/ParentalControlsContext';
+import { RevenueCatProvider } from '@/context/RevenueCatContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { TierProvider } from '@/context/TierContext';
 import { VPNProvider } from '@/context/VPNContext';
-import { ParentalControlsProvider } from '@/context/ParentalControlsContext';
-import { ThemeProvider, useTheme } from '@/context/ThemeContext';
-import { GlobalPaywallModal } from '@/components/tier';
 
 export {
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
   initialRouteName: '(auth)',
 };
 
+// Keep splash visible until we're ready
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const { isDark, colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
+  const hasNavigated = useRef(false);
 
   // Create navigation theme based on current theme
   const navigationTheme = isDark
@@ -62,33 +68,71 @@ function RootLayoutNav() {
         },
       };
 
+  // Check onboarding status on mount
   useEffect(() => {
-    // Check if onboarding is complete on mount
     AsyncStorage.getItem('onboarding_complete').then((value) => {
       setOnboardingComplete(value === 'true');
-      setInitialCheckDone(true);
     });
   }, []);
 
+  // Determine if all checks are complete
+  const isReady = !authLoading && onboardingComplete !== null;
+
+  // Handle initial navigation and splash screen
   useEffect(() => {
-    if (loading || !initialCheckDone) return;
+    if (!isReady || hasNavigated.current) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    // Only redirect on initial load, not on every segment change
-    if (!onboardingComplete && !inAuthGroup) {
-      // Show onboarding
-      router.replace('/(auth)/welcome');
-    } else if (onboardingComplete && isAuthenticated && inAuthGroup) {
-      // User is authenticated, skip to main app
-      router.replace('/(tabs)');
-    } else if (onboardingComplete && !isAuthenticated && !inAuthGroup) {
-      // User completed onboarding but not authenticated, go to account
+    // Determine target route based on auth state
+    let targetRoute: string | null = null;
+
+    if (!onboardingComplete) {
+      // Not onboarded - go to welcome (only if not already in auth)
+      if (!inAuthGroup) {
+        targetRoute = '/(auth)/welcome';
+      }
+    } else if (isAuthenticated) {
+      // Onboarded and authenticated - go to main app
+      if (inAuthGroup) {
+        targetRoute = '/(tabs)';
+      }
+    } else {
+      // Onboarded but not authenticated - go to account
+      if (!inAuthGroup) {
+        targetRoute = '/(auth)/account';
+      }
+    }
+
+    // Navigate if needed
+    if (targetRoute) {
+      router.replace(targetRoute as any);
+    }
+
+    // Mark navigation as done and reveal the app
+    hasNavigated.current = true;
+    setIsNavigationReady(true);
+    SplashScreen.hideAsync();
+  }, [isReady, onboardingComplete, isAuthenticated, segments, router]);
+
+  // Handle subsequent auth state changes (e.g., logout from main app)
+  useEffect(() => {
+    if (!hasNavigated.current || !isReady) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    // If user logs out while in main app, redirect to account
+    if (onboardingComplete && !isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/account');
     }
-  }, [loading, initialCheckDone, isAuthenticated]);
+    // If user authenticates while in auth flow, go to main app
+    else if (onboardingComplete && isAuthenticated && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, onboardingComplete, segments]);
 
-  if (loading || !initialCheckDone) {
+  // Show loading screen until ready
+  if (!isReady || !isNavigationReady) {
     return <LoadingScreen />;
   }
 
@@ -106,38 +150,35 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({  
+  const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,  
-  }); 
+    ...FontAwesome.font,
+  });
 
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
+  // Don't hide splash here - let RootLayoutNav control it after auth check
   if (!loaded) {
     return null;
   }
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <RevenueCatProvider>
-          <TierProvider>
-            <VPNProvider>
-              <ParentalControlsProvider>
-                <RootLayoutNav />
-              </ParentalControlsProvider>
-            </VPNProvider>
-          </TierProvider>
-        </RevenueCatProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <RevenueCatProvider>
+            <TierProvider>
+              <VPNProvider>
+                <ParentalControlsProvider>
+                  <RootLayoutNav />
+                </ParentalControlsProvider>
+              </VPNProvider>
+            </TierProvider>
+          </RevenueCatProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

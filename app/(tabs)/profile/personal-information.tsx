@@ -24,6 +24,7 @@ import Animated, {
   FadeInDown,
   Easing,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -79,6 +80,7 @@ export default function PersonalInformationScreen() {
   const { colors, isDark } = useTheme();
   const { user, profile, updateProfile } = useAuth();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const [username, setUsername] = useState(profile?.username || '');
   const [email] = useState(user?.email || '');
@@ -96,10 +98,10 @@ export default function PersonalInformationScreen() {
     setIsLoading(true);
     try {
       await updateProfile({ username });
-      Alert.alert('Success', 'Your profile has been updated.');
+      Alert.alert(t('common.status.success'), t('profile.personalInfo.profileUpdated'));
       setHasChanges(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      Alert.alert(t('common.status.error'), t('profile.personalInfo.profileUpdateError'));
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +109,14 @@ export default function PersonalInformationScreen() {
 
   const handleChangePassword = () => {
     Alert.alert(
-      'Change Password',
-      'We will send a password reset link to your email address.',
+      t('profile.personalInfo.passwordResetTitle'),
+      t('profile.personalInfo.passwordResetMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.buttons.cancel'), style: 'cancel' },
         {
-          text: 'Send Link',
+          text: t('profile.personalInfo.sendLink'),
           onPress: () => {
-            Alert.alert('Email Sent', 'Check your inbox for the password reset link.');
+            Alert.alert(t('profile.personalInfo.emailSent'), t('profile.personalInfo.checkInbox'));
           },
         },
       ]
@@ -165,7 +167,7 @@ export default function PersonalInformationScreen() {
         <View style={styles.header}>
           {renderBackButton()}
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Personal Information
+            {t('profile.personalInfo.title')}
           </Text>
           <View style={{ width: 40 }} />
         </View>
@@ -174,7 +176,7 @@ export default function PersonalInformationScreen() {
           entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
         >
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            Manage your account details
+            {t('profile.personalInfo.manageDetails')}
           </Text>
         </AnimatedView>
 
@@ -199,7 +201,7 @@ export default function PersonalInformationScreen() {
           >
             <Camera size={16} color={colors.primary} />
             <Text style={[styles.changeAvatarText, { color: colors.primary }]}>
-              Change Photo
+              {t('profile.personalInfo.changePhoto')}
             </Text>
           </Pressable>
         </AnimatedView>
@@ -215,19 +217,19 @@ export default function PersonalInformationScreen() {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.personalInfo.profile')}</Text>
 
           <EditableField
-            label="USERNAME"
+            label={t('profile.personalInfo.username')}
             value={username}
-            placeholder="Enter your username"
+            placeholder={t('profile.personalInfo.usernamePlaceholder')}
             onChangeText={handleUsernameChange}
           />
 
           <EditableField
-            label="EMAIL ADDRESS"
+            label={t('profile.personalInfo.email')}
             value={email}
-            placeholder="your@email.com"
+            placeholder={t('profile.personalInfo.emailPlaceholder')}
             onChangeText={() => {}}
             editable={false}
             keyboardType="email-address"
@@ -243,7 +245,7 @@ export default function PersonalInformationScreen() {
           >
             <Info size={14} color="#3B82F6" />
             <Text style={[styles.emailNoteText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>
-              Email cannot be changed for security reasons
+              {t('profile.personalInfo.emailNote')}
             </Text>
           </View>
         </AnimatedView>
@@ -259,7 +261,7 @@ export default function PersonalInformationScreen() {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Security</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.personalInfo.security')}</Text>
 
           <Pressable
             onPress={handleChangePassword}
@@ -281,9 +283,9 @@ export default function PersonalInformationScreen() {
               <Key size={20} color={colors.primary} />
             </View>
             <View style={styles.passwordContent}>
-              <Text style={[styles.passwordTitle, { color: colors.text }]}>Change Password</Text>
+              <Text style={[styles.passwordTitle, { color: colors.text }]}>{t('profile.personalInfo.changePassword')}</Text>
               <Text style={[styles.passwordSubtitle, { color: colors.textSecondary }]}>
-                Update your account password
+                {t('profile.personalInfo.updatePassword')}
               </Text>
             </View>
             <ChevronRight size={20} color={colors.textMuted} />
@@ -301,13 +303,13 @@ export default function PersonalInformationScreen() {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Information</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.personalInfo.accountInfo')}</Text>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Member Since</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.personalInfo.memberSince')}</Text>
             <Text style={[styles.infoValue, { color: colors.text }]}>
               {profile?.created_at
-                ? new Date(profile.created_at).toLocaleDateString('en-US', {
+                ? new Date(profile.created_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'en-US', {
                     month: 'long',
                     year: 'numeric',
                   })
@@ -318,7 +320,7 @@ export default function PersonalInformationScreen() {
           <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Account ID</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.accountId')}</Text>
             <Text style={[styles.infoValue, { color: colors.textMuted }]}>
               {user?.id?.slice(0, 8) || 'N/A'}...
             </Text>
@@ -346,7 +348,7 @@ export default function PersonalInformationScreen() {
                 style={styles.saveButtonGradient}
               >
                 <Text style={styles.saveButtonText}>
-                  {isLoading ? 'Saving...' : 'Save Changes'}
+                  {isLoading ? t('profile.personalInfo.saving') : t('profile.personalInfo.saveChanges')}
                 </Text>
               </LinearGradient>
             </Pressable>
@@ -360,15 +362,15 @@ export default function PersonalInformationScreen() {
           <Pressable
             onPress={() => {
               Alert.alert(
-                'Delete Account',
-                'Are you sure you want to delete your account? This action cannot be undone.',
+                t('profile.personalInfo.deleteAccount'),
+                t('profile.personalInfo.deleteAccountConfirm'),
                 [
-                  { text: 'Cancel', style: 'cancel' },
+                  { text: t('common.buttons.cancel'), style: 'cancel' },
                   {
-                    text: 'Delete',
+                    text: t('profile.deleteAccount'),
                     style: 'destructive',
                     onPress: () => {
-                      Alert.alert('Contact Support', 'Please contact support to delete your account.');
+                      Alert.alert(t('profile.support.title'), t('profile.personalInfo.contactSupportToDelete'));
                     },
                   },
                 ]
@@ -376,7 +378,7 @@ export default function PersonalInformationScreen() {
             }}
             style={styles.deleteButton}
           >
-            <Text style={[styles.deleteButtonText, { color: colors.error }]}>Delete Account</Text>
+            <Text style={[styles.deleteButtonText, { color: colors.error }]}>{t('profile.personalInfo.deleteAccount')}</Text>
           </Pressable>
         </AnimatedView>
       </AnimatedScrollView>

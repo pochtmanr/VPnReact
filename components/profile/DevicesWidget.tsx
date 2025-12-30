@@ -5,10 +5,19 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
-import { Smartphone, Tablet, Monitor, X, Minus } from 'lucide-react-native';
+import { Smartphone, Tablet, Monitor, X, Minus, ChevronDown, ChevronUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -81,6 +90,14 @@ interface DeviceItemProps {
   isParentalEnabled?: boolean;
   isAdBlockEnabled?: boolean;
   onRemove?: () => void;
+  isCollapsed?: boolean;
+  translations: {
+    mainDevice: string;
+    thisDevice: string;
+    vpn: string;
+    control: string;
+    adBlock: string;
+  };
 }
 
 const DeviceItem = memo(function DeviceItem({
@@ -92,6 +109,8 @@ const DeviceItem = memo(function DeviceItem({
   isParentalEnabled,
   isAdBlockEnabled,
   onRemove,
+  isCollapsed = false,
+  translations,
 }: DeviceItemProps) {
   const { colors, isDark } = useTheme();
 
@@ -115,13 +134,23 @@ const DeviceItem = memo(function DeviceItem({
     [isDark]
   );
 
-  // Collect tags to display
+  // Collect status dots for collapsed view (only for current device)
+  const statusDots = useMemo(() => {
+    if (!isCurrentDevice) return [];
+    const dots: Array<{ color: string; key: string }> = [];
+    if (isVpnConnected) dots.push({ color: '#22C55E', key: 'vpn' });
+    if (isParentalEnabled) dots.push({ color: '#3B82F6', key: 'parental' });
+    if (isAdBlockEnabled) dots.push({ color: '#EF4444', key: 'adblock' });
+    return dots;
+  }, [isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled]);
+
+  // Collect tags to display (only in expanded view)
   const tags = useMemo(() => {
     const result: Array<{ label: string; color: string; bgColor: string }> = [];
 
     if (isMainDevice) {
       result.push({
-        label: 'Main device',
+        label: translations.mainDevice,
         color: colors.primary,
         bgColor: `${colors.primary}15`,
       });
@@ -129,7 +158,7 @@ const DeviceItem = memo(function DeviceItem({
 
     if (isCurrentDevice) {
       result.push({
-        label: 'This device',
+        label: translations.thisDevice,
         color: colors.textSecondary,
         bgColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
       });
@@ -137,21 +166,21 @@ const DeviceItem = memo(function DeviceItem({
       // Status badges only for current device
       if (isVpnConnected) {
         result.push({
-          label: 'VPN',
+          label: translations.vpn,
           color: '#22C55E',
           bgColor: 'rgba(34, 197, 94, 0.15)',
         });
       }
       if (isParentalEnabled) {
         result.push({
-          label: 'Control',
+          label: translations.control,
           color: '#3B82F6',
           bgColor: 'rgba(59, 130, 246, 0.15)',
         });
       }
       if (isAdBlockEnabled) {
         result.push({
-          label: 'Ad Block',
+          label: translations.adBlock,
           color: '#EF4444',
           bgColor: 'rgba(239, 68, 68, 0.15)',
         });
@@ -159,26 +188,43 @@ const DeviceItem = memo(function DeviceItem({
     }
 
     return result;
-  }, [isMainDevice, isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled, colors, isDark]);
+  }, [isMainDevice, isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled, colors, isDark, translations]);
 
-  // Determine if remove button should be shown
-  const showRemoveButton = !isMainDevice && canRemove;
-  const showDisabledIndicator = isMainDevice && canRemove; // Show — for main device when user is on main device
+  // Determine if remove button should be shown (only in expanded view)
+  const showRemoveButton = !isCollapsed && !isMainDevice && canRemove;
+  const showDisabledIndicator = !isCollapsed && isMainDevice && canRemove;
 
   return (
-    <View style={styles.deviceItem}>
-      <View style={[styles.deviceIcon, { backgroundColor: deviceIconBg }]}>
-        <DeviceIcon size={20} color={colors.textSecondary} />
+    <View style={[styles.deviceItem, isCollapsed && styles.deviceItemCollapsed]}>
+      <View style={[styles.deviceIcon, isCollapsed && styles.deviceIconCollapsed, { backgroundColor: deviceIconBg }]}>
+        <DeviceIcon size={isCollapsed ? 16 : 20} color={colors.textSecondary} />
       </View>
 
       <View style={styles.deviceInfo}>
         {/* Line 1: Brand · OS */}
-        <Text style={[styles.deviceBrand, { color: colors.text }]}>
-          {deviceBrand} · {osName}
-        </Text>
+        <View style={styles.deviceNameRow}>
+          <Text style={[styles.deviceBrand, isCollapsed && styles.deviceBrandCollapsed, { color: colors.text }]} numberOfLines={1}>
+            {deviceBrand}
+          </Text>
+          <Text style={[styles.deviceOsInline, { color: colors.textSecondary }]}>
+            {' '}· {osName}
+          </Text>
 
-        {/* Line 2: Tags */}
-        {tags.length > 0 && (
+          {/* Status dots in collapsed view */}
+          {isCollapsed && statusDots.length > 0 && (
+            <View style={styles.statusDotsRow}>
+              {statusDots.map((dot) => (
+                <View
+                  key={dot.key}
+                  style={[styles.statusDot, { backgroundColor: dot.color }]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Line 2: Tags (only in expanded view) */}
+        {!isCollapsed && tags.length > 0 && (
           <View style={styles.tagsRow}>
             {tags.map((tag, index) => (
               <View
@@ -194,7 +240,7 @@ const DeviceItem = memo(function DeviceItem({
         )}
       </View>
 
-      {/* Remove button or disabled indicator */}
+      {/* Remove button or disabled indicator (only in expanded view) */}
       {showRemoveButton && onRemove && (
         <Pressable
           onPress={onRemove}
@@ -227,6 +273,7 @@ export const DevicesWidget = memo(function DevicesWidget({
   animationDelay = 150,
 }: DevicesWidgetProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const {
     devices,
     deviceSession,
@@ -241,8 +288,15 @@ export const DevicesWidget = memo(function DevicesWidget({
   const { isEnabled: isParentalEnabled } = useParentalControls();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isVpnConnected = connectionStatus === 'connected';
+
+  // Toggle collapsed/expanded state with animation
+  const toggleExpanded = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(prev => !prev);
+  }, []);
 
   // Simulate loading state (devices come from context, so just brief delay)
   useEffect(() => {
@@ -267,19 +321,28 @@ export const DevicesWidget = memo(function DevicesWidget({
     });
   }, [devices, mainDevice, deviceSession]);
 
+  // Memoize translations for DeviceItem to avoid re-renders
+  const deviceItemTranslations = useMemo(() => ({
+    mainDevice: t('profile.devices.mainDevice'),
+    thisDevice: t('profile.devices.thisDevice'),
+    vpn: t('profile.devices.vpn'),
+    control: t('profile.devices.control'),
+    adBlock: t('profile.devices.adBlock'),
+  }), [t]);
+
   const handleRemoveDevice = useCallback((deviceId: string, deviceName: string) => {
     Alert.alert(
-      'Remove Device?',
-      `"${deviceName}" will be signed out and removed from your account.`,
+      t('profile.devices.removeTitle'),
+      t('profile.devices.removeMessage', { name: deviceName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.buttons.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.buttons.confirm'),
           style: 'destructive',
           onPress: async () => {
             const result = await removeDevice(deviceId);
             if (!result.success) {
-              Alert.alert('Error', result.error || 'Couldn\'t remove device. Check your connection.');
+              Alert.alert(t('common.status.error'), result.error || t('profile.devices.removeError'));
             } else {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
@@ -287,34 +350,42 @@ export const DevicesWidget = memo(function DevicesWidget({
         },
       ]
     );
-  }, [removeDevice]);
+  }, [removeDevice, t]);
+
+  const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
   return (
     <AnimatedView
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
       style={[styles.card, cardStyle]}
     >
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Devices</Text>
-        <Text style={[styles.deviceCount, { color: colors.textSecondary }]}>
-          {deviceCount} of {maxDevices}
-        </Text>
-      </View>
+      {/* Tappable header to toggle collapsed/expanded */}
+      <Pressable onPress={toggleExpanded} style={styles.sectionHeaderPressable}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.devices.title')}</Text>
+          <View style={styles.headerRight}>
+            <Text style={[styles.deviceCount, { color: colors.textSecondary }]}>
+              {deviceCount} / {maxDevices}
+            </Text>
+            <ChevronIcon size={18} color={colors.textSecondary} />
+          </View>
+        </View>
+      </Pressable>
 
-      {/* Non-main device info message */}
-      {!canManageDevices && devices.length > 1 && (
+      {/* Non-main device info message (only in expanded view) */}
+      {isExpanded && !canManageDevices && devices.length > 1 && (
         <View style={[styles.infoMessage, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
           <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-            Sign in from your main device to manage devices
+            {t('profile.devices.manageFromMain')}
           </Text>
         </View>
       )}
 
-      {/* Device limit warning */}
-      {deviceCount >= maxDevices && (
+      {/* Device limit warning (only in expanded view) */}
+      {isExpanded && deviceCount >= maxDevices && (
         <View style={[styles.warningMessage, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
           <Text style={[styles.warningText, { color: '#EAB308' }]}>
-            Device limit reached. Remove a device to add a new one.
+            {t('profile.devices.limitReached')}
           </Text>
         </View>
       )}
@@ -333,7 +404,15 @@ export const DevicesWidget = memo(function DevicesWidget({
 
             return (
               <View key={device.id}>
-                {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                {index > 0 && (
+                  <View
+                    style={[
+                      styles.divider,
+                      !isExpanded && styles.dividerCollapsed,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
+                )}
                 <DeviceItem
                   device={device}
                   isCurrentDevice={isCurrentDevice}
@@ -342,6 +421,8 @@ export const DevicesWidget = memo(function DevicesWidget({
                   isVpnConnected={isCurrentDevice ? isVpnConnected : false}
                   isParentalEnabled={isCurrentDevice ? isParentalEnabled : false}
                   isAdBlockEnabled={isCurrentDevice ? adBlockEnabled : false}
+                  isCollapsed={!isExpanded}
+                  translations={deviceItemTranslations}
                   onRemove={
                     canManageDevices && !isMainDevice
                       ? () => handleRemoveDevice(device.device_id, device.device_name)
@@ -353,7 +434,7 @@ export const DevicesWidget = memo(function DevicesWidget({
           })
         ) : (
           <Text style={[styles.noDevices, { color: colors.textSecondary }]}>
-            No devices connected
+            {t('profile.devices.noDevices')}
           </Text>
         )}
       </View>
@@ -368,11 +449,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+  sectionHeaderPressable: {
+    marginBottom: 8,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sectionTitle: {
     fontSize: 16,
@@ -412,6 +500,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
+  deviceItemCollapsed: {
+    paddingVertical: 8,
+    gap: 10,
+  },
   deviceIcon: {
     width: 40,
     height: 40,
@@ -419,13 +511,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  deviceIconCollapsed: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
   deviceInfo: {
     flex: 1,
     gap: 4,
   },
+  deviceNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+  },
   deviceBrand: {
     fontSize: 15,
     fontWeight: '500',
+    flexShrink: 1,
+  },
+  deviceBrandCollapsed: {
+    fontSize: 14,
+  },
+  deviceOsInline: {
+    fontSize: 14,
+    flexShrink: 0,
+  },
+  statusDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+    gap: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   tagsRow: {
     flexDirection: 'row',
@@ -456,5 +577,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginLeft: 52,
+  },
+  dividerCollapsed: {
+    marginLeft: 42,
   },
 });

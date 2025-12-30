@@ -8,6 +8,7 @@ import {
 import { Crown, Shield, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +28,7 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
   const { colors, isDark } = useTheme();
   const { account } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,9 +39,9 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
 
   const { currentTier, tierData } = useMemo(() => {
     const tierInfo = {
-      free: { name: 'Free', color: colors.textMuted },
-      pro: { name: 'Pro', color: colors.primary },
-      premium: { name: 'Premium', color: colors.info },
+      free: { nameKey: 'tier.free', color: colors.textMuted },
+      pro: { nameKey: 'profile.subscription.plans.pro', color: colors.primary },
+      premium: { nameKey: 'tier.premium', color: colors.info },
     };
     const tier = (account?.subscription_tier || 'free') as keyof typeof tierInfo;
     return { currentTier: tier, tierData: tierInfo[tier] };
@@ -50,7 +52,7 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
       style={[styles.card, cardStyle]}
     >
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Subscription</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.subscription.title')}</Text>
 
       {isLoading ? (
         <SkeletonSubscription />
@@ -75,10 +77,12 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
           </View>
           <View style={styles.subscriptionInfo}>
             <Text style={[styles.subscriptionPlan, { color: colors.text }]}>
-              {tierData.name} Plan
+              {t(tierData.nameKey)}
             </Text>
             <Text style={[styles.subscriptionStatus, { color: colors.textSecondary }]}>
-              {currentTier === 'free' ? 'Upgrade to unlock all features' : 'Active subscription'}
+              {currentTier === 'free'
+                ? t('profile.subscription.statusText.upgradePrompt')
+                : t('profile.subscription.statusText.activeSubscription')}
             </Text>
           </View>
           <ChevronRight size={20} color={colors.textMuted} />

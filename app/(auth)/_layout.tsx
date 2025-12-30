@@ -7,7 +7,9 @@ export default function AuthLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
+        animation: 'fade',
+        // Disable swipe-back gesture in auth flow to prevent navigation leakage
+        gestureEnabled: false,
       }}
     >
       <Stack.Screen name="welcome" />

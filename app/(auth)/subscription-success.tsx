@@ -12,42 +12,43 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useRevenueCat } from '@/context/RevenueCatContext';
 
-// Map product identifiers to user-friendly names
-const PLAN_DISPLAY_NAMES: Record<string, string> = {
-  'vpn_premium_monthly': 'Premium Monthly',
-  'vpn_premium_6m': 'Premium 6 Months',
-  'vpn_premium_yearly': 'Premium Yearly',
+// Map product identifiers to translation keys
+const PLAN_TRANSLATION_KEYS: Record<string, string> = {
+  'vpn_premium_monthly': 'auth.subscriptionSuccess.plans.monthly',
+  'vpn_premium_6m': 'auth.subscriptionSuccess.plans.sixMonths',
+  'vpn_premium_yearly': 'auth.subscriptionSuccess.plans.yearly',
 };
-
-function formatDate(date: Date | null): string {
-  if (!date) return 'Lifetime';
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 export default function SubscriptionSuccessScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ restored?: string }>();
   const { activeSubscription } = useRevenueCat();
+  const { t, i18n } = useTranslation();
 
   const isRestored = params.restored === 'true';
 
   const planName = useMemo(() => {
-    if (!activeSubscription?.productIdentifier) return 'Premium';
-    return PLAN_DISPLAY_NAMES[activeSubscription.productIdentifier] || 'Premium';
-  }, [activeSubscription?.productIdentifier]);
+    if (!activeSubscription?.productIdentifier) return t('tier.premium');
+    const translationKey = PLAN_TRANSLATION_KEYS[activeSubscription.productIdentifier];
+    return translationKey ? t(translationKey) : t('tier.premium');
+  }, [activeSubscription?.productIdentifier, t]);
 
   const renewalDate = useMemo(() => {
-    return formatDate(activeSubscription?.expirationDate || null);
-  }, [activeSubscription?.expirationDate]);
+    if (!activeSubscription?.expirationDate) return t('profile.subscription.statusText.lifetimeAccess');
+    return activeSubscription.expirationDate.toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }, [activeSubscription?.expirationDate, t, i18n.language]);
 
-  const autoRenewStatus = activeSubscription?.willRenew ? 'On' : 'Off';
+  const autoRenewStatus = activeSubscription?.willRenew
+    ? t('common.status.enabled')
+    : t('common.status.disabled');
 
   const handleContinue = () => {
     router.replace('/(tabs)');
@@ -94,14 +95,14 @@ export default function SubscriptionSuccessScreen() {
 
         {/* Title */}
         <Text style={styles.title}>
-          {isRestored ? 'Welcome back!' : "You're all set!"}
+          {isRestored ? t('auth.subscriptionSuccess.welcomeBack') : t('auth.subscriptionSuccess.allSet')}
         </Text>
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
           {isRestored
-            ? 'Your subscription has been restored.'
-            : 'Your subscription is now active.'}
+            ? t('profile.subscription.statusText.activeSubscription')
+            : t('profile.subscription.statusText.activeSubscription')}
         </Text>
 
         {/* Subscription Details Card */}
@@ -111,7 +112,7 @@ export default function SubscriptionSuccessScreen() {
             <View style={styles.detailIcon}>
               <Crown size={18} color="#FFD700" />
             </View>
-            <Text style={styles.detailLabel}>Plan</Text>
+            <Text style={styles.detailLabel}>{t('profile.subscription.currentPlan')}</Text>
             <Text style={styles.detailValue}>{planName}</Text>
           </View>
 
@@ -123,7 +124,9 @@ export default function SubscriptionSuccessScreen() {
               <Calendar size={18} color="rgba(255, 255, 255, 0.6)" />
             </View>
             <Text style={styles.detailLabel}>
-              {activeSubscription?.willRenew ? 'Renews' : 'Expires'}
+              {activeSubscription?.willRenew
+                ? t('profile.subscription.statusText.renewsOn', { date: '' }).replace('{{date}}', '').trim()
+                : t('profile.subscription.statusText.accessUntil', { date: '' }).replace('{{date}}', '').trim()}
             </Text>
             <Text style={styles.detailValue}>{renewalDate}</Text>
           </View>
@@ -135,10 +138,10 @@ export default function SubscriptionSuccessScreen() {
             <View style={styles.detailIcon}>
               <RefreshCw size={18} color="rgba(255, 255, 255, 0.6)" />
             </View>
-            <Text style={styles.detailLabel}>Auto-renew</Text>
+            <Text style={styles.detailLabel}>{t('common.status.active')}</Text>
             <Text style={[
               styles.detailValue,
-              { color: autoRenewStatus === 'On' ? '#22C55E' : 'rgba(255, 255, 255, 0.6)' }
+              { color: activeSubscription?.willRenew ? '#22C55E' : 'rgba(255, 255, 255, 0.6)' }
             ]}>
               {autoRenewStatus}
             </Text>
@@ -164,7 +167,7 @@ export default function SubscriptionSuccessScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.buttonGradient}
             >
-              <Text style={styles.primaryButtonText}>Continue to App</Text>
+              <Text style={styles.primaryButtonText}>{t('common.buttons.continue')}</Text>
             </LinearGradient>
           </Pressable>
 
@@ -176,7 +179,7 @@ export default function SubscriptionSuccessScreen() {
             ]}
             onPress={handleManageSubscription}
           >
-            <Text style={styles.secondaryButtonText}>Manage Subscription</Text>
+            <Text style={styles.secondaryButtonText}>{t('profile.subscription.cta.manage')}</Text>
           </Pressable>
         </View>
       </View>

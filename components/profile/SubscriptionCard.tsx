@@ -11,6 +11,7 @@ import {
 import { Crown, Shield, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useRevenueCat } from '@/context/RevenueCatContext';
@@ -48,6 +49,7 @@ export const SubscriptionCard = memo(function SubscriptionCard({
 }: SubscriptionCardProps) {
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const { t } = useTranslation();
   const {
     currentTier,
     activeSubscription,
@@ -94,86 +96,87 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     switch (subscriptionStatus) {
       case 'active':
         return {
-          label: 'Active',
+          label: t('profile.subscription.status.active'),
           color: '#22C55E',
           backgroundColor: 'rgba(34, 197, 94, 0.15)',
         };
       case 'canceled':
         return {
-          label: 'Canceled',
+          label: t('profile.subscription.status.canceled'),
           color: '#EAB308',
           backgroundColor: 'rgba(234, 179, 8, 0.15)',
         };
       case 'expired':
         return {
-          label: 'Expired',
+          label: t('profile.subscription.status.expired'),
           color: colors.textMuted,
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
         };
       case 'grace_period':
         return {
-          label: 'Payment Issue',
+          label: t('profile.subscription.status.gracePeriod'),
           color: '#F97316',
           backgroundColor: 'rgba(249, 115, 22, 0.15)',
         };
       default:
         return null;
     }
-  }, [subscriptionStatus, colors.textMuted, isDark]);
+  }, [subscriptionStatus, colors.textMuted, isDark, t]);
 
   // Plan display name
   const planName = useMemo(() => {
     switch (currentTier) {
       case 'premium':
-        return 'Premium Plan';
+        return t('profile.subscription.plans.premium');
       case 'pro':
-        return 'Pro Plan';
+        return t('profile.subscription.plans.pro');
       default:
-        return 'Free Plan';
+        return t('profile.subscription.plans.free');
     }
-  }, [currentTier]);
+  }, [currentTier, t]);
 
   // Status text (renewal/expiration info)
   const statusText = useMemo(() => {
     if (subscriptionStatus === 'free') {
-      return 'Upgrade to unlock all features';
+      return t('profile.subscription.statusText.upgradePrompt');
     }
 
     if (subscriptionStatus === 'grace_period') {
-      return 'Update payment method to continue access';
+      return t('profile.subscription.statusText.updatePayment');
     }
 
     const date = activeSubscription?.expirationDate;
-    if (!date) return 'Active subscription';
+    if (!date) return t('profile.subscription.statusText.activeSubscription');
 
+    const formattedDate = formatDate(date);
     switch (subscriptionStatus) {
       case 'active':
-        return `Renews on ${formatDate(date)}`;
+        return t('profile.subscription.statusText.renewsOn', { date: formattedDate });
       case 'canceled':
-        return `Access until ${formatDate(date)}`;
+        return t('profile.subscription.statusText.accessUntil', { date: formattedDate });
       case 'expired':
-        return `Expired on ${formatDate(date)}`;
+        return t('profile.subscription.statusText.expiredOn', { date: formattedDate });
       default:
-        return 'Active subscription';
+        return t('profile.subscription.statusText.activeSubscription');
     }
-  }, [subscriptionStatus, activeSubscription?.expirationDate]);
+  }, [subscriptionStatus, activeSubscription?.expirationDate, t]);
 
   // CTA button configuration
   const ctaConfig = useMemo(() => {
     switch (subscriptionStatus) {
       case 'free':
-        return { label: 'Upgrade', action: 'upgrade' as const };
+        return { label: t('profile.subscription.cta.upgrade'), action: 'upgrade' as const };
       case 'active':
-        return { label: 'Manage Subscription', action: 'manage' as const };
+        return { label: t('profile.subscription.cta.manage'), action: 'manage' as const };
       case 'canceled':
       case 'expired':
-        return { label: 'Resubscribe', action: 'upgrade' as const };
+        return { label: t('profile.subscription.cta.resubscribe'), action: 'upgrade' as const };
       case 'grace_period':
-        return { label: 'Fix Payment', action: 'manage' as const };
+        return { label: t('profile.subscription.cta.fixPayment'), action: 'manage' as const };
       default:
-        return { label: 'Upgrade', action: 'upgrade' as const };
+        return { label: t('profile.subscription.cta.upgrade'), action: 'upgrade' as const };
     }
-  }, [subscriptionStatus]);
+  }, [subscriptionStatus, t]);
 
   // Open store subscription management
   const openManageSubscription = useCallback(async () => {
@@ -210,7 +213,7 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     try {
       await refreshCustomerInfo();
     } catch (e) {
-      setError('Couldn\'t load subscription');
+      setError(t('profile.subscription.loadError'));
     } finally {
       setIsRefreshing(false);
     }
@@ -223,7 +226,7 @@ export const SubscriptionCard = memo(function SubscriptionCard({
         entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
         style={[styles.card, cardStyle]}
       >
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Subscription</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.subscription.title')}</Text>
         <SkeletonSubscription />
       </AnimatedView>
     );
@@ -236,11 +239,11 @@ export const SubscriptionCard = memo(function SubscriptionCard({
         entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
         style={[styles.card, cardStyle]}
       >
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Subscription</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.subscription.title')}</Text>
         <Pressable onPress={handleRefresh} style={styles.errorContainer}>
           <AlertCircle size={20} color={colors.error} />
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || rcError || 'Couldn\'t load subscription. Tap to retry.'}
+            {error || rcError || t('profile.subscription.loadError')}
           </Text>
           {isRefreshing ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -259,7 +262,7 @@ export const SubscriptionCard = memo(function SubscriptionCard({
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
       style={[styles.card, cardStyle]}
     >
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Subscription</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.subscription.title')}</Text>
 
       <Pressable
         onPress={handleCardPress}

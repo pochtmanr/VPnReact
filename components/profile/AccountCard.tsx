@@ -9,6 +9,7 @@ import { Key, Copy, Check } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +27,7 @@ export const AccountCard = memo(function AccountCard({
 }: AccountCardProps) {
   const { colors, isDark } = useTheme();
   const { account } = useAuth();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopyAccountId = useCallback(async () => {
@@ -47,9 +49,9 @@ export const AccountCard = memo(function AccountCard({
           <Key size={24} color={colors.primary} />
         </View>
         <View style={styles.accountInfo}>
-          <Text style={[styles.accountLabel, { color: colors.textSecondary }]}>Account ID</Text>
+          <Text style={[styles.accountLabel, { color: colors.textSecondary }]}>{t('profile.accountId')}</Text>
           <Text style={[styles.accountId, { color: colors.text }]}>
-            {account?.account_id || 'Not logged in'}
+            {account?.account_id || t('profile.notLoggedIn')}
           </Text>
         </View>
       </View>
@@ -70,12 +72,12 @@ export const AccountCard = memo(function AccountCard({
           {copied ? (
             <>
               <Check size={16} color={colors.success} />
-              <Text style={[styles.copyButtonText, { color: colors.success }]}>Copied!</Text>
+              <Text style={[styles.copyButtonText, { color: colors.success }]}>{t('profile.copied')}</Text>
             </>
           ) : (
             <>
               <Copy size={16} color={colors.primary} />
-              <Text style={[styles.copyButtonText, { color: colors.primary }]}>Copy ID</Text>
+              <Text style={[styles.copyButtonText, { color: colors.primary }]}>{t('profile.copyId')}</Text>
             </>
           )}
         </Pressable>

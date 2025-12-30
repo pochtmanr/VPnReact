@@ -25,8 +25,10 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
+import { useServerTranslation } from '@/hooks/useServerTranslation';
 import { VPNServer } from '@/types/database';
 
 export interface ServerBottomSheetRef {
@@ -54,11 +56,13 @@ interface ServerBottomSheetProps {
   isPremiumLocked: (server: VPNServer) => boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onOpen?: () => void;
 }
 
 // Blur Backdrop Component - separated to properly use hooks
+// Provides modal-like overlay that covers the entire screen including navbar
 function BlurBackdrop({ animatedIndex, style, onPress, isDark }: {
-  animatedIndex: any;  
+  animatedIndex: any;
   style?: any;
   onPress: () => void;
   isDark: boolean;
@@ -76,17 +80,26 @@ function BlurBackdrop({ animatedIndex, style, onPress, isDark }: {
   return (
     <Animated.View
       style={[
-        style,
         StyleSheet.absoluteFill,
+        style,
         containerStyle,
+        // Ensure backdrop covers everything including tab bar
+        { top: 0, left: 0, right: 0, bottom: 0 },
       ]}
       pointerEvents="auto"
     >
       <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
         <BlurView
           tint={isDark ? 'dark' : 'light'}
-          intensity={50}
+          intensity={60}
           style={StyleSheet.absoluteFill}
+        />
+        {/* Additional dark overlay for better modal feel */}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)' }
+          ]}
         />
       </Pressable>
     </Animated.View>
@@ -99,13 +112,18 @@ function ServerCard({
   isSelected,
   isConnected,
   onPress,
+  cityName,
+  countryName,
 }: {
   server: VPNServer;
   isSelected: boolean;
   isConnected: boolean;
   onPress: () => void;
+  cityName: string;
+  countryName: string;
 }) {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Pressable
@@ -133,11 +151,11 @@ function ServerCard({
             <Text style={styles.flagEmoji}>{getCountryFlag(server.country_code)}</Text>
           </View>
           <View style={styles.serverInfo}>
-            <Text style={[styles.serverName, { color: colors.text }]}>
-              {server.city}
+            <Text style={[styles.serverName, { color: colors.text }]} numberOfLines={1}>
+              {cityName}
             </Text>
-            <Text style={[styles.serverLocation, { color: colors.textSecondary }]}>
-              {server.country}
+            <Text style={[styles.serverLocation, { color: colors.textSecondary }]} numberOfLines={1}>
+              {countryName}
             </Text>
           </View>
         </View>
@@ -170,7 +188,7 @@ function ServerCard({
                   : colors.textMuted
             }
           ]}>
-            {isConnected ? 'Connected' : isSelected ? 'Selected' : 'Available'}
+            {isConnected ? t('common.status.connected') : isSelected ? t('server.selected') : t('server.available')}
           </Text>
         </View>
       </View>
@@ -183,7 +201,7 @@ function ServerCard({
             <Text style={[styles.statValue, { color: colors.text }]}>
               {server.latency_ms != null ? `${server.latency_ms}ms` : 'N/A'}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Latency</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('vpn.stats.latency')}</Text>
           </View>
         </View>
 
@@ -193,7 +211,7 @@ function ServerCard({
           <Zap size={16} color={colors.warning} />
           <View>
             <Text style={[styles.statValue, { color: colors.text }]}>WireGuard</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Protocol</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('server.protocol')}</Text>
           </View>
         </View>
 
@@ -203,7 +221,7 @@ function ServerCard({
           <ShieldCheck size={16} color={colors.info} />
           <View>
             <Text style={[styles.statValue, { color: colors.text }]}>256-bit</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Encryption</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('server.encryption')}</Text>
           </View>
         </View>
       </View>
@@ -218,11 +236,14 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
       selectedServer,
       isConnected,
       onServerSelect,
+      onOpen,
     },
     ref
   ) => {
     const { colors, isDark } = useTheme();
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
+    const { getServerCity, getServerCountry } = useServerTranslation();
     const bottomSheetRef = React.useRef<BottomSheet>(null);
 
     // Single snap point at 85% - opens directly to this height
@@ -230,7 +251,11 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
 
     // Expose open/close methods
     useImperativeHandle(ref, () => ({
-      open: () => bottomSheetRef.current?.snapToIndex(0),
+      open: () => {
+        // Trigger lazy loading of servers when opening
+        onOpen?.();
+        bottomSheetRef.current?.snapToIndex(0);
+      },
       close: () => bottomSheetRef.current?.close(),
     }));
 
@@ -290,6 +315,11 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
           backgroundColor: isDark ? 'rgba(10, 10, 10, 0.98)' : 'rgba(250, 250, 250, 0.98)',
         }}
         style={styles.bottomSheet}
+        // Cover the entire screen including status bar/notch area
+        topInset={0}
+        // Ensure modal-like behavior
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
       >
         <View style={[styles.sheetContent, { paddingBottom: insets.bottom + 20 }]}>
           {/* Header */}
@@ -303,10 +333,10 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
               </View>
               <View>
                 <Text style={[styles.sheetTitle, { color: colors.text }]}>
-                  VPN Server
+                  {t('server.title')}
                 </Text>
                 <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-                  Your private WireGuard server
+                  {t('server.subtitle')}
                 </Text>
               </View>
             </View>
@@ -326,6 +356,8 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
                   isSelected={selectedServer?.id === server.id}
                   isConnected={isConnected && selectedServer?.id === server.id}
                   onPress={() => onServerSelect(server)}
+                  cityName={getServerCity(server)}
+                  countryName={getServerCountry(server)}
                 />
               ))
             ) : (
@@ -337,10 +369,10 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
                   <Server size={32} color={colors.textMuted} />
                 </View>
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  No Server Available
+                  {t('server.empty.title')}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Your WireGuard server will appear here once configured
+                  {t('server.empty.subtitle')}
                 </Text>
               </View>
             )}
@@ -355,7 +387,7 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
             ]}>
               <Shield size={18} color="#3B82F6" />
               <Text style={[styles.infoText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>
-                WireGuard provides fast, modern VPN encryption with minimal overhead.
+                {t('server.info')}
               </Text>
             </View>
           </BottomSheetScrollView>

@@ -156,11 +156,17 @@ export const ActivationButton = memo(function ActivationButton({
           styles.buttonStatusTitle,
           { color: isEnabled ? accentColor : colors.text },
         ]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
       >
         {isEnabled ? enabledLabel : disabledLabel}
       </Text>
 
-      <Text style={[styles.buttonStatusSubtitle, { color: colors.textSecondary }]}>
+      <Text
+        style={[styles.buttonStatusSubtitle, { color: colors.textSecondary }]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
         {isEnabled ? enabledSubtitle : disabledSubtitle}
       </Text>
     </View>
@@ -200,11 +206,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     letterSpacing: -0.3,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    lineHeight: 28,
   },
   buttonStatusSubtitle: {
     marginTop: 6,
     fontSize: 14,
     fontWeight: '400',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    lineHeight: 20,
   },
 });
 

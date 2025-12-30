@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { ActivationButton, QuickStatsRow, ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
@@ -74,6 +75,7 @@ export default function AdblockScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { adBlockEnabled, setAdBlockEnabled, connectionStatus } = useVPN();
+  const { t } = useTranslation();
   const isVPNConnected = connectionStatus === 'connected';
 
   // Feature gating with automatic paywall
@@ -203,12 +205,12 @@ export default function AdblockScreen() {
           >
             <View style={styles.headerRow}>
               <View>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Ad Blocker</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('adblock.title')}</Text>
                 <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                  DNS-level protection
+                  {t('adblock.description')}
                 </Text>
               </View>
-             
+
             </View>
           </AnimatedView>
 
@@ -222,8 +224,10 @@ export default function AdblockScreen() {
               isEnabled={adBlockEnabled}
               onToggle={handleToggle}
               disabled={isGating} // Only disable during paywall presentation
-              enabledSubtitle="Tap to disable ad blocking"
-              disabledSubtitle={getDisabledReason() || "Tap to enable ad blocking"}
+              enabledLabel={t('common.status.protectionActive')}
+              disabledLabel={t('common.status.protectionDisabled')}
+              enabledSubtitle={t('adblock.activation.tapToDisable')}
+              disabledSubtitle={getDisabledReason() || t('adblock.activation.tapToEnable')}
               accentColor="#EF4444"
             />
 
@@ -231,9 +235,9 @@ export default function AdblockScreen() {
             {hasAdBlockAccess && adBlockEnabled && isVPNConnected && (
               <QuickStatsRow
                 stats={[
-                  { icon: Ban, iconColor: colors.error, value: stats ? formatNumber(stats.totalBlocked) : '-', label: 'Blocked' },
-                  { icon: Activity, iconColor: '#3B82F6', value: stats ? `${stats.blockRate}%` : '-', label: 'Block Rate' },
-                  { icon: Database, iconColor: '#3B82F6', value: stats ? formatNumber(stats.filterRulesCount) : '-', label: 'Rules' },
+                  { icon: Ban, iconColor: colors.error, value: stats ? formatNumber(stats.totalBlocked) : '-', label: t('adblock.stats.blocked') },
+                  { icon: Activity, iconColor: '#3B82F6', value: stats ? `${stats.blockRate}%` : '-', label: t('adblock.stats.blockRate') },
+                  { icon: Database, iconColor: '#3B82F6', value: stats ? formatNumber(stats.filterRulesCount) : '-', label: t('adblock.stats.rules') },
                 ]}
               />
             )}
@@ -247,13 +251,13 @@ export default function AdblockScreen() {
             <StatCard
               icon={Ban}
               value={stats ? formatNumber(stats.totalBlocked) : '-'}
-              label="Ads Blocked"
+              label={t('adblock.stats.adsBlocked')}
               color={isVPNConnected ? colors.error : colors.textMuted}
             />
             <StatCard
               icon={Activity}
               value={stats ? formatNumber(stats.totalQueries) : '-'}
-              label="DNS Queries"
+              label={t('adblock.stats.requests')}
               color={isVPNConnected ? '#3B82F6' : colors.textMuted}
             />
           </AnimatedView>
@@ -270,9 +274,9 @@ export default function AdblockScreen() {
               !isVPNConnected && styles.disabledSection,
             ]}
           >
-            <Text style={[styles.sectionTitle, { color: isVPNConnected ? colors.text : colors.textMuted }]}>Coverage</Text>
+            <Text style={[styles.sectionTitle, { color: isVPNConnected ? colors.text : colors.textMuted }]}>{t('adblock.coverage.title')}</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              {isVPNConnected ? 'Protection works across your entire device' : 'Connect VPN to enable coverage'}
+              {isVPNConnected ? t('adblock.coverage.subtitle') : t('adblock.coverage.connectVPN')}
             </Text>
 
             <View style={styles.coverageList}>
@@ -285,7 +289,7 @@ export default function AdblockScreen() {
                 >
                   <Globe size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>All Browsers</Text>
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>{t('adblock.coverage.allBrowsers')}</Text>
                 <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
               <View style={[styles.coverageDivider, { backgroundColor: colors.border }]} />
@@ -298,7 +302,7 @@ export default function AdblockScreen() {
                 >
                   <Smartphone size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>All Apps</Text>
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>{t('adblock.coverage.allApps')}</Text>
                 <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
               <View style={[styles.coverageDivider, { backgroundColor: colors.border }]} />
@@ -311,7 +315,7 @@ export default function AdblockScreen() {
                 >
                   <Wifi size={20} color={isVPNConnected ? '#3B82F6' : colors.textMuted} />
                 </View>
-                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>System-Wide</Text>
+                <Text style={[styles.coverageLabel, { color: isVPNConnected ? colors.text : colors.textMuted }]}>{t('adblock.coverage.systemWide')}</Text>
                 <Check size={18} color={isVPNConnected ? colors.success : colors.textMuted} />
               </View>
             </View>
@@ -345,8 +349,8 @@ export default function AdblockScreen() {
               }
             ]}>
               {connectionStatus === 'connected'
-                ? 'VPN connected - Ad blocking uses AdGuard Home DNS on your VPN server.'
-                : 'Connect to VPN for DNS-level ad blocking. Stats require VPN connection.'
+                ? t('adblock.connectionInfo.connected')
+                : t('adblock.connectionInfo.disconnected')
               }
             </Text>
           </AnimatedView>

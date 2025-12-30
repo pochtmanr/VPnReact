@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useVPN } from '@/context/VPNContext';
@@ -68,6 +69,17 @@ const getCategoryIcon = (categoryId: ContentCategory, color: string) => {
   }
 };
 
+// Category translation key mapping
+const CATEGORY_TRANSLATION_KEYS: Record<ContentCategory, string> = {
+  adult: 'parental.categories.adult',
+  gambling: 'parental.categories.gambling',
+  social_media: 'parental.categories.socialMedia',
+  gaming: 'parental.categories.gaming',
+  streaming: 'parental.categories.streaming',
+  malware: 'parental.categories.malware',
+  ads_trackers: 'parental.categories.adsTrackers',
+};
+
 // Category Row Item - Memoized
 interface CategoryRowProps {
   category: CategoryInfo;
@@ -76,6 +88,7 @@ interface CategoryRowProps {
   isDark: boolean;
   colors: ReturnType<typeof useTheme>['colors'];
   disabled?: boolean;
+  t: (key: string) => string;
 }
 
 const CategoryRow = memo(function CategoryRow({
@@ -85,6 +98,7 @@ const CategoryRow = memo(function CategoryRow({
   isDark,
   colors,
   disabled = false,
+  t,
 }: CategoryRowProps) {
   const handleToggle = useCallback(() => {
     if (!disabled) {
@@ -101,6 +115,7 @@ const CategoryRow = memo(function CategoryRow({
   );
 
   const iconColor = disabled ? colors.textMuted : category.color;
+  const translationKey = CATEGORY_TRANSLATION_KEYS[category.id];
 
   return (
     <View style={[styles.categoryRow, disabled && styles.disabledRow]}>
@@ -110,10 +125,10 @@ const CategoryRow = memo(function CategoryRow({
         </View>
         <View style={styles.categoryText}>
           <Text style={[styles.categoryName, { color: disabled ? colors.textMuted : colors.text }]}>
-            {category.name}
+            {t(`${translationKey}.name`)}
           </Text>
           <Text style={[styles.categoryDescription, { color: disabled ? colors.textMuted : colors.textSecondary }]}>
-            {category.description}
+            {t(`${translationKey}.description`)}
           </Text>
         </View>
       </View>
@@ -164,6 +179,7 @@ export default function ParentalControlsScreen() {
   const { colors, isDark } = useTheme();
   const { connectionStatus } = useVPN();
   const isVPNConnected = connectionStatus === 'connected';
+  const { t } = useTranslation();
 
   // Feature gating with automatic paywall
   const {
@@ -200,12 +216,12 @@ export default function ParentalControlsScreen() {
   useEffect(() => {
     if (error) {
       Alert.alert(
-        'Connection Error',
-        'Unable to connect to the server. Please ensure VPN is connected and try again.',
+        t('parental.alerts.connectionError'),
+        t('parental.alerts.connectionErrorMessage'),
         [{ text: 'OK', onPress: clearError }]
       );
     }
-  }, [error, clearError]);
+  }, [error, clearError, t]);
 
   // Refresh stats when enabled (deferred to avoid blocking)
   useEffect(() => {
@@ -267,16 +283,20 @@ export default function ParentalControlsScreen() {
 
   const handleRemoveDomain = useCallback(
     (domain: string) => {
-      Alert.alert('Remove Domain', `Remove "${domain}" from blocked list?`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => removeBlockedDomain(domain),
-        },
-      ]);
+      Alert.alert(
+        t('parental.alerts.removeDomain'),
+        t('parental.alerts.removeDomainMessage', { domain }),
+        [
+          { text: t('common.buttons.cancel'), style: 'cancel' },
+          {
+            text: t('common.buttons.confirm'),
+            style: 'destructive',
+            onPress: () => removeBlockedDomain(domain),
+          },
+        ]
+      );
     },
-    [removeBlockedDomain]
+    [removeBlockedDomain, t]
   );
 
   const openAddDomainModal = useCallback(() => {
@@ -376,10 +396,10 @@ export default function ParentalControlsScreen() {
             style={styles.header}
           >
             <Text style={[styles.title, { color: colors.text }]}>
-              Parental Controls
+              {t('parental.title')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Protect your family online
+              {t('parental.subtitle')}
             </Text>
           </AnimatedView>
 
@@ -393,17 +413,19 @@ export default function ParentalControlsScreen() {
               isEnabled={isEnabled}
               onToggle={() => handleToggleParentalControls(!isEnabled)}
               disabled={isGating || isToggling} // Only disable during paywall/toggle
-              enabledSubtitle={`${blockedCategories.length} categories blocked`}
-              disabledSubtitle={getDisabledReason() || "Tap to enable content filtering"}
+              enabledLabel={t('common.status.protectionActive')}
+              disabledLabel={t('common.status.protectionDisabled')}
+              enabledSubtitle={t('parental.activation.categoriesBlocked', { count: blockedCategories.length })}
+              disabledSubtitle={getDisabledReason() || t('parental.activation.tapToEnable')}
               accentColor="#3B82F6"
             />
 
             {hasParentalAccess && isEnabled && isVPNConnected && blockingStats && (
               <QuickStatsRow
                 stats={[
-                  { icon: Ban, iconColor: colors.error, value: blockingStats.totalBlocked, label: 'Blocked' },
-                  { icon: BarChart3, iconColor: '#3B82F6', value: blockedCategories.length, label: 'Categories' },
-                  { icon: Shield, iconColor: '#3B82F6', value: customBlockedDomains.length, label: 'Custom' },
+                  { icon: Ban, iconColor: colors.error, value: blockingStats.totalBlocked, label: t('parental.stats.blocked') },
+                  { icon: BarChart3, iconColor: '#3B82F6', value: blockedCategories.length, label: t('parental.stats.categories') },
+                  { icon: Shield, iconColor: '#3B82F6', value: customBlockedDomains.length, label: t('parental.stats.custom') },
                 ]}
               />
             )}
@@ -414,10 +436,10 @@ export default function ParentalControlsScreen() {
             // Determine if categories section should be disabled and why
             const isCategoriesDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
             const getCategoriesDescription = () => {
-              if (!hasParentalAccess) return 'Upgrade to Pro to manage categories';
-              if (!isEnabled) return 'Enable Parental Controls above to manage categories';
-              if (!isVPNConnected) return 'Connect VPN to manage categories';
-              return 'Select categories to block';
+              if (!hasParentalAccess) return t('parental.disabled.upgradeRequired');
+              if (!isEnabled) return t('parental.disabled.enableRequired');
+              if (!isVPNConnected) return t('parental.disabled.vpnRequired');
+              return t('parental.categories.selectToBlock');
             };
 
             return (
@@ -426,7 +448,7 @@ export default function ParentalControlsScreen() {
                 style={[styles.sectionCard, cardStyle, isCategoriesDisabled && styles.disabledSection]}
               >
                 <Text style={[styles.sectionTitle, { color: isCategoriesDisabled ? colors.textMuted : colors.text }]}>
-                  Content Categories
+                  {t('parental.categories.title')}
                 </Text>
                 <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
                   {getCategoriesDescription()}
@@ -444,6 +466,7 @@ export default function ParentalControlsScreen() {
                       isDark={isDark}
                       colors={colors}
                       disabled={isCategoriesDisabled}
+                      t={t}
                     />
                   </React.Fragment>
                 ))}
@@ -456,10 +479,10 @@ export default function ParentalControlsScreen() {
             // Determine if domains section should be disabled and why
             const isDomainsDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
             const getDomainsDescription = () => {
-              if (!hasParentalAccess) return 'Upgrade to Pro to manage sites';
-              if (!isEnabled) return 'Enable Parental Controls above to manage sites';
-              if (!isVPNConnected) return 'Connect VPN to manage sites';
-              return 'Add specific websites to block';
+              if (!hasParentalAccess) return t('parental.disabled.upgradeRequiredSites');
+              if (!isEnabled) return t('parental.disabled.enableRequiredSites');
+              if (!isVPNConnected) return t('parental.disabled.vpnRequiredSites');
+              return t('parental.customDomains.description');
             };
 
             return (
@@ -468,11 +491,11 @@ export default function ParentalControlsScreen() {
                 style={[styles.sectionCard, cardStyle, isDomainsDisabled && styles.disabledSection]}
               >
                 <View style={styles.sectionHeader}>
-                  <View>
+                  <View style={styles.sectionHeaderText}>
                     <Text style={[styles.sectionTitle, { color: isDomainsDisabled ? colors.textMuted : colors.text }]}>
-                      Custom Blocked Sites
+                      {t('parental.customDomains.title')}
                     </Text>
-                    <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+                    <Text style={[styles.sectionDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                       {getDomainsDescription()}
                     </Text>
                   </View>
@@ -488,7 +511,7 @@ export default function ParentalControlsScreen() {
                 {customBlockedDomains.length === 0 ? (
                   <View style={styles.emptyState}>
                     <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-                      No custom sites blocked yet
+                      {t('parental.customDomains.empty')}
                     </Text>
                   </View>
                 ) : (
@@ -517,8 +540,7 @@ export default function ParentalControlsScreen() {
           >
             <Shield size={18} color="#3B82F6" />
             <Text style={[styles.infoText, { color: infoTextColor }]}>
-              Content filtering is applied when connected to VPN. Categories use
-              AdGuard DNS rules for system-wide protection.
+              {t('parental.info')}
             </Text>
           </AnimatedView>
         </Animated.ScrollView>
@@ -541,7 +563,7 @@ export default function ParentalControlsScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Block Website
+                {t('parental.modal.title')}
               </Text>
               <Pressable onPress={closeAddDomainModal} hitSlop={8}>
                 <X size={24} color={colors.textSecondary} />
@@ -549,7 +571,7 @@ export default function ParentalControlsScreen() {
             </View>
 
             <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-              Enter the domain to block (e.g., example.com)
+              {t('parental.modal.description')}
             </Text>
 
             <TextInput
@@ -562,7 +584,7 @@ export default function ParentalControlsScreen() {
                   color: colors.text,
                 },
               ]}
-              placeholder="example.com"
+              placeholder={t('parental.customDomains.placeholder')}
               placeholderTextColor={colors.textMuted}
               value={domainInput}
               onChangeText={setDomainInput}
@@ -577,7 +599,7 @@ export default function ParentalControlsScreen() {
               onPress={handleAddDomain}
               style={[styles.modalButton, { backgroundColor: '#3B82F6' }]}
             >
-              <Text style={styles.modalButtonText}>Block Site</Text>
+              <Text style={styles.modalButtonText}>{t('parental.modal.blockSite')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -629,6 +651,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  sectionHeaderText: {
+    flex: 1,
+    marginRight: 12,
   },
   sectionTitle: {
     fontSize: 17,

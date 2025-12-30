@@ -197,6 +197,39 @@ export interface Database {
           created_at?: string;
         };
       };
+      // Server translations for multi-language support
+      server_translations: {
+        Row: {
+          id: string;
+          server_id: string; // References vpn_servers.id
+          language_code: string; // ISO 639-1 code (e.g., 'en', 'ru', 'es')
+          city_name: string; // Localized city name
+          country_name: string; // Localized country name
+          description: string | null; // Optional localized description
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          server_id: string;
+          language_code: string;
+          city_name: string;
+          country_name: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          server_id?: string;
+          language_code?: string;
+          city_name?: string;
+          country_name?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {};
     Functions: {};
@@ -211,7 +244,15 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type VPNServer = Database['public']['Tables']['vpn_servers']['Row'];
 export type ConnectionLog = Database['public']['Tables']['connection_logs']['Row'];
 export type UserFavorite = Database['public']['Tables']['user_favorites']['Row'];
+export type ServerTranslation = Database['public']['Tables']['server_translations']['Row'];
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'disconnecting' | 'error';
 export type DeviceType = 'ios' | 'android' | 'chrome' | 'firefox' | 'web';
 export type SubscriptionTier = 'free' | 'pro' | 'premium';
+
+// Server with translations merged
+export interface TranslatedServer extends VPNServer {
+  translated_city?: string;
+  translated_country?: string;
+  translated_description?: string;
+}

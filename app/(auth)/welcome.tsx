@@ -2,7 +2,7 @@ import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Dimensions,
   Image,
@@ -21,50 +21,64 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const PHRASES = [
-  'to privacy.',
-  'to be let alone.',
-  'to disappear.',
-  'to be forgotten.',
-  'to say no.',
-  'to silence.',
-  'to be unseen.',
-  'to be untracked.',
-  'to digital sovereignty.',
-  'to hold their own keys.',
-  'to watch the watchmen.',
-  'to none of your business.',
-  'to anonymity.',
-  'to secrecy.',
-  'to be invisible.',
-  'to go dark.',
-  'to close the curtains.',
-  'to lock the door.',
-  'to keep secrets.',
-  'to own their data.',
-  'to leave no trace.',
-  'to a private life.',
-  'to an exit.',
-  'to be unreachable.',
-  'to refuse.',
-  'to encrypt.',
-  'to a closed door.',
+// Phrase keys for translation
+const PHRASE_KEYS = [
+  'privacy',
+  'letAlone',
+  'disappear',
+  'forgotten',
+  'sayNo',
+  'silence',
+  'unseen',
+  'untracked',
+  'sovereignty',
+  'ownKeys',
+  'watchWatchmen',
+  'noneOfBusiness',
+  'anonymity',
+  'secrecy',
+  'invisible',
+  'goDark',
+  'closeCurtains',
+  'lockDoor',
+  'keepSecrets',
+  'ownData',
+  'noTrace',
+  'privateLife',
+  'exit',
+  'unreachable',
+  'refuse',
+  'encrypt',
+  'closedDoor',
 ];
 
-const PHRASE_HEIGHT = 44;
+// Dynamic phrase height to accommodate 2 lines for long translations
+const PHRASE_LINE_HEIGHT = 38;
+const PHRASE_MAX_LINES = 2;
+const PHRASE_HEIGHT = PHRASE_LINE_HEIGHT * PHRASE_MAX_LINES;
 const HOLD_DURATION = 3000;
 const SLIDE_DURATION = 600;
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
+  const { t } = useTranslation();
 
   const [fontsLoaded] = useFonts({
     IBMPlexSerif_400Regular_Italic,
   });
+
+  // Get translated phrases
+  const phrases = useMemo(() =>
+    PHRASE_KEYS.map((key) => t(`auth.welcome.phrases.${key}`) + '.'),
+    [t]
+  );
 
   // Single declarative animation - runs entirely on UI thread
   useEffect(() => {
@@ -72,7 +86,7 @@ export default function WelcomeScreen() {
 
     // Build the full animation sequence once
     // Each step: hold, then slide to next
-    const steps = PHRASES.map((_, index) => {
+    const steps = phrases.map((_: string, index: number) => {
       const targetY = -index * PHRASE_HEIGHT;
       return withDelay(
         HOLD_DURATION,
@@ -96,7 +110,7 @@ export default function WelcomeScreen() {
       -1, // Infinite loop
       false // Don't reverse
     );
-  }, [fontsLoaded, translateY]);
+  }, [fontsLoaded, translateY, phrases]);
 
   // Single animated style - only translateY, GPU-accelerated
   const animatedStyle = useAnimatedStyle(() => ({
@@ -146,12 +160,12 @@ export default function WelcomeScreen() {
         {/* Centered Text Section */}
         <View style={styles.animationContainer}>
           {/* Static Row - Never re-renders */}
-          <Text style={styles.staticText}>Everybody has a right</Text>
+          <Text style={styles.staticText}>{t('auth.welcome.everyoneHasRight')}</Text>
 
           {/* Vertical Carousel - Single translateY animation */}
           <View style={styles.carouselMask}>
             <Animated.View style={[styles.carouselTrack, animatedStyle]}>
-              {PHRASES.map((phrase, index) => (
+              {phrases.map((phrase, index) => (
                 <Text key={index} style={styles.animatedText}>
                   {phrase}
                 </Text>
@@ -163,37 +177,22 @@ export default function WelcomeScreen() {
         {/* Bottom Section */}
         <View style={styles.bottomSection}>
           {/* CTA Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              {
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-                opacity: pressed ? 0.9 : 1,
-              },
-            ]}
-            onPress={() => router.push('/(auth)/account')}
-          >
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
-              <Text style={styles.primaryButtonText}>Continue</Text>
-            </LinearGradient>
-          </Pressable>
+          <PrimaryButton
+            title={t('common.buttons.continue')}
+            onPress={() => router.replace('/(auth)/account')}
+          />
 
           {/* Terms of Service */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              By continuing, you agree to our{' '}
+              {t('auth.welcome.footer.byContinuing')}{' '}
             </Text>
             <Pressable>
-              <Text style={styles.footerLink}>Terms of Service</Text>
+              <Text style={styles.footerLink}>{t('tier.paywall.terms')}</Text>
             </Pressable>
-            <Text style={styles.footerText}> and </Text>
+            <Text style={styles.footerText}> {t('auth.welcome.footer.and')} </Text>
             <Pressable>
-              <Text style={styles.footerLink}>Privacy Policy</Text>
+              <Text style={styles.footerLink}>{t('tier.paywall.privacy')}</Text>
             </Pressable>
           </View>
         </View>
@@ -238,8 +237,9 @@ const styles = StyleSheet.create({
   carouselMask: {
     height: PHRASE_HEIGHT,
     overflow: 'hidden',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
+    width: SCREEN_WIDTH - 48,
   },
   // Track - contains all phrases stacked vertically
   carouselTrack: {
@@ -247,35 +247,20 @@ const styles = StyleSheet.create({
   },
   animatedText: {
     height: PHRASE_HEIGHT,
-    fontSize: 32,
+    fontSize: 28,
     fontFamily: 'IBMPlexSerif_400Regular_Italic',
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.9)',
     letterSpacing: -0.5,
     textAlign: 'center',
-    lineHeight: PHRASE_HEIGHT,
+    lineHeight: PHRASE_LINE_HEIGHT,
+    paddingHorizontal: 16,
+    maxWidth: SCREEN_WIDTH - 48,
   },
   // Bottom Section
   bottomSection: {
     gap: 20,
     paddingBottom: 8,
-  },
-  // Primary Button
-  primaryButton: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 9999,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
   },
   // Footer
   footer: {

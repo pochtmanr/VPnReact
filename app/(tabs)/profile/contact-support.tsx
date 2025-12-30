@@ -11,7 +11,7 @@ import {
   MessageCircle,
   Send,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,10 +28,12 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { useRTL } from '@/i18n/useRTL';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
@@ -110,33 +112,35 @@ export default function ContactSupportScreen() {
   const { colors, isDark } = useTheme();
   const { account } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
+  const { isRTL, flexDirection, textAlign } = useRTL();
 
   const [bugDescription, setBugDescription] = useState('');
   const [isSubmittingBug, setIsSubmittingBug] = useState(false);
   const [bugReportExpanded, setBugReportExpanded] = useState(false);
 
-  const faqs = [
+  const faqs = useMemo(() => [
     {
-      question: 'How do I connect to a VPN server?',
-      answer: 'Go to the VPN tab and tap the connect button. You can also select a specific server from the Servers tab before connecting.',
+      question: t('profile.support.faq.connect.question'),
+      answer: t('profile.support.faq.connect.answer'),
     },
     {
-      question: 'Why is my connection slow?',
-      answer: 'Try connecting to a server closer to your location. Server load and your internet speed also affect VPN performance.',
+      question: t('profile.support.faq.slow.question'),
+      answer: t('profile.support.faq.slow.answer'),
     },
     {
-      question: 'How do I change my subscription plan?',
-      answer: 'Go to Profile > Subscription to view and manage your current plan. You can upgrade or downgrade at any time.',
+      question: t('profile.support.faq.subscription.question'),
+      answer: t('profile.support.faq.subscription.answer'),
     },
     {
-      question: 'Is my data secure?',
-      answer: 'Yes! We use military-grade AES-256 encryption and maintain a strict no-logs policy to protect your privacy.',
+      question: t('profile.support.faq.secure.question'),
+      answer: t('profile.support.faq.secure.answer'),
     },
-  ];
+  ], [t]);
 
   const handleSubmitBugReport = useCallback(async () => {
     if (!bugDescription.trim()) {
-      Alert.alert('Missing Information', 'Please describe the bug you encountered.');
+      Alert.alert(t('profile.support.bugReport.missingInfo'), t('profile.support.bugReport.pleaseDescribe'));
       return;
     }
 
@@ -151,23 +155,23 @@ export default function ContactSupportScreen() {
 
       if (error) {
         console.error('Bug report error:', error);
-        Alert.alert('Error', 'Failed to submit bug report. Please try again.');
+        Alert.alert(t('profile.support.bugReport.errorTitle'), t('profile.support.bugReport.error'));
         return;
       }
 
       setBugDescription('');
       setBugReportExpanded(false);
       Alert.alert(
-        'Thank You!',
-        'Your bug report has been submitted. We appreciate your feedback!',
+        t('profile.support.bugReport.thankYou'),
+        t('profile.support.bugReport.success'),
       );
     } catch (err) {
       console.error('Bug report error:', err);
-      Alert.alert('Error', 'Failed to submit bug report. Please try again.');
+      Alert.alert(t('profile.support.bugReport.errorTitle'), t('profile.support.bugReport.error'));
     } finally {
       setIsSubmittingBug(false);
     }
-  }, [bugDescription, account?.account_id]);
+  }, [bugDescription, account?.account_id, t]);
 
   const handleEmailSupport = () => {
     Linking.openURL('mailto:support@simnetiq.store?subject=Support Request');
@@ -218,10 +222,10 @@ export default function ContactSupportScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { flexDirection: flexDirection('row') }]}>
           {renderBackButton()}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Help & Support
+          <Text style={[styles.headerTitle, { color: colors.text, textAlign: textAlign('center') }]}>
+            {t('profile.support.title')}
           </Text>
           <View style={{ width: 40 }} />
         </View>
@@ -229,27 +233,25 @@ export default function ContactSupportScreen() {
         <AnimatedView
           entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
         >
-          <Text style={[styles.description, { color: colors.textSecondary }]}>
-            Get help from our team
+          <Text style={[styles.description, { color: colors.textSecondary, textAlign: textAlign('left') }]}>
+            {t('profile.support.description')}
           </Text>
         </AnimatedView>
 
         {/* Quick Support Options */}
         <AnimatedView
           entering={FadeInDown.delay(75).duration(300).easing(Easing.out(Easing.ease))}
-          style={styles.supportOptions}
+          style={[styles.supportOptions, { flexDirection: flexDirection('row') }]}
         >
           <SupportOption
             icon={Mail}
-            label="Email Us"
-  
+            label={t('profile.support.emailUs')}
             onPress={handleEmailSupport}
             iconColor={colors.primary}
           />
           <SupportOption
             icon={MessageCircle}
-            label="Telegram"
- 
+            label={t('profile.support.telegram')}
             onPress={handleTelegram}
             iconColor="#0088CC"
           />
@@ -268,9 +270,9 @@ export default function ContactSupportScreen() {
         >
           <Pressable
             onPress={() => setBugReportExpanded(!bugReportExpanded)}
-            style={styles.bugReportHeader}
+            style={[styles.bugReportHeader, { flexDirection: flexDirection('row') }]}
           >
-            <View style={styles.bugReportHeaderLeft}>
+            <View style={[styles.bugReportHeaderLeft, { flexDirection: flexDirection('row') }]}>
               <View
                 style={[
                   styles.bugIcon,
@@ -280,9 +282,9 @@ export default function ContactSupportScreen() {
                 <Bug size={20} color="#EF4444" />
               </View>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Report a Bug</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.support.bugReport.title')}</Text>
                 <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                  Help us improve the app
+                  {t('profile.support.bugReport.subtitle')}
                 </Text>
               </View>
             </View>
@@ -302,11 +304,12 @@ export default function ContactSupportScreen() {
                     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                     color: colors.text,
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                    textAlign: textAlign('left'),
                   },
                 ]}
                 value={bugDescription}
                 onChangeText={setBugDescription}
-                placeholder="Describe the bug you encountered..."
+                placeholder={t('profile.support.bugReport.placeholder')}
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={4}
@@ -321,6 +324,7 @@ export default function ContactSupportScreen() {
                   {
                     backgroundColor: bugDescription.trim() ? '#3B82F6' : colors.border,
                     opacity: pressed ? 0.8 : 1,
+                    flexDirection: flexDirection('row'),
                   },
                   isSubmittingBug && { opacity: 0.6 },
                 ]}
@@ -330,7 +334,7 @@ export default function ContactSupportScreen() {
                 ) : (
                   <>
                     <Send size={18} color="#fff" />
-                    <Text style={styles.submitBugButtonText}>Submit Report</Text>
+                    <Text style={styles.submitBugButtonText}>{t('profile.support.bugReport.submitReport')}</Text>
                   </>
                 )}
               </Pressable>
@@ -349,7 +353,7 @@ export default function ContactSupportScreen() {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Frequently Asked Questions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.support.faq.title')}</Text>
 
           <View style={styles.faqList}>
             {faqs.map((faq, index) => (
@@ -366,15 +370,16 @@ export default function ContactSupportScreen() {
             {
               backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
               borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
+              flexDirection: flexDirection('row'),
             },
           ]}
         >
           <Clock size={20} color="#3B82F6" />
           <View style={styles.infoContent}>
-            <Text style={[styles.infoTitle, { color: colors.text }]}>Response Times</Text>
-            <Text style={[styles.infoText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>
-              Free users: 48-72 hours{'\n'}
-              Pro/Premium users: 24 hours
+            <Text style={[styles.infoTitle, { color: colors.text, textAlign: textAlign('left') }]}>{t('profile.support.responseTime.title')}</Text>
+            <Text style={[styles.infoText, { color: isDark ? '#93C5FD' : '#1D4ED8', textAlign: textAlign('left') }]}>
+              {t('profile.support.responseTime.freeUsers')}{'\n'}
+              {t('profile.support.responseTime.proUsers')}
             </Text>
           </View>
         </AnimatedView>

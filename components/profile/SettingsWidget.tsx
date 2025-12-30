@@ -7,7 +7,7 @@ import {
   Linking,
 } from 'react-native';
 import {
-  Palette,
+  Settings,
   HelpCircle,
   FileText,
   Info,
@@ -15,9 +15,11 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
-import { useTheme, ThemeMode } from '@/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import { SkeletonMenuItem } from '@/components/ui/Skeleton';
+import { getCurrentLanguage, LANGUAGE_FLAGS, LANGUAGE_NAMES } from '@/i18n';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -83,8 +85,9 @@ export const SettingsWidget = memo(function SettingsWidget({
   cardStyle,
   animationDelay = 200,
 }: SettingsWidgetProps) {
-  const { colors, themeMode } = useTheme();
+  const { colors, themeMode, isDark } = useTheme();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -93,13 +96,13 @@ export const SettingsWidget = memo(function SettingsWidget({
     return () => clearTimeout(timer);
   }, []);
 
-  const themeLabel = useMemo(() => {
-    switch (themeMode) {
-      case 'light': return 'Light mode';
-      case 'dark': return 'Dark mode';
-      case 'system': return 'System';
-    }
-  }, [themeMode]);
+  // Build description for App Settings showing current theme and language
+  const appSettingsDescription = useMemo(() => {
+    const currentLang = getCurrentLanguage();
+    const themeLabel = t(`profile.appearance.${themeMode}`);
+    const langFlag = LANGUAGE_FLAGS[currentLang];
+    return `${themeLabel} · ${langFlag} ${LANGUAGE_NAMES[currentLang]}`;
+  }, [themeMode, t]);
 
   const openPrivacyPolicy = useCallback(async () => {
     await Linking.openURL('https://www.simnetiq.store/privacy-policy');
@@ -114,7 +117,7 @@ export const SettingsWidget = memo(function SettingsWidget({
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
       style={[styles.card, cardStyle]}
     >
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Settings</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.settings.title')}</Text>
 
       <View style={styles.menuList}>
         {isLoading ? (
@@ -128,31 +131,31 @@ export const SettingsWidget = memo(function SettingsWidget({
         ) : (
           <>
             <MenuItem
-              icon={Palette}
-              label="Appearance"
-              description={themeLabel}
+              icon={Settings}
+              label={t('profile.settings.title')}
+              description={appSettingsDescription}
               iconColor={colors.info}
               onPress={() => router.push('/(tabs)/profile/appearance')}
             />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <MenuItem
               icon={HelpCircle}
-              label="Help & Support"
-              description="FAQ and contact us"
+              label={t('profile.settings.contactSupport')}
+              description={t('profile.settings.faqAndContact')}
               iconColor={colors.primary}
               onPress={() => router.push('/(tabs)/profile/contact-support')}
             />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <MenuItem
               icon={FileText}
-              label="Privacy Policy"
+              label={t('tier.paywall.privacy')}
               iconColor={colors.textSecondary}
               onPress={openPrivacyPolicy}
             />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <MenuItem
               icon={Info}
-              label="Terms of Service"
+              label={t('tier.paywall.terms')}
               iconColor={colors.textSecondary}
               onPress={openTermsOfService}
             />

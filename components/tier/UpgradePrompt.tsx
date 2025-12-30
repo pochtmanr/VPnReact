@@ -20,6 +20,7 @@ import {
   Globe,
   Smartphone,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import {
   useTier,
@@ -42,12 +43,12 @@ interface UpgradePromptProps {
   subtitle?: string;
 }
 
-// Pro tier features to display in the modal
+// Pro tier features to display in the modal - using translation keys
 const PRO_FEATURES = [
-  { icon: Globe, label: 'Premium Servers', description: 'Fast, worldwide servers' },
-  { icon: Shield, label: 'Ad Blocking', description: 'DNS-level protection' },
-  { icon: Smartphone, label: '5 Devices', description: 'Connect multiple devices' },
-  { icon: Zap, label: 'Parental Controls', description: 'Keep your family safe' },
+  { icon: Globe, labelKey: 'tier.features.premiumServers.title', descKey: 'tier.features.premiumServers.description' },
+  { icon: Shield, labelKey: 'tier.features.adBlocking.title', descKey: 'tier.features.adBlocking.description' },
+  { icon: Smartphone, labelKey: 'tier.features.devices.title', descKey: 'tier.features.devices.description' },
+  { icon: Zap, labelKey: 'tier.features.parentalControls.title', descKey: 'tier.features.parentalControls.description' },
 ];
 
 /**
@@ -64,6 +65,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 }: UpgradePromptProps) {
   const { colors, isDark } = useTheme();
   const { tier, getUpgradePath, getRequiredTierForFeature } = useTier();
+  const { t } = useTranslation();
   const {
     packages,
     monthlyPackage,
@@ -90,16 +92,16 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
   const displayTitle = title || (featureInfo
     ? `Unlock ${featureInfo.name}`
-    : `Upgrade to ${upgradeTierName}`);
+    : t('tier.paywall.title'));
 
   const displaySubtitle = subtitle || (featureInfo
     ? featureInfo.description
-    : 'Get access to all premium features');
+    : t('tier.paywall.subtitle'));
 
   // Handle package purchase
   const handlePurchase = useCallback(async (pkg: SubscriptionPackage) => {
     if (isMockMode) {
-      Alert.alert('Development Mode', 'Purchases are not available in development mode. Please build and run on a device.');
+      Alert.alert(t('common.status.error'), t('tier.devMode'));
       return;
     }
 
@@ -107,18 +109,18 @@ export const UpgradePrompt = memo(function UpgradePrompt({
     try {
       const result = await purchasePackage(pkg);
       if (result.success) {
-        Alert.alert('Success', 'Thank you for subscribing!', [
+        Alert.alert(t('common.status.success'), t('tier.purchaseSuccess'), [
           { text: 'OK', onPress: onClose }
         ]);
       } else if (result.error && result.error !== 'Purchase cancelled') {
-        Alert.alert('Error', result.error);
+        Alert.alert(t('common.status.error'), result.error);
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to complete purchase. Please try again.');
+      Alert.alert(t('common.status.error'), t('tier.purchaseError'));
     } finally {
       setIsPurchasing(false);
     }
-  }, [purchasePackage, onClose, isMockMode]);
+  }, [purchasePackage, onClose, isMockMode, t]);
 
   // Handle restore purchases
   const handleRestore = useCallback(async () => {
@@ -127,19 +129,19 @@ export const UpgradePrompt = memo(function UpgradePrompt({
       const result = await restorePurchases();
       if (result.success) {
         if (result.restored) {
-          Alert.alert('Success', 'Your purchases have been restored!', [
+          Alert.alert(t('common.status.success'), t('tier.purchaseSuccess'), [
             { text: 'OK', onPress: onClose }
           ]);
         } else {
-          Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+          Alert.alert(t('common.status.error'), t('tier.noPurchases'));
         }
       } else if (result.error) {
-        Alert.alert('Error', result.error);
+        Alert.alert(t('common.status.error'), result.error);
       }
     } finally {
       setIsPurchasing(false);
     }
-  }, [restorePurchases, onClose]);
+  }, [restorePurchases, onClose, t]);
 
   // Memoize styles
   const containerStyle = useMemo(() => ({
@@ -193,7 +195,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
               {/* Current tier badge */}
               <View style={[styles.currentTierBadge, { backgroundColor: featureItemBg }]}>
                 <Text style={[styles.currentTierText, { color: colors.textSecondary }]}>
-                  Current plan: <Text style={{ color: colors.text, fontWeight: '600' }}>
+                  {t('profile.subscription.currentPlan')}: <Text style={{ color: colors.text, fontWeight: '600' }}>
                     {TIER_DISPLAY_NAMES[tier]}
                   </Text>
                 </Text>
@@ -211,10 +213,10 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                     </View>
                     <View style={styles.featureText}>
                       <Text style={[styles.featureLabel, { color: colors.text }]}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </Text>
                       <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>
-                        {item.description}
+                        {t(item.descKey)}
                       </Text>
                     </View>
                     <Check size={18} color={colors.success} />
@@ -240,17 +242,17 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                   >
                     {savingsPercentage && (
                       <View style={styles.savingsBadge}>
-                        <Text style={styles.savingsText}>Save {savingsPercentage}%</Text>
+                        <Text style={styles.savingsText}>{t('tier.paywall.save', { percent: savingsPercentage })}</Text>
                       </View>
                     )}
                     <Text style={[styles.packageName, { color: colors.text }]}>
-                      Yearly
+                      {t('tier.paywall.yearly')}
                     </Text>
                     <Text style={[styles.packagePrice, { color: colors.text }]}>
                       {yearlyPackage.product.priceString}
                     </Text>
                     <Text style={[styles.packagePeriod, { color: colors.textSecondary }]}>
-                      per year
+                      {t('tier.paywall.perYear')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -270,13 +272,13 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.packageName, { color: colors.text }]}>
-                      Monthly
+                      {t('tier.paywall.monthly')}
                     </Text>
                     <Text style={[styles.packagePrice, { color: colors.text }]}>
                       {monthlyPackage.product.priceString}
                     </Text>
                     <Text style={[styles.packagePeriod, { color: colors.textSecondary }]}>
-                      per month
+                      {t('tier.paywall.perMonth')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -287,7 +289,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                    Processing...
+                    {t('tier.paywall.processing')}
                   </Text>
                 </View>
               )}
@@ -299,7 +301,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
                 disabled={isPurchasing || isLoading}
               >
                 <Text style={[styles.restoreText, { color: colors.textSecondary }]}>
-                  Restore Purchases
+                  {t('tier.paywall.restore')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -326,6 +328,7 @@ export const UpgradeBanner = memo(function UpgradeBanner({
 }: UpgradeBannerProps) {
   const { colors, isDark } = useTheme();
   const { canUpgrade } = useTier();
+  const { t } = useTranslation();
 
   const [showModal, setShowModal] = React.useState(false);
 
@@ -342,7 +345,7 @@ export const UpgradeBanner = memo(function UpgradeBanner({
   const featureInfo = feature ? FEATURE_INFO[feature] : null;
   const bannerText = featureInfo
     ? `Unlock ${featureInfo.name}`
-    : 'Upgrade to Pro';
+    : t('profile.subscription.cta.upgradeToPro');
 
   if (compact) {
     return (
@@ -391,7 +394,7 @@ export const UpgradeBanner = memo(function UpgradeBanner({
               {bannerText}
             </Text>
             <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>
-              {featureInfo?.description || 'Access all premium features'}
+              {featureInfo?.description || t('profile.subscription.cta.unlockFeatures')}
             </Text>
           </View>
         </View>

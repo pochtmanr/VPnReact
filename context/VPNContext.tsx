@@ -45,11 +45,14 @@ interface VPNContextType {
   measuredLatency: number | null;
   // Connection error message (when status is 'error')
   connectionError: string | null;
+  // Lazy loading flag for servers
+  serversLoaded: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   selectServer: (server: VPNServer) => void;
   toggleFavorite: (serverId: string) => Promise<void>;
   refreshServers: () => Promise<void>;
+  loadServersIfNeeded: () => Promise<void>;
   installVPNProfile: () => Promise<boolean>;
   checkProfileInstalled: () => Promise<boolean>;
   retryConnection: () => Promise<void>;
@@ -75,6 +78,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   const [adBlockEnabled, setAdBlockEnabledState] = useState(false);
   const [measuredLatency, setMeasuredLatency] = useState<number | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [serversLoaded, setServersLoaded] = useState(false);
   const latencyIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // DNS servers - AdGuard DNS when ad blocking is enabled, regular DNS otherwise
@@ -111,12 +115,19 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Measure latency by pinging a public endpoint through the VPN tunnel
-  const measureLatency = useCallback(async (): Promise<number | null> => {
-    if (!selectedServer || connectionStatus !== 'connected') {
+  // Measure latency - works both when connected (through VPN) and disconnected (direct ping)
+  const measureLatency = useCallback(async (forceServerLatency: boolean = false): Promise<number | null> => {
+    if (!selectedServer) {
       return null;
     }
 
+    // When disconnected, return stored server latency (pre-computed on backend)
+    // This provides useful info to users before they connect
+    if (connectionStatus !== 'connected' || forceServerLatency) {
+      return selectedServer.latency_ms || null;
+    }
+
+    // When connected, measure actual round-trip through VPN tunnel
     try {
       const startTime = Date.now();
       const controller = new AbortController();
@@ -241,6 +252,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         );
 
         setServers(wireGuardServers);
+        setServersLoaded(true);
 
         // Auto-select the first WireGuard server if none selected
         if (!selectedServer && wireGuardServers.length > 0) {
@@ -253,6 +265,15 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, [selectedServer]);
+
+  // Load servers if not already loaded (prevents duplicate fetches when bottom sheet opens)
+  const loadServersIfNeeded = useCallback(async () => {
+    // Only fetch if we don't have servers yet
+    if (servers.length === 0 && !loading) {
+      setLoading(true);
+      await refreshServers();
+    }
+  }, [servers.length, loading, refreshServers]);
 
   // Fetch favorites
   const fetchFavorites = useCallback(async () => {
@@ -307,6 +328,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     checkProfileInstalled();
   }, [checkProfileInstalled]);
 
+  // Load servers on mount - needed for VPN connection to work
   useEffect(() => {
     refreshServers();
   }, [refreshServers]);
@@ -699,11 +721,13 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         setAdBlockEnabled,
         measuredLatency,
         connectionError,
+        serversLoaded,
         connect,
         disconnect,
         selectServer,
         toggleFavorite,
         refreshServers,
+        loadServersIfNeeded,
         installVPNProfile,
         checkProfileInstalled,
         retryConnection,

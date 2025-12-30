@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
@@ -41,6 +42,7 @@ export default function SubscriptionScreen() {
   const { colors, isDark } = useTheme();
   const { tier, isPro } = useTier();
   const router = useRouter();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -74,11 +76,11 @@ export default function SubscriptionScreen() {
     } catch (error) {
       console.error('Error opening subscription management:', error);
       Alert.alert(
-        'Unable to Open',
-        'Please manage your subscription in Settings > Apple ID > Subscriptions'
+        t('profile.subscription.unableToOpen'),
+        t('profile.subscription.manageInSettings')
       );
     }
-  }, []);
+  }, [t]);
 
   // Restore purchases - required by Apple
   const handleRestorePurchases = useCallback(async () => {
@@ -96,18 +98,18 @@ export default function SubscriptionScreen() {
             params: { restored: 'true' },
           });
         } else {
-          Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+          Alert.alert(t('common.status.error'), t('profile.subscription.noPurchasesFound'));
         }
       } else {
-        Alert.alert('Error', result.error || 'Failed to restore purchases.');
+        Alert.alert(t('common.status.error'), result.error || t('profile.subscription.restoreError'));
       }
     } catch (error) {
       console.error('Error restoring purchases:', error);
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      Alert.alert(t('common.status.error'), t('profile.subscription.restoreError'));
     } finally {
       setIsLoading(false);
     }
-  }, [restorePurchases, router]);
+  }, [restorePurchases, router, t]);
 
   // Open upgrade modal
   const handleUpgrade = useCallback(() => {
@@ -169,7 +171,7 @@ export default function SubscriptionScreen() {
               <ArrowLeft size={20} color={colors.text} />
             </Pressable>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Subscription
+              {t('profile.subscription.title')}
             </Text>
             <View style={{ width: 40 }} />
           </View>
@@ -178,7 +180,7 @@ export default function SubscriptionScreen() {
             entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
           >
             <Text style={[styles.description, { color: colors.textSecondary }]}>
-              Manage your plan
+              {t('profile.subscription.managePlan')}
             </Text>
           </AnimatedView>
 
@@ -198,7 +200,7 @@ export default function SubscriptionScreen() {
 
             {/* Plan Info */}
             <View style={styles.planInfo}>
-              <Text style={[styles.planLabel, { color: colors.textSecondary }]}>Current Plan</Text>
+              <Text style={[styles.planLabel, { color: colors.textSecondary }]}>{t('profile.subscription.currentPlan')}</Text>
               <Text style={[styles.planName, { color: colors.text }]}>
                 {TIER_DISPLAY_NAMES[tier]}
               </Text>
@@ -210,7 +212,7 @@ export default function SubscriptionScreen() {
                     <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
                   )}
                   <Text style={[styles.activeBadgeText, { color: colors.success }]}>
-                    {isRevenueCatLoading ? 'Refreshing...' : 'Active'}
+                    {isRevenueCatLoading ? t('profile.subscription.status.refreshing') : t('profile.subscription.status.active')}
                   </Text>
                 </View>
               )}
@@ -223,14 +225,14 @@ export default function SubscriptionScreen() {
                   <Calendar size={16} color={colors.textSecondary} />
                   <Text style={[styles.detailText, { color: colors.textSecondary }]}>
                     {activeSubscription.expirationDate
-                      ? `Renews ${activeSubscription.expirationDate.toLocaleDateString()}`
-                      : 'Lifetime access'}
+                      ? t('profile.subscription.statusText.renewsOn', { date: activeSubscription.expirationDate.toLocaleDateString() })
+                      : t('profile.subscription.statusText.lifetimeAccess')}
                   </Text>
                 </View>
                 {activeSubscription.isInTrial && (
                   <View style={[styles.trialBadge, { backgroundColor: `${colors.warning}15` }]}>
                     <Sparkles size={14} color={colors.warning} />
-                    <Text style={[styles.trialText, { color: colors.warning }]}>Free Trial</Text>
+                    <Text style={[styles.trialText, { color: colors.warning }]}>{t('profile.subscription.freeTrial')}</Text>
                   </View>
                 )}
               </View>
@@ -240,10 +242,10 @@ export default function SubscriptionScreen() {
             {!isPro && (
               <View style={[styles.upgradeSection, { borderTopColor: colors.border }]}>
                 <Text style={[styles.upgradeText, { color: colors.text }]}>
-                  Upgrade to Pro
+                  {t('profile.subscription.cta.upgradeToPro')}
                 </Text>
                 <Text style={[styles.upgradeSubtext, { color: colors.textSecondary }]}>
-                  Unlock all premium features
+                  {t('profile.subscription.cta.unlockFeatures')}
                 </Text>
                 <Pressable
                   onPress={handleUpgrade}
@@ -259,7 +261,7 @@ export default function SubscriptionScreen() {
                     style={styles.upgradeButtonGradient}
                   >
                     <Crown size={18} color="#FFFFFF" />
-                    <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+                    <Text style={styles.upgradeButtonText}>{t('profile.subscription.cta.upgradeNow')}</Text>
                   </LinearGradient>
                 </Pressable>
               </View>
@@ -284,10 +286,10 @@ export default function SubscriptionScreen() {
               </View>
               <View style={styles.menuContent}>
                 <Text style={[styles.menuLabel, { color: colors.text }]}>
-                  Manage in {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}
+                  {t('profile.subscription.management.manageInStore', { store: Platform.OS === 'ios' ? 'App Store' : 'Play Store' })}
                 </Text>
                 <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
-                  Change or cancel subscription
+                  {t('profile.subscription.management.changeOrCancel')}
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
@@ -313,9 +315,9 @@ export default function SubscriptionScreen() {
                 )}
               </View>
               <View style={styles.menuContent}>
-                <Text style={[styles.menuLabel, { color: colors.text }]}>Restore Purchases</Text>
+                <Text style={[styles.menuLabel, { color: colors.text }]}>{t('profile.subscription.management.restorePurchases')}</Text>
                 <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
-                  Restore previous subscriptions
+                  {t('profile.subscription.management.restoreDescription')}
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
@@ -335,9 +337,9 @@ export default function SubscriptionScreen() {
                 <HelpCircle size={20} color={colors.textSecondary} />
               </View>
               <View style={styles.menuContent}>
-                <Text style={[styles.menuLabel, { color: colors.text }]}>Subscription Help</Text>
+                <Text style={[styles.menuLabel, { color: colors.text }]}>{t('profile.subscription.management.subscriptionHelp')}</Text>
                 <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
-                  FAQ and support
+                  {t('profile.subscription.management.faqAndSupport')}
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
@@ -351,8 +353,8 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.infoText, { color: colors.textMuted }]}>
               {Platform.OS === 'ios'
-                ? 'Subscriptions are managed through the App Store. You can cancel anytime in your Apple ID settings.'
-                : 'Subscriptions are managed through Google Play. You can cancel anytime in your Play Store settings.'}
+                ? t('profile.subscription.infoFooter.ios')
+                : t('profile.subscription.infoFooter.android')}
             </Text>
           </AnimatedView>
         </Animated.ScrollView>

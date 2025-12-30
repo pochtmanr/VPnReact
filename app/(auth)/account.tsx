@@ -9,15 +9,18 @@ import {
   ArrowRight,
   Check,
   Copy,
+  Globe,
   Key,
-  RefreshCw,
   Shield,
   Smartphone,
+  X,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Keyboard,
+  Modal,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -28,12 +31,14 @@ import {
 import Animated, {
   Easing,
   FadeInDown,
-  FadeInUp,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage, getCurrentLanguage, LANGUAGE_FLAGS, LANGUAGE_NAMES, SUPPORTED_LANGUAGES } from '@/i18n';
+import { PrimaryButton, BUTTON_GRADIENTS } from '@/components/ui/PrimaryButton';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -44,6 +49,7 @@ export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { createAccount, loginWithAccountId, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
 
   const [mode, setMode] = useState<Mode>('choice');
   const [accountId, setAccountId] = useState('');
@@ -51,13 +57,21 @@ export default function AccountScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
 
-  // Redirect if already authenticated
+  // Check if already authenticated on mount (not after account creation)
+  // Only redirect if user was already logged in when navigating to this screen
   useEffect(() => {
-    if (isAuthenticated) {
+    // Skip redirect if we're in create mode with a generated ID (user just created account)
+    if (mode === 'create' && generatedId) {
+      return;
+    }
+    // Only auto-redirect if we're on the choice screen and already authenticated
+    if (isAuthenticated && mode === 'choice') {
       handleContinue();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, mode, generatedId]);
 
   const handleCreateAccount = async () => {
     setLoading(true);
@@ -70,11 +84,11 @@ export default function AccountScreen() {
         setGeneratedId(result.accountId);
         try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       } else {
-        setError(result.error || 'Failed to create account');
+        setError(result.error || t('common.errors.generic'));
         try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(t('common.errors.generic'));
       try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
     } finally {
       setLoading(false);
@@ -83,7 +97,7 @@ export default function AccountScreen() {
 
   const handleLogin = async () => {
     if (!accountId.trim()) {
-      setError('Please enter your account ID');
+      setError(t('auth.account.errors.enterAccountId'));
       return;
     }
 
@@ -97,11 +111,11 @@ export default function AccountScreen() {
         try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
         handleContinue();
       } else {
-        setError(result.error || 'Invalid account ID');
+        setError(result.error || t('auth.account.errors.invalidAccountId'));
         try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(t('common.errors.generic'));
       try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
     } finally {
       setLoading(false);
@@ -138,6 +152,17 @@ export default function AccountScreen() {
   const handleContinue = async () => {
     await AsyncStorage.setItem('onboarding_complete', 'true');
     router.replace('/(tabs)');
+  };
+
+  const handleLanguageChange = async (lang: string) => {
+    try {
+      await changeLanguage(lang);
+      setCurrentLang(lang);
+      setShowLanguageModal(false);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (err) {
+      console.warn('Failed to change language:', err);
+    }
   };
 
   // Format input as user types (VPN-XXXX-XXXX-XXXX)
@@ -178,9 +203,9 @@ export default function AccountScreen() {
       entering={FadeInDown.delay(200).duration(500).easing(Easing.out(Easing.ease))}
       style={styles.choiceContainer}
     >
-      <Text style={styles.choiceTitle}>Get Started</Text>
+      <Text style={styles.choiceTitle}>{t('auth.account.title')}</Text>
       <Text style={styles.choiceSubtitle}>
-        Create a new account or login with an existing ID
+        {t('auth.account.subtitle')}
       </Text>
 
       {/* Create Account Card */}
@@ -198,9 +223,9 @@ export default function AccountScreen() {
               <Key size={28} color={colors.primary} />
             </View>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>Create New Account</Text>
+              <Text style={styles.optionTitle}>{t('auth.account.createAccount')}</Text>
               <Text style={styles.optionDescription}>
-                Get a unique ID to use across all your devices
+                {t('auth.account.createDescription')}
               </Text>
             </View>
             <ArrowRight size={20} color="rgba(255, 255, 255, 0.4)" />
@@ -223,9 +248,9 @@ export default function AccountScreen() {
               <Smartphone size={28} color={colors.success} />
             </View>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>I Have an Account</Text>
+              <Text style={styles.optionTitle}>{t('auth.account.login')}</Text>
               <Text style={styles.optionDescription}>
-                Enter your existing account ID to continue
+                {t('auth.account.loginDescription')}
               </Text>
             </View>
             <ArrowRight size={20} color="rgba(255, 255, 255, 0.4)" />
@@ -241,7 +266,7 @@ export default function AccountScreen() {
         <BlurView intensity={20} tint="dark" style={styles.deviceInfoBlur}>
           <Shield size={16} color={colors.primary} />
           <Text style={styles.deviceInfoText}>
-            Your account works on up to 10 devices
+            {t('auth.account.deviceInfo', { count: 10 })}
           </Text>
         </BlurView>
       </AnimatedView>
@@ -255,9 +280,9 @@ export default function AccountScreen() {
     >
       {!generatedId ? (
         <>
-          <Text style={styles.modeTitle}>Create Account</Text>
+          <Text style={styles.modeTitle}>{t('auth.account.createAccount')}</Text>
           <Text style={styles.modeSubtitle}>
-            We'll generate a unique ID for you. Save it to use on other devices.
+            {t('auth.account.generateDescription')}
           </Text>
 
           <AnimatedView
@@ -270,7 +295,7 @@ export default function AccountScreen() {
                   <Key size={40} color={colors.primary} />
                 </View>
                 <Text style={styles.createHint}>
-                  Your account ID will look like:{'\n'}
+                  {t('auth.account.idPreview')}{'\n'}
                   <Text style={{ color: colors.primary, fontWeight: '700' }}>VPN-XXXX-XXXX-XXXX</Text>
                 </Text>
               </View>
@@ -281,40 +306,24 @@ export default function AccountScreen() {
             <Text style={[styles.errorText, { color: '#EF4444' }]}>{error}</Text>
           )}
 
-          <AnimatedPressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              { transform: [{ scale: pressed ? 0.98 : 1 }], opacity: loading ? 0.7 : pressed ? 0.9 : 1 },
-            ]}
+          <PrimaryButton
+            title={t('auth.account.generateButton')}
             onPress={handleCreateAccount}
+            loading={loading}
             disabled={loading}
-          >
-            <LinearGradient
-              colors={[colors.primary, '#4A8BC4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
-              {loading ? (
-                <RefreshCw size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
-              ) : (
-                <>
-                  <Text style={styles.primaryButtonText}>Generate My Account ID</Text>
-                  <Key size={20} color="#FFFFFF" />
-                </>
-              )}
-            </LinearGradient>
-          </AnimatedPressable>
+            icon={<Key size={20} color="#FFFFFF" />}
+            enterDelay={200}
+          />
 
           <Pressable onPress={() => setMode('choice')} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back</Text>
+            <Text style={styles.backButtonText}>{t('common.buttons.back')}</Text>
           </Pressable>
         </>
       ) : (
         <>
-          <Text style={styles.modeTitle}>Your Account ID</Text>
+          <Text style={styles.modeTitle}>{t('auth.account.yourAccountId')}</Text>
           <Text style={styles.modeSubtitle}>
-            Save this ID! You'll need it to access your account on other devices.
+            {t('auth.account.saveWarning')}
           </Text>
 
           <AnimatedView
@@ -336,7 +345,7 @@ export default function AccountScreen() {
                     <Copy size={20} color={colors.primary} />
                   )}
                   <Text style={[styles.idActionText, { color: copied ? colors.success : colors.primary }]}>
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? t('profile.copied') : t('profile.copyId')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -344,7 +353,7 @@ export default function AccountScreen() {
                   onPress={handleShareId}
                 >
                   <ArrowRight size={20} color="#FFFFFF" />
-                  <Text style={styles.idActionText}>Share</Text>
+                  <Text style={styles.idActionText}>{t('auth.account.share')}</Text>
                 </Pressable>
               </View>
             </BlurView>
@@ -357,29 +366,18 @@ export default function AccountScreen() {
             <BlurView intensity={20} tint="dark" style={styles.warningCardBlur}>
               <Shield size={18} color="#F59E0B" />
               <Text style={styles.warningText}>
-                This is your only way to access your account. Store it securely.
+                {t('auth.account.securityWarning')}
               </Text>
             </BlurView>
           </AnimatedView>
 
-          <AnimatedPressable
-            entering={FadeInUp.delay(400).duration(400)}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              { transform: [{ scale: pressed ? 0.98 : 1 }], opacity: pressed ? 0.9 : 1 },
-            ]}
+          <PrimaryButton
+            title={t('auth.account.continueToApp')}
             onPress={handleContinue}
-          >
-            <LinearGradient
-              colors={[colors.success, '#1B9B5E']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
-              <Text style={styles.primaryButtonText}>Continue to App</Text>
-              <ArrowRight size={20} color="#FFFFFF" />
-            </LinearGradient>
-          </AnimatedPressable>
+            icon={<ArrowRight size={20} color="#FFFFFF" />}
+            gradientColors={BUTTON_GRADIENTS.success}
+            enterDelay={400}
+          />
         </>
       )}
     </AnimatedView>
@@ -391,9 +389,9 @@ export default function AccountScreen() {
         entering={FadeInDown.delay(100).duration(500).easing(Easing.out(Easing.ease))}
         style={styles.loginContainer}
       >
-        <Text style={styles.modeTitle}>Enter Account ID</Text>
+        <Text style={styles.modeTitle}>{t('auth.login.title')}</Text>
         <Text style={styles.modeSubtitle}>
-          Enter your account ID to access Doppler VPN on this device
+          {t('auth.login.subtitle')}
         </Text>
 
         <AnimatedView
@@ -418,33 +416,17 @@ export default function AccountScreen() {
           <Text style={[styles.errorText, { color: '#EF4444' }]}>{error}</Text>
         )}
 
-        <AnimatedPressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            { transform: [{ scale: pressed ? 0.98 : 1 }], opacity: loading ? 0.7 : pressed ? 0.9 : 1 },
-          ]}
+        <PrimaryButton
+          title={t('auth.account.login')}
           onPress={handleLogin}
+          loading={loading}
           disabled={loading}
-        >
-          <LinearGradient
-            colors={[colors.primary, '#4A8BC4']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.buttonGradient}
-          >
-            {loading ? (
-              <RefreshCw size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
-            ) : (
-              <>
-                <Text style={styles.primaryButtonText}>Login</Text>
-                <ArrowRight size={20} color="#FFFFFF" />
-              </>
-            )}
-          </LinearGradient>
-        </AnimatedPressable>
+          icon={<ArrowRight size={20} color="#FFFFFF" />}
+          enterDelay={200}
+        />
 
         <Pressable onPress={() => { setMode('choice'); setError(null); }} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back</Text>
+          <Text style={styles.backButtonText}>{t('common.buttons.back')}</Text>
         </Pressable>
       </AnimatedView>
     </TouchableWithoutFeedback>
@@ -470,6 +452,27 @@ export default function AccountScreen() {
           },
         ]}
       >
+        {/* Language Selector Button */}
+        <AnimatedView
+          entering={FadeInDown.delay(50).duration(400)}
+          style={styles.languageButton}
+        >
+          <Pressable
+            onPress={() => setShowLanguageModal(true)}
+            style={({ pressed }) => [
+              styles.languageButtonInner,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <BlurView intensity={30} tint="dark" style={styles.languageButtonBlur}>
+              <Globe size={14} color="rgba(255, 255, 255, 0.7)" />
+              <Text style={styles.languageButtonText}>
+                {currentLang.toUpperCase()}
+              </Text>
+            </BlurView>
+          </Pressable>
+        </AnimatedView>
+
         {/* Header Badge */}
         <AnimatedView
           entering={FadeInDown.delay(100).duration(500).easing(Easing.out(Easing.ease))}
@@ -480,6 +483,57 @@ export default function AccountScreen() {
             <Text style={styles.headerBadgeText}>Doppler VPN</Text>
           </BlurView>
         </AnimatedView>
+
+        {/* Language Selection Modal */}
+        <Modal
+          visible={showLanguageModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLanguageModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowLanguageModal(false)}
+          >
+            <View style={styles.modalContent}>
+              <BlurView intensity={80} tint="dark" style={styles.modalBlur}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>{t('profile.language')}</Text>
+                  <Pressable
+                    onPress={() => setShowLanguageModal(false)}
+                    style={styles.modalClose}
+                  >
+                    <X size={20} color="rgba(255, 255, 255, 0.6)" />
+                  </Pressable>
+                </View>
+                <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <Pressable
+                      key={lang}
+                      style={({ pressed }) => [
+                        styles.languageOption,
+                        currentLang === lang && styles.languageOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => handleLanguageChange(lang)}
+                    >
+                      <Text style={styles.languageFlag}>{LANGUAGE_FLAGS[lang]}</Text>
+                      <Text style={[
+                        styles.languageName,
+                        currentLang === lang && { color: colors.primary },
+                      ]}>
+                        {LANGUAGE_NAMES[lang]}
+                      </Text>
+                      {currentLang === lang && (
+                        <Check size={18} color={colors.primary} />
+                      )}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </BlurView>
+            </View>
+          </Pressable>
+        </Modal>
 
         {/* Content based on mode */}
         {mode === 'choice' && renderChoice()}
@@ -725,24 +779,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  primaryButton: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 10,
-    borderRadius: 9999,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
   backButton: {
     alignItems: 'center',
     paddingVertical: 16,
@@ -751,6 +787,90 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '500',
+  },
+  // Language Selector
+  languageButton: {
+    position: 'absolute',
+    top: 60,
+    right: 24,
+    zIndex: 10,
+  },
+  languageButtonInner: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  languageButtonBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  languageButtonText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalBlur: {
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  modalClose: {
+    padding: 4,
+  },
+  languageList: {
+    maxHeight: 400,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  languageOptionActive: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  languageFlag: {
+    fontSize: 24,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
     fontWeight: '500',
   },
 });
