@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "کنترل والدین",
+      "filter": "فیلتر",
       "adblock": "مسدودکننده تبلیغات",
       "profile": "پروفایل"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "تنظیمات سریع",
-      "parentalControls": {
-        "title": "کنترل والدین",
+      "contentFilter": {
+        "title": "فیلتر محتوا",
         "active": "فیلتر محتوا فعال است",
-        "description": "کودکان را از محتوای مضر محافظت کنید"
+        "description": "فیلتر محتوای ناخواسته"
       },
       "adBlocker": {
         "title": "مسدودکننده تبلیغات",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "کنترل والدین",
-    "subtitle": "خانواده خود را آنلاین محافظت کنید",
-    "description": "کنترل کنید چه محتوایی قابل دسترسی است",
+  "filter": {
+    "title": "فیلتر محتوا",
+    "subtitle": "تجربه آنلاین خود را کنترل کنید",
+    "description": "مسدود کردن محتوا و وب‌سایت‌های ناخواسته",
     "categories": {
       "title": "دسته‌بندی محتوا",
       "selectToBlock": "دسته‌ها را برای مسدود کردن انتخاب کنید",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "برای مدیریت دسته‌ها به Pro ارتقا دهید",
-      "enableRequired": "کنترل والدین بالا را برای مدیریت دسته‌ها فعال کنید",
+      "enableRequired": "فیلتر محتوا بالا را برای مدیریت دسته‌ها فعال کنید",
       "vpnRequired": "برای مدیریت دسته‌ها به VPN متصل شوید",
       "upgradeRequiredSites": "برای مدیریت سایت‌ها به Pro ارتقا دهید",
-      "enableRequiredSites": "کنترل والدین بالا را برای مدیریت سایت‌ها فعال کنید",
+      "enableRequiredSites": "فیلتر محتوا بالا را برای مدیریت سایت‌ها فعال کنید",
       "vpnRequiredSites": "برای مدیریت سایت‌ها به VPN متصل شوید"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "دستگاه اصلی",
       "connected": "متصل",
       "vpn": "VPN",
-      "control": "کنترل",
+      "filter": "فیلتر",
       "adBlock": "مسدودکننده تبلیغات",
       "childMode": "حالت کودک",
       "noDevices": "هیچ دستگاهی متصل نیست",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "سرورهای پریمیوم",
         "adBlocking": "مسدودسازی تبلیغات",
-        "parentalControls": "کنترل والدین",
+        "contentFilter": "فیلتر محتوا",
         "devices": "۵ دستگاه"
       }
     }
@@ -559,9 +559,9 @@
         "title": "۵ دستگاه",
         "description": "اتصال چند دستگاه"
       },
-      "parentalControls": {
-        "title": "کنترل والدین",
-        "description": "خانواده خود را امن نگه دارید"
+      "contentFilter": {
+        "title": "فیلتر محتوا",
+        "description": "مسدود کردن محتوای ناخواسته"
       }
     },
 

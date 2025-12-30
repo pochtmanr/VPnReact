@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LogOut, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Linking,
@@ -14,7 +15,6 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import {
   AccountCard,
@@ -228,7 +228,7 @@ export default function ProfileScreen() {
             entering={FadeInDown.delay(300).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.versionContainer}
           >
-            <Text style={[styles.versionText, { color: colors.textMuted }]}>Doppler VPN v1.0.0</Text>
+            <Text style={[styles.versionText, { color: colors.textMuted }]}>Doppler VPN v1.1.2</Text>
           </AnimatedView>
         </Animated.ScrollView>
       </ScrollShadow>

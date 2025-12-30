@@ -45,7 +45,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "Фильтр",
+      "filter": "Фильтр",
       "adblock": "Ad Block",
       "profile": "Профиль"
     }
@@ -198,10 +198,10 @@
     },
     "quickSettings": {
       "title": "Быстрые настройки",
-      "parentalControls": {
+      "contentFilter": {
         "title": "Фильтр контента",
         "active": "Фильтрация контента активна",
-        "description": "Защитите детей от вредного контента"
+        "description": "Фильтруйте нежелательный контент"
       },
       "adBlocker": {
         "title": "Блокировщик рекламы",
@@ -222,10 +222,10 @@
       }
     }
   },
-  "parental": {
+  "filter": {
     "title": "Фильтр контента",
-    "subtitle": "Защитите свою семью онлайн",
-    "description": "Контролируйте доступный контент",
+    "subtitle": "Контролируйте онлайн-контент",
+    "description": "Блокируйте нежелательный контент и сайты",
     "categories": {
       "title": "Категории контента",
       "selectToBlock": "Выберите категории для блокировки",
@@ -400,7 +400,7 @@
       "mainDevice": "Основное устройство",
       "connected": "Подключено",
       "vpn": "VPN",
-      "control": "Контроль",
+      "filter": "Фильтр",
       "adBlock": "Блокировка рекламы",
       "childMode": "Детский режим",
       "noDevices": "Нет подключенных устройств",
@@ -525,7 +525,7 @@
       "features": {
         "premiumServers": "Премиум серверы",
         "adBlocking": "Блокировка рекламы",
-        "parentalControls": "Фильтр контента",
+        "contentFilter": "Фильтр контента",
         "devices": "5 устройств"
       }
     }
@@ -551,9 +551,9 @@
         "title": "5 устройств",
         "description": "Подключайте несколько устройств"
       },
-      "parentalControls": {
+      "contentFilter": {
         "title": "Фильтр контента",
-        "description": "Защитите свою семью"
+        "description": "Блокировка нежелательного контента"
       }
     },
     "paywall": {

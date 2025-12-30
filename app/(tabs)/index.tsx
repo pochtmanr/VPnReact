@@ -280,21 +280,6 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-// Get device icon based on type
-function getDeviceIcon(deviceType: string): typeof Smartphone {
-  return Smartphone;
-}
-
-// Get OS display name
-function getOSName(deviceType: string): string {
-  switch (deviceType) {
-    case 'ios': return 'iOS';
-    case 'android': return 'Android';
-    case 'web': return 'Web';
-    default: return deviceType;
-  }
-}
-
 // Get device brand from device name
 function getDeviceBrand(deviceName: string, deviceType: string): string {
   const name = deviceName.toLowerCase();
@@ -308,128 +293,118 @@ function getDeviceBrand(deviceName: string, deviceType: string): string {
   return 'Device';
 }
 
-// Compact Ads Blocked Widget Component
-interface AdsBlockedWidgetProps {
+// Square Blocked Count Widget (1:1 aspect ratio) - matches adblock StatCard style
+interface BlockedWidgetProps {
   stats: AdBlockStats | null;
   isConnected: boolean;
   isEnabled: boolean;
 }
 
-function AdsBlockedWidget({ stats, isConnected, isEnabled }: AdsBlockedWidgetProps) {
+function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
-  const cardStyle = {
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-  };
-
   const showStats = isConnected && isEnabled && stats;
   const blockedCount = showStats ? formatNumber(stats.totalBlocked) : '--';
-  const blockRate = showStats ? `${stats.blockRate}%` : '--';
+  const iconColor = isConnected && isEnabled ? '#EF4444' : colors.textMuted;
 
   return (
-    <AnimatedView
-      entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))}
-      style={[styles.compactWidget, cardStyle]}
+    <View
+      style={[
+        styles.squareWidget,
+        styles.statCardWidget,
+        {
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+        },
+      ]}
     >
-      <View style={styles.widgetHeader}>
-        <View style={[styles.widgetIconContainer, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
-          <Ban size={18} color={isConnected && isEnabled ? '#EF4444' : colors.textMuted} />
-        </View>
-        <Text style={[styles.widgetTitle, { color: colors.text }]}>{t('vpn.widgets.adsBlocked.title')}</Text>
+      <View style={[styles.statCardIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
+        <Ban size={20} color={iconColor} />
       </View>
-      <View style={styles.widgetStats}>
-        <View style={styles.widgetStatItem}>
-          <Text style={[styles.widgetStatValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
-            {blockedCount}
-          </Text>
-          <Text style={[styles.widgetStatLabel, { color: colors.textSecondary }]}>
-            {t('vpn.widgets.adsBlocked.blocked')}
-          </Text>
-        </View>
-        <View style={[styles.widgetStatDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.widgetStatItem}>
-          <Text style={[styles.widgetStatValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
-            {blockRate}
-          </Text>
-          <Text style={[styles.widgetStatLabel, { color: colors.textSecondary }]}>
-            {t('vpn.widgets.adsBlocked.rate')}
-          </Text>
-        </View>
-      </View>
-    </AnimatedView>
+      <Text style={[styles.statCardValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
+        {blockedCount}
+      </Text>
+      <Text style={[styles.statCardLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+        {t('vpn.widgets.adsBlocked.blocked')}
+      </Text>
+    </View>
   );
 }
 
-// Compact Connected Devices Widget Component
-interface ConnectedDevicesWidgetProps {
+// Square Devices Widget (1:1 aspect ratio) with device list
+interface DevicesWidgetProps {
   devices: DeviceSession[];
   currentDeviceId: string | undefined;
   isVpnConnected: boolean;
 }
 
-function ConnectedDevicesWidget({ devices, currentDeviceId, isVpnConnected }: ConnectedDevicesWidgetProps) {
+function DevicesWidget({ devices, currentDeviceId, isVpnConnected }: DevicesWidgetProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
-  const cardStyle = {
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-  };
-
-  // Show max 3 devices
-  const displayDevices = devices.slice(0, 3);
+  // Show max 4 devices, show +N for more
+  const displayDevices = devices.slice(0, 4);
+  const hasMoreDevices = devices.length > 4;
 
   return (
-    <AnimatedView
-      entering={FadeInDown.delay(200).duration(300).easing(Easing.out(Easing.ease))}
-      style={[styles.compactWidget, cardStyle]}
+    <View
+      style={[
+        styles.squareWidget,
+        styles.devicesWidget,
+        {
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+        },
+      ]}
     >
-      <View style={styles.widgetHeader}>
-        <View style={[styles.widgetIconContainer, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-          <Smartphone size={18} color="#3B82F6" />
+      {/* Header */}
+      <View style={styles.devicesWidgetHeader}>
+        <View style={[styles.devicesWidgetIconSmall, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
+          <Smartphone size={16} color="#3B82F6" />
         </View>
-        <Text style={[styles.widgetTitle, { color: colors.text }]}>{t('vpn.widgets.devices.title')}</Text>
-        <Text style={[styles.widgetCount, { color: colors.textSecondary }]}>{devices.length}</Text>
+        <Text style={[styles.devicesWidgetTitle, { color: colors.text }]}>
+          {t('vpn.widgets.devices.title')}
+        </Text>
+        <Text style={[styles.devicesWidgetCount, { color: colors.textSecondary }]}>
+          {devices.length}
+        </Text>
       </View>
 
+      {/* Device List */}
       {displayDevices.length > 0 ? (
-        <View style={styles.devicesList}>
-          {displayDevices.map((device, index) => {
+        <View style={styles.devicesWidgetList}>
+          {displayDevices.map((device) => {
             const isCurrentDevice = device.device_id === currentDeviceId;
-            const DeviceIcon = getDeviceIcon(device.device_type);
-            const brand = getDeviceBrand(device.device_name, device.device_type);
-            const os = getOSName(device.device_type);
+            const deviceName = getDeviceBrand(device.device_name, device.device_type);
 
             return (
-              <View key={device.id}>
-                {index > 0 && <View style={[styles.deviceDivider, { backgroundColor: colors.border }]} />}
-                <View style={styles.deviceItem}>
-                  <View style={[styles.deviceIconSmall, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' }]}>
-                    <DeviceIcon size={14} color={colors.textSecondary} />
-                  </View>
-                  <View style={styles.deviceInfo}>
-                    <Text style={[styles.deviceName, { color: colors.text }]} numberOfLines={1}>
-                      {brand}
-                    </Text>
-                    <Text style={[styles.deviceOS, { color: colors.textSecondary }]}>{os}</Text>
-                  </View>
-                  {/* Green dot if this device is connected to VPN */}
-                  {isCurrentDevice && isVpnConnected && (
-                    <View style={styles.connectedDot} />
-                  )}
-                </View>
+              <View key={device.id} style={styles.devicesWidgetItem}>
+                <Text
+                  style={[styles.devicesWidgetItemName, { color: colors.text }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {deviceName}
+                </Text>
+                {isCurrentDevice && isVpnConnected && (
+                  <View style={styles.devicesWidgetDot} />
+                )}
               </View>
             );
           })}
+          {hasMoreDevices && (
+            <Text style={[styles.devicesWidgetMore, { color: colors.textMuted }]}>
+              +{devices.length - 4}
+            </Text>
+          )}
         </View>
       ) : (
-        <Text style={[styles.noDevicesText, { color: colors.textSecondary }]}>
+        <Text style={[styles.devicesWidgetEmpty, { color: colors.textMuted }]}>
           {t('vpn.widgets.devices.noDevices')}
         </Text>
       )}
-    </AnimatedView>
+    </View>
   );
 }
 
@@ -468,11 +443,11 @@ export default function HomeScreen() {
 
   // Feature gating with automatic paywall for Quick Settings
   const {
-    hasAccess: hasParentalAccess,
-    requestAccess: requestParentalAccess,
-    isGating: isParentalGating,
-    getDisabledReason: getParentalDisabledReason,
-  } = useFeatureGate('parental_controls', {
+    hasAccess: hasFilterAccess,
+    requestAccess: requestFilterAccess,
+    isGating: isFilterGating,
+    getDisabledReason: getFilterDisabledReason,
+  } = useFeatureGate('content_filter', {
     requiresVPN: true,
     isVPNConnected: connectionStatus === 'connected',
   });
@@ -572,9 +547,9 @@ export default function HomeScreen() {
     bottomSheetRef.current?.open();
   };
 
-  // Parental controls toggle with paywall gating
-  const handleParentalToggle = useCallback(async (newValue: boolean) => {
-    if (isParentalToggling || isParentalGating) return;
+  // Content filter toggle with paywall gating
+  const handleFilterToggle = useCallback(async (newValue: boolean) => {
+    if (isParentalToggling || isFilterGating) return;
 
     // If turning off, always allow
     if (!newValue) {
@@ -587,7 +562,7 @@ export default function HomeScreen() {
     }
 
     // If turning on, check access (shows paywall if needed)
-    const granted = await requestParentalAccess();
+    const granted = await requestFilterAccess();
     if (!granted) return;
 
     try {
@@ -595,7 +570,7 @@ export default function HomeScreen() {
     } catch (err) {
       console.log('Toggle error handled by context');
     }
-  }, [isParentalToggling, isParentalGating, toggleParentalControls, requestParentalAccess]);
+  }, [isParentalToggling, isFilterGating, toggleParentalControls, requestFilterAccess]);
 
   // Ad block toggle with paywall gating
   const handleAdBlockToggle = useCallback(async (newValue: boolean) => {
@@ -843,36 +818,36 @@ export default function HomeScreen() {
           >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('vpn.quickSettings.title')}</Text>
 
-            {/* Parental Controls - Tappable to show paywall when locked */}
-            <View style={[styles.settingRow, (!isConnected || !hasParentalAccess) && styles.settingRowDisabled]}>
+            {/* Content Filter - Tappable to show paywall when locked */}
+            <View style={[styles.settingRow, (!isConnected || !hasFilterAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
                 <View style={[
                   styles.settingIcon,
                   {
                     backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                    opacity: (isConnected && hasParentalAccess) ? 1 : 0.5,
+                    opacity: (isConnected && hasFilterAccess) ? 1 : 0.5,
                   }
                 ]}>
-                  <Users size={20} color={(isConnected && hasParentalAccess) ? '#3B82F6' : colors.textMuted} />
+                  <Users size={20} color={(isConnected && hasFilterAccess) ? '#3B82F6' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: (isConnected && hasParentalAccess) ? colors.text : colors.textMuted }]}>
-                    {t('vpn.quickSettings.parentalControls.title')}
+                  <Text style={[styles.settingLabel, { color: (isConnected && hasFilterAccess) ? colors.text : colors.textMuted }]}>
+                    {t('vpn.quickSettings.contentFilter.title')}
                   </Text>
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {getParentalDisabledReason() ||
-                      (parentalEnabled ? t('vpn.quickSettings.parentalControls.active') : t('vpn.quickSettings.parentalControls.description'))}
+                    {getFilterDisabledReason() ||
+                      (parentalEnabled ? t('vpn.quickSettings.contentFilter.active') : t('vpn.quickSettings.contentFilter.description'))}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={parentalEnabled}
-                onValueChange={handleParentalToggle}
-                disabled={isParentalGating || isParentalToggling}
+                onValueChange={handleFilterToggle}
+                disabled={isFilterGating || isParentalToggling}
                 trackColor={{ false: colors.border, true: '#3B82F6' }}
                 thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
                 ios_backgroundColor={colors.border}
-                style={{ opacity: (isParentalGating || isParentalToggling) ? 0.5 : 1 }}
+                style={{ opacity: (isFilterGating || isParentalToggling) ? 0.5 : 1 }}
               />
             </View>
 
@@ -925,21 +900,25 @@ export default function HomeScreen() {
             )}
           </AnimatedView>
 
-          {/* Ads Blocked Widget */}
-          <AdsBlockedWidget
-            stats={adBlockStats}
-            isConnected={isConnected}
-            isEnabled={adBlockEnabled}
-          />
+          {/* Square Widgets Row */}
+          <AnimatedView
+            entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))}
+            style={styles.widgetsRow}
+          >
+            {/* Blocked Count Widget (Left) */}
+            <BlockedWidget
+              stats={adBlockStats}
+              isConnected={isConnected}
+              isEnabled={adBlockEnabled}
+            />
 
-          {/* Connected Devices Widget */}
-          {isLoggedIn && devices.length > 0 && (
-            <ConnectedDevicesWidget
+            {/* Devices Widget (Right) */}
+            <DevicesWidget
               devices={devices}
               currentDeviceId={deviceSession?.device_id}
               isVpnConnected={isConnected}
             />
-          )}
+          </AnimatedView>
 
           {/* Info Card */}
           <AnimatedView
@@ -1210,97 +1189,127 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  // Compact Widget Styles
-  compactWidget: {
+  // Square Widgets Row
+  widgetsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  // Square Widget Styles (1:1 aspect ratio)
+  squareWidget: {
+    flex: 1,
+    aspectRatio: 1,
     borderRadius: 16,
     borderWidth: 1,
-    padding: 14,
-    marginBottom: 12,
-  },
-  widgetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  widgetIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
-  widgetTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  widgetCount: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  widgetStats: {
-    flexDirection: 'row',
+  squareWidgetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  widgetStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  widgetStatValue: {
-    fontSize: 20,
+  squareWidgetValue: {
+    fontSize: 28,
     fontWeight: '700',
   },
-  widgetStatLabel: {
-    fontSize: 11,
-    marginTop: 2,
+  squareWidgetLabel: {
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+    maxWidth: '90%',
   },
-  widgetStatDivider: {
-    width: 1,
-    height: 28,
-    marginHorizontal: 12,
-  },
-  // Device List in Widget
-  devicesList: {
-    gap: 0,
-  },
-  deviceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 10,
-  },
-  deviceIconSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deviceOS: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  deviceDivider: {
-    height: 1,
-    marginStart: 38,
-  },
-  connectedDot: {
+  squareWidgetDot: {
+    position: 'absolute',
+    top: 12,
+    end: 12,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#22C55E',
   },
-  noDevicesText: {
+  // StatCard Widget styles (matches adblock StatCard)
+  statCardWidget: {
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    padding: 16,
+    gap: 8,
+  },
+  statCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statCardValue: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  statCardLabel: {
     fontSize: 13,
+  },
+  // Devices Widget specific styles
+  devicesWidget: {
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+    padding: 12,
+  },
+  devicesWidgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  devicesWidgetIconSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  devicesWidgetTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  devicesWidgetCount: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  devicesWidgetList: {
+    flex: 1,
+    gap: 4,
+  },
+  devicesWidgetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  devicesWidgetItemName: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  devicesWidgetDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22C55E',
+  },
+  devicesWidgetMore: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  devicesWidgetEmpty: {
+    flex: 1,
+    fontSize: 11,
     textAlign: 'center',
-    paddingVertical: 8,
   },
 });

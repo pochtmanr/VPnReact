@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "Parental",
+      "filter": "Filter",
       "adblock": "Ad Block",
       "profile": "Profile"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "Quick Settings",
-      "parentalControls": {
-        "title": "Parental Controls",
+      "contentFilter": {
+        "title": "Content Filter",
         "active": "Content filtering active",
-        "description": "Protect children from harmful content"
+        "description": "Filter unwanted and harmful content"
       },
       "adBlocker": {
         "title": "Ad Blocker",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "Parental Controls",
-    "subtitle": "Protect your family online",
-    "description": "Control what content can be accessed",
+  "filter": {
+    "title": "Content Filter",
+    "subtitle": "Control your online experience",
+    "description": "Block unwanted content and websites",
     "categories": {
       "title": "Content Categories",
       "selectToBlock": "Select categories to block",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "Upgrade to Pro to manage categories",
-      "enableRequired": "Enable Parental Controls above to manage categories",
+      "enableRequired": "Enable Content Filter above to manage categories",
       "vpnRequired": "Connect VPN to manage categories",
       "upgradeRequiredSites": "Upgrade to Pro to manage sites",
-      "enableRequiredSites": "Enable Parental Controls above to manage sites",
+      "enableRequiredSites": "Enable Content Filter above to manage sites",
       "vpnRequiredSites": "Connect VPN to manage sites"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "Main device",
       "connected": "Connected",
       "vpn": "VPN",
-      "control": "Control",
+      "filter": "Filter",
       "adBlock": "Ad Block",
       "childMode": "Child Mode",
       "noDevices": "No devices connected",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "Premium Servers",
         "adBlocking": "Ad Blocking",
-        "parentalControls": "Parental Controls",
+        "contentFilter": "Content Filter",
         "devices": "5 Devices"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5 Devices",
         "description": "Connect multiple devices"
       },
-      "parentalControls": {
-        "title": "Parental Controls",
-        "description": "Keep your family safe"
+      "contentFilter": {
+        "title": "Content Filter",
+        "description": "Block unwanted content"
       }
     },
 

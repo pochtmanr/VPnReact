@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "ペアレンタル",
+      "filter": "フィルター",
       "adblock": "広告ブロック",
       "profile": "プロフィール"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "クイック設定",
-      "parentalControls": {
-        "title": "ペアレンタルコントロール",
+      "contentFilter": {
+        "title": "コンテンツフィルター",
         "active": "コンテンツフィルタリングが有効",
-        "description": "有害なコンテンツから子供を保護"
+        "description": "不要なコンテンツをフィルタリング"
       },
       "adBlocker": {
         "title": "広告ブロッカー",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "ペアレンタルコントロール",
-    "subtitle": "家族をオンラインで保護",
-    "description": "アクセスできるコンテンツを制御",
+  "filter": {
+    "title": "コンテンツフィルター",
+    "subtitle": "オンライン体験を管理",
+    "description": "不要なコンテンツとウェブサイトをブロック",
     "categories": {
       "title": "コンテンツカテゴリ",
       "selectToBlock": "ブロックするカテゴリを選択",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "カテゴリを管理するにはProにアップグレード",
-      "enableRequired": "カテゴリを管理するには上のペアレンタルコントロールを有効化",
+      "enableRequired": "上のコンテンツフィルターを有効化してカテゴリを管理",
       "vpnRequired": "カテゴリを管理するにはVPNに接続",
       "upgradeRequiredSites": "サイトを管理するにはProにアップグレード",
-      "enableRequiredSites": "サイトを管理するには上のペアレンタルコントロールを有効化",
+      "enableRequiredSites": "上のコンテンツフィルターを有効化してサイトを管理",
       "vpnRequiredSites": "サイトを管理するにはVPNに接続"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "メインデバイス",
       "connected": "接続済み",
       "vpn": "VPN",
-      "control": "コントロール",
+      "filter": "フィルター",
       "adBlock": "広告ブロック",
       "childMode": "子供モード",
       "noDevices": "接続されているデバイスはありません",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "プレミアムサーバー",
         "adBlocking": "広告ブロック",
-        "parentalControls": "ペアレンタルコントロール",
+        "contentFilter": "コンテンツフィルター",
         "devices": "5台のデバイス"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5台のデバイス",
         "description": "複数のデバイスを接続"
       },
-      "parentalControls": {
-        "title": "ペアレンタルコントロール",
-        "description": "家族を安全に"
+      "contentFilter": {
+        "title": "コンテンツフィルター",
+        "description": "不要なコンテンツをブロック"
       }
     },
 

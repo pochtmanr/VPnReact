@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "Parental",
+      "filter": "Filtro",
       "adblock": "Bloqueador",
       "profile": "Perfil"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "Configurações rápidas",
-      "parentalControls": {
-        "title": "Controle parental",
+      "contentFilter": {
+        "title": "Filtro de conteúdo",
         "active": "Filtragem de conteúdo ativa",
-        "description": "Proteja crianças de conteúdo prejudicial"
+        "description": "Filtre conteúdo indesejado"
       },
       "adBlocker": {
         "title": "Bloqueador de anúncios",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "Controle parental",
-    "subtitle": "Proteja sua família online",
-    "description": "Controle que conteúdo pode ser acessado",
+  "filter": {
+    "title": "Filtro de conteúdo",
+    "subtitle": "Controle sua experiência online",
+    "description": "Bloqueie conteúdo e sites indesejados",
     "categories": {
       "title": "Categorias de conteúdo",
       "selectToBlock": "Selecione categorias para bloquear",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "Atualize para Pro para gerenciar categorias",
-      "enableRequired": "Ative o Controle Parental acima para gerenciar categorias",
+      "enableRequired": "Ative o Filtro de conteúdo acima para gerenciar categorias",
       "vpnRequired": "Conecte VPN para gerenciar categorias",
       "upgradeRequiredSites": "Atualize para Pro para gerenciar sites",
-      "enableRequiredSites": "Ative o Controle Parental acima para gerenciar sites",
+      "enableRequiredSites": "Ative o Filtro de conteúdo acima para gerenciar sites",
       "vpnRequiredSites": "Conecte VPN para gerenciar sites"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "Dispositivo principal",
       "connected": "Conectado",
       "vpn": "VPN",
-      "control": "Controle",
+      "filter": "Filtro",
       "adBlock": "Bloqueador",
       "childMode": "Modo criança",
       "noDevices": "Nenhum dispositivo conectado",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "Servidores Premium",
         "adBlocking": "Bloqueio de anúncios",
-        "parentalControls": "Controle parental",
+        "contentFilter": "Filtro de conteúdo",
         "devices": "5 dispositivos"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5 dispositivos",
         "description": "Conecte múltiplos dispositivos"
       },
-      "parentalControls": {
-        "title": "Controle parental",
-        "description": "Mantenha sua família segura"
+      "contentFilter": {
+        "title": "Filtro de conteúdo",
+        "description": "Bloqueie conteúdo indesejado"
       }
     },
 

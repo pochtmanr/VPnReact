@@ -12,7 +12,7 @@ export type SubscriptionTier = 'free' | 'pro' | 'premium';
 export type Feature =
   | 'premium_servers'
   | 'ad_blocking'
-  | 'parental_controls'
+  | 'content_filter'
   | 'unlimited_devices'
   | 'priority_support'
   | 'custom_dns'
@@ -29,14 +29,14 @@ const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
   pro: [
     'premium_servers',
     'ad_blocking',
-    'parental_controls',
+    'content_filter',
     'unlimited_devices',
     'priority_support',
   ],
   premium: [
     'premium_servers',
     'ad_blocking',
-    'parental_controls',
+    'content_filter',
     'unlimited_devices',
     'priority_support',
     'custom_dns',
@@ -76,9 +76,9 @@ export const FEATURE_INFO: Record<Feature, { name: string; description: string }
     name: 'Ad Blocking',
     description: 'DNS-level ad and tracker blocking',
   },
-  parental_controls: {
-    name: 'Parental Controls',
-    description: 'Block inappropriate content and websites',
+  content_filter: {
+    name: 'Content Filter',
+    description: 'Block unwanted content and websites',
   },
   unlimited_devices: {
     name: 'Multiple Devices',

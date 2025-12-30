@@ -100,7 +100,7 @@ interface DeviceAccordionItemProps {
     mainDevice: string;
     thisDevice: string;
     vpn: string;
-    control: string;
+    filter: string;
     adBlock: string;
   };
   isLast: boolean;
@@ -196,7 +196,7 @@ const DeviceAccordionItem = memo(function DeviceAccordionItem({
       }
       if (isParentalEnabled) {
         result.push({
-          label: translations.control,
+          label: translations.filter,
           color: '#3B82F6',
           bgColor: 'rgba(59, 130, 246, 0.15)',
         });
@@ -361,7 +361,7 @@ export const DevicesWidget = memo(function DevicesWidget({
     mainDevice: t('profile.devices.mainDevice'),
     thisDevice: t('profile.devices.thisDevice'),
     vpn: t('profile.devices.vpn'),
-    control: t('profile.devices.control'),
+    filter: t('profile.devices.filter'),
     adBlock: t('profile.devices.adBlock'),
   }), [t]);
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -38,18 +39,19 @@ import { useTier, TIER_DISPLAY_NAMES } from '@/context/TierContext';
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// Features unlocked with Pro
+// Features unlocked with Pro - labels will be resolved from translations
 const PRO_FEATURES = [
-  { icon: Globe, label: 'Premium Servers', color: '#3B82F6' },
-  { icon: Shield, label: 'Ad Blocking', color: '#22C55E' },
-  { icon: Zap, label: 'Parental Controls', color: '#8B5CF6' },
-  { icon: Smartphone, label: '5 Devices', color: '#F59E0B' },
+  { icon: Globe, labelKey: 'profile.thankYou.features.premiumServers', color: '#3B82F6' },
+  { icon: Shield, labelKey: 'profile.thankYou.features.adBlocking', color: '#22C55E' },
+  { icon: Zap, labelKey: 'profile.thankYou.features.contentFilter', color: '#8B5CF6' },
+  { icon: Smartphone, labelKey: 'profile.thankYou.features.devices', color: '#F59E0B' },
 ];
 
 export default function ThankYouScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { tier, tierDisplayName } = useTier();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ plan?: string }>();
 
@@ -199,7 +201,7 @@ export default function ThankYouScreen() {
           <View style={styles.featuresList}>
             {PRO_FEATURES.map((feature, index) => (
               <AnimatedView
-                key={feature.label}
+                key={feature.labelKey}
                 entering={FadeInDown.delay(600 + index * 100).duration(300)}
                 style={styles.featureItem}
               >
@@ -207,7 +209,7 @@ export default function ThankYouScreen() {
                   <feature.icon size={20} color={feature.color} />
                 </View>
                 <Text style={[styles.featureLabel, { color: colors.text }]}>
-                  {feature.label}
+                  {t(feature.labelKey)}
                 </Text>
                 <CheckCircle size={18} color={colors.success} />
               </AnimatedView>

@@ -71,13 +71,13 @@ const getCategoryIcon = (categoryId: ContentCategory, color: string) => {
 
 // Category translation key mapping
 const CATEGORY_TRANSLATION_KEYS: Record<ContentCategory, string> = {
-  adult: 'parental.categories.adult',
-  gambling: 'parental.categories.gambling',
-  social_media: 'parental.categories.socialMedia',
-  gaming: 'parental.categories.gaming',
-  streaming: 'parental.categories.streaming',
-  malware: 'parental.categories.malware',
-  ads_trackers: 'parental.categories.adsTrackers',
+  adult: 'filter.categories.adult',
+  gambling: 'filter.categories.gambling',
+  social_media: 'filter.categories.socialMedia',
+  gaming: 'filter.categories.gaming',
+  streaming: 'filter.categories.streaming',
+  malware: 'filter.categories.malware',
+  ads_trackers: 'filter.categories.adsTrackers',
 };
 
 // Category Row Item - Memoized
@@ -174,7 +174,7 @@ const DomainRow = memo(function DomainRow({ domain, onRemove, colors, disabled =
 // MAIN COMPONENT
 // =============================================================================
 
-export default function ParentalControlsScreen() {
+export default function ContentFilterScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { connectionStatus } = useVPN();
@@ -183,11 +183,11 @@ export default function ParentalControlsScreen() {
 
   // Feature gating with automatic paywall
   const {
-    hasAccess: hasParentalAccess,
+    hasAccess: hasFilterAccess,
     requestAccess,
     isGating,
     getDisabledReason,
-  } = useFeatureGate('parental_controls', {
+  } = useFeatureGate('content_filter', {
     requiresVPN: true,
     isVPNConnected,
   });
@@ -216,8 +216,8 @@ export default function ParentalControlsScreen() {
   useEffect(() => {
     if (error) {
       Alert.alert(
-        t('parental.alerts.connectionError'),
-        t('parental.alerts.connectionErrorMessage'),
+        t('filter.alerts.connectionError'),
+        t('filter.alerts.connectionErrorMessage'),
         [{ text: 'OK', onPress: clearError }]
       );
     }
@@ -284,8 +284,8 @@ export default function ParentalControlsScreen() {
   const handleRemoveDomain = useCallback(
     (domain: string) => {
       Alert.alert(
-        t('parental.alerts.removeDomain'),
-        t('parental.alerts.removeDomainMessage', { domain }),
+        t('filter.alerts.removeDomain'),
+        t('filter.alerts.removeDomainMessage', { domain }),
         [
           { text: t('common.buttons.cancel'), style: 'cancel' },
           {
@@ -396,17 +396,17 @@ export default function ParentalControlsScreen() {
             style={styles.header}
           >
             <Text style={[styles.title, { color: colors.text }]}>
-              {t('parental.title')}
+              {t('filter.title')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {t('parental.subtitle')}
+              {t('filter.subtitle')}
             </Text>
           </AnimatedView>
 
           {/* Hero Card with Interactive Activation Button */}
           <AnimatedView
-            entering={FadeInDown.delay(hasParentalAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
-            style={[styles.heroCard, cardStyle, (!hasParentalAccess || !isVPNConnected) && styles.lockedSection]}
+            entering={FadeInDown.delay(hasFilterAccess ? 50 : 75).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.heroCard, cardStyle, (!hasFilterAccess || !isVPNConnected) && styles.lockedSection]}
           >
             {/* Tappable even when locked to show paywall */}
             <ActivationButton
@@ -415,17 +415,17 @@ export default function ParentalControlsScreen() {
               disabled={isGating || isToggling} // Only disable during paywall/toggle
               enabledLabel={t('common.status.protectionActive')}
               disabledLabel={t('common.status.protectionDisabled')}
-              enabledSubtitle={t('parental.activation.categoriesBlocked', { count: blockedCategories.length })}
-              disabledSubtitle={getDisabledReason() || t('parental.activation.tapToEnable')}
+              enabledSubtitle={t('filter.activation.categoriesBlocked', { count: blockedCategories.length })}
+              disabledSubtitle={getDisabledReason() || t('filter.activation.tapToEnable')}
               accentColor="#3B82F6"
             />
 
-            {hasParentalAccess && isEnabled && isVPNConnected && blockingStats && (
+            {hasFilterAccess && isEnabled && isVPNConnected && blockingStats && (
               <QuickStatsRow
                 stats={[
-                  { icon: Ban, iconColor: colors.error, value: blockingStats.totalBlocked, label: t('parental.stats.blocked') },
-                  { icon: BarChart3, iconColor: '#3B82F6', value: blockedCategories.length, label: t('parental.stats.categories') },
-                  { icon: Shield, iconColor: '#3B82F6', value: customBlockedDomains.length, label: t('parental.stats.custom') },
+                  { icon: Ban, iconColor: colors.error, value: blockingStats.totalBlocked, label: t('filter.stats.blocked') },
+                  { icon: BarChart3, iconColor: '#3B82F6', value: blockedCategories.length, label: t('filter.stats.categories') },
+                  { icon: Shield, iconColor: '#3B82F6', value: customBlockedDomains.length, label: t('filter.stats.custom') },
                 ]}
               />
             )}
@@ -434,12 +434,12 @@ export default function ParentalControlsScreen() {
           {/* Content Categories */}
           {(() => {
             // Determine if categories section should be disabled and why
-            const isCategoriesDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
+            const isCategoriesDisabled = !isEnabled || !isVPNConnected || !hasFilterAccess;
             const getCategoriesDescription = () => {
-              if (!hasParentalAccess) return t('parental.disabled.upgradeRequired');
-              if (!isEnabled) return t('parental.disabled.enableRequired');
-              if (!isVPNConnected) return t('parental.disabled.vpnRequired');
-              return t('parental.categories.selectToBlock');
+              if (!hasFilterAccess) return t('filter.disabled.upgradeRequired');
+              if (!isEnabled) return t('filter.disabled.enableRequired');
+              if (!isVPNConnected) return t('filter.disabled.vpnRequired');
+              return t('filter.categories.selectToBlock');
             };
 
             return (
@@ -448,7 +448,7 @@ export default function ParentalControlsScreen() {
                 style={[styles.sectionCard, cardStyle, isCategoriesDisabled && styles.disabledSection]}
               >
                 <Text style={[styles.sectionTitle, { color: isCategoriesDisabled ? colors.textMuted : colors.text }]}>
-                  {t('parental.categories.title')}
+                  {t('filter.categories.title')}
                 </Text>
                 <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
                   {getCategoriesDescription()}
@@ -477,12 +477,12 @@ export default function ParentalControlsScreen() {
           {/* Custom Blocked Domains */}
           {(() => {
             // Determine if domains section should be disabled and why
-            const isDomainsDisabled = !isEnabled || !isVPNConnected || !hasParentalAccess;
+            const isDomainsDisabled = !isEnabled || !isVPNConnected || !hasFilterAccess;
             const getDomainsDescription = () => {
-              if (!hasParentalAccess) return t('parental.disabled.upgradeRequiredSites');
-              if (!isEnabled) return t('parental.disabled.enableRequiredSites');
-              if (!isVPNConnected) return t('parental.disabled.vpnRequiredSites');
-              return t('parental.customDomains.description');
+              if (!hasFilterAccess) return t('filter.disabled.upgradeRequiredSites');
+              if (!isEnabled) return t('filter.disabled.enableRequiredSites');
+              if (!isVPNConnected) return t('filter.disabled.vpnRequiredSites');
+              return t('filter.customDomains.description');
             };
 
             return (
@@ -493,7 +493,7 @@ export default function ParentalControlsScreen() {
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionHeaderText}>
                     <Text style={[styles.sectionTitle, { color: isDomainsDisabled ? colors.textMuted : colors.text }]}>
-                      {t('parental.customDomains.title')}
+                      {t('filter.customDomains.title')}
                     </Text>
                     <Text style={[styles.sectionDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                       {getDomainsDescription()}
@@ -511,7 +511,7 @@ export default function ParentalControlsScreen() {
                 {customBlockedDomains.length === 0 ? (
                   <View style={styles.emptyState}>
                     <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-                      {t('parental.customDomains.empty')}
+                      {t('filter.customDomains.empty')}
                     </Text>
                   </View>
                 ) : (
@@ -540,7 +540,7 @@ export default function ParentalControlsScreen() {
           >
             <Shield size={18} color="#3B82F6" />
             <Text style={[styles.infoText, { color: infoTextColor }]}>
-              {t('parental.info')}
+              {t('filter.info')}
             </Text>
           </AnimatedView>
         </Animated.ScrollView>
@@ -563,7 +563,7 @@ export default function ParentalControlsScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t('parental.modal.title')}
+                {t('filter.modal.title')}
               </Text>
               <Pressable onPress={closeAddDomainModal} hitSlop={8}>
                 <X size={24} color={colors.textSecondary} />
@@ -571,7 +571,7 @@ export default function ParentalControlsScreen() {
             </View>
 
             <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-              {t('parental.modal.description')}
+              {t('filter.modal.description')}
             </Text>
 
             <TextInput
@@ -584,7 +584,7 @@ export default function ParentalControlsScreen() {
                   color: colors.text,
                 },
               ]}
-              placeholder={t('parental.customDomains.placeholder')}
+              placeholder={t('filter.customDomains.placeholder')}
               placeholderTextColor={colors.textMuted}
               value={domainInput}
               onChangeText={setDomainInput}
@@ -599,7 +599,7 @@ export default function ParentalControlsScreen() {
               onPress={handleAddDomain}
               style={[styles.modalButton, { backgroundColor: '#3B82F6' }]}
             >
-              <Text style={styles.modalButtonText}>{t('parental.modal.blockSite')}</Text>
+              <Text style={styles.modalButtonText}>{t('filter.modal.blockSite')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

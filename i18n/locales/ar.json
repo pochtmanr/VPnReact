@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "الرقابة",
+      "filter": "فلتر",
       "adblock": "حظر الإعلانات",
       "profile": "الملف الشخصي"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "إعدادات سريعة",
-      "parentalControls": {
-        "title": "الرقابة الأبوية",
+      "contentFilter": {
+        "title": "فلتر المحتوى",
         "active": "تصفية المحتوى نشطة",
-        "description": "احمِ الأطفال من المحتوى الضار"
+        "description": "تصفية المحتوى غير المرغوب فيه"
       },
       "adBlocker": {
         "title": "حاجب الإعلانات",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "الرقابة الأبوية",
-    "subtitle": "احمِ عائلتك عبر الإنترنت",
-    "description": "تحكّم في المحتوى الذي يمكن الوصول إليه",
+  "filter": {
+    "title": "فلتر المحتوى",
+    "subtitle": "تحكم في تجربتك على الإنترنت",
+    "description": "حظر المحتوى والمواقع غير المرغوب فيها",
     "categories": {
       "title": "فئات المحتوى",
       "selectToBlock": "اختر الفئات للحظر",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "قم بالترقية إلى Pro لإدارة الفئات",
-      "enableRequired": "فعّل الرقابة الأبوية أعلاه لإدارة الفئات",
+      "enableRequired": "فعّل فلتر المحتوى أعلاه لإدارة الفئات",
       "vpnRequired": "اتصل بـ VPN لإدارة الفئات",
       "upgradeRequiredSites": "قم بالترقية إلى Pro لإدارة المواقع",
-      "enableRequiredSites": "فعّل الرقابة الأبوية أعلاه لإدارة المواقع",
+      "enableRequiredSites": "فعّل فلتر المحتوى أعلاه لإدارة المواقع",
       "vpnRequiredSites": "اتصل بـ VPN لإدارة المواقع"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "الجهاز الرئيسي",
       "connected": "متصل",
       "vpn": "VPN",
-      "control": "التحكم",
+      "filter": "فلتر",
       "adBlock": "حظر الإعلانات",
       "childMode": "وضع الأطفال",
       "noDevices": "لا توجد أجهزة متصلة",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "خوادم بريميوم",
         "adBlocking": "حظر الإعلانات",
-        "parentalControls": "الرقابة الأبوية",
+        "contentFilter": "فلتر المحتوى",
         "devices": "5 أجهزة"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5 أجهزة",
         "description": "اتصل بأجهزة متعددة"
       },
-      "parentalControls": {
-        "title": "الرقابة الأبوية",
-        "description": "حافظ على أمان عائلتك"
+      "contentFilter": {
+        "title": "فلتر المحتوى",
+        "description": "حظر المحتوى غير المرغوب فيه"
       }
     },
 

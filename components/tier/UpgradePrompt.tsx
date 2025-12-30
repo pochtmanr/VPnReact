@@ -48,7 +48,7 @@ const PRO_FEATURES = [
   { icon: Globe, labelKey: 'tier.features.premiumServers.title', descKey: 'tier.features.premiumServers.description' },
   { icon: Shield, labelKey: 'tier.features.adBlocking.title', descKey: 'tier.features.adBlocking.description' },
   { icon: Smartphone, labelKey: 'tier.features.devices.title', descKey: 'tier.features.devices.description' },
-  { icon: Zap, labelKey: 'tier.features.parentalControls.title', descKey: 'tier.features.parentalControls.description' },
+  { icon: Zap, labelKey: 'tier.features.contentFilter.title', descKey: 'tier.features.contentFilter.description' },
 ];
 
 /**

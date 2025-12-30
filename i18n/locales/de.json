@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "Kinderschutz",
+      "filter": "Filter",
       "adblock": "Werbeblocker",
       "profile": "Profil"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "Schnelleinstellungen",
-      "parentalControls": {
-        "title": "Kinderschutz",
+      "contentFilter": {
+        "title": "Inhaltsfilter",
         "active": "Inhaltsfilterung aktiv",
-        "description": "Schützen Sie Kinder vor schädlichen Inhalten"
+        "description": "Unerwünschte Inhalte filtern"
       },
       "adBlocker": {
         "title": "Werbeblocker",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "Kinderschutz",
-    "subtitle": "Schützen Sie Ihre Familie online",
-    "description": "Kontrollieren Sie welche Inhalte zugänglich sind",
+  "filter": {
+    "title": "Inhaltsfilter",
+    "subtitle": "Online-Inhalte kontrollieren",
+    "description": "Unerwünschte Inhalte und Websites blockieren",
     "categories": {
       "title": "Inhaltskategorien",
       "selectToBlock": "Kategorien zum Blockieren auswählen",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "Auf Pro upgraden um Kategorien zu verwalten",
-      "enableRequired": "Kinderschutz oben aktivieren um Kategorien zu verwalten",
+      "enableRequired": "Aktivieren Sie den Inhaltsfilter oben, um Kategorien zu verwalten",
       "vpnRequired": "VPN verbinden um Kategorien zu verwalten",
       "upgradeRequiredSites": "Auf Pro upgraden um Seiten zu verwalten",
-      "enableRequiredSites": "Kinderschutz oben aktivieren um Seiten zu verwalten",
+      "enableRequiredSites": "Aktivieren Sie den Inhaltsfilter oben, um Websites zu verwalten",
       "vpnRequiredSites": "VPN verbinden um Seiten zu verwalten"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "Hauptgerät",
       "connected": "Verbunden",
       "vpn": "VPN",
-      "control": "Kontrolle",
+      "filter": "Filter",
       "adBlock": "Werbeblocker",
       "childMode": "Kindermodus",
       "noDevices": "Keine Geräte verbunden",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "Premium-Server",
         "adBlocking": "Werbeblockierung",
-        "parentalControls": "Kinderschutz",
+        "contentFilter": "Inhaltsfilter",
         "devices": "5 Geräte"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5 Geräte",
         "description": "Mehrere Geräte verbinden"
       },
-      "parentalControls": {
-        "title": "Kinderschutz",
-        "description": "Familie sicher halten"
+      "contentFilter": {
+        "title": "Inhaltsfilter",
+        "description": "Unerwünschte Inhalte blockieren"
       }
     },
 

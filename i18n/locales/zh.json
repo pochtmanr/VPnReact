@@ -46,7 +46,7 @@
   "navigation": {
     "tabs": {
       "vpn": "VPN",
-      "parental": "家长控制",
+      "filter": "过滤",
       "adblock": "广告拦截",
       "profile": "个人资料"
     }
@@ -201,10 +201,10 @@
     },
     "quickSettings": {
       "title": "快速设置",
-      "parentalControls": {
-        "title": "家长控制",
+      "contentFilter": {
+        "title": "内容过滤",
         "active": "内容过滤已启用",
-        "description": "保护儿童免受有害内容"
+        "description": "过滤不需要的内容"
       },
       "adBlocker": {
         "title": "广告拦截器",
@@ -226,10 +226,10 @@
     }
   },
 
-  "parental": {
-    "title": "家长控制",
-    "subtitle": "在线保护您的家人",
-    "description": "控制可访问的内容",
+  "filter": {
+    "title": "内容过滤",
+    "subtitle": "控制您的在线体验",
+    "description": "拦截不需要的内容和网站",
     "categories": {
       "title": "内容类别",
       "selectToBlock": "选择要拦截的类别",
@@ -280,10 +280,10 @@
     },
     "disabled": {
       "upgradeRequired": "升级到专业版以管理类别",
-      "enableRequired": "启用上方的家长控制以管理类别",
+      "enableRequired": "启用上方的内容过滤以管理类别",
       "vpnRequired": "连接VPN以管理类别",
       "upgradeRequiredSites": "升级到专业版以管理网站",
-      "enableRequiredSites": "启用上方的家长控制以管理网站",
+      "enableRequiredSites": "启用上方的内容过滤以管理网站",
       "vpnRequiredSites": "连接VPN以管理网站"
     },
     "modal": {
@@ -406,7 +406,7 @@
       "mainDevice": "主设备",
       "connected": "已连接",
       "vpn": "VPN",
-      "control": "控制",
+      "filter": "过滤",
       "adBlock": "广告拦截",
       "childMode": "儿童模式",
       "noDevices": "没有已连接的设备",
@@ -531,7 +531,7 @@
       "features": {
         "premiumServers": "高级服务器",
         "adBlocking": "广告拦截",
-        "parentalControls": "家长控制",
+        "contentFilter": "内容过滤",
         "devices": "5台设备"
       }
     }
@@ -559,9 +559,9 @@
         "title": "5台设备",
         "description": "连接多台设备"
       },
-      "parentalControls": {
-        "title": "家长控制",
-        "description": "保护您的家人安全"
+      "contentFilter": {
+        "title": "内容过滤",
+        "description": "拦截不需要的内容"
       }
     },
 

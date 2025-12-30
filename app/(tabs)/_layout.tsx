@@ -10,9 +10,9 @@ export default function TabLayout() {
         <Icon sf="shield.checkered" />
         <Label>{t('navigation.tabs.vpn')}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="parental">
-        <Icon sf="figure.and.child.holdinghands" />
-        <Label>{t('navigation.tabs.parental')}</Label>
+      <NativeTabs.Trigger name="filter">
+        <Icon sf="line.3.horizontal.decrease" />
+        <Label>{t('navigation.tabs.filter')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="adblock">
         <Icon sf="nosign" />
