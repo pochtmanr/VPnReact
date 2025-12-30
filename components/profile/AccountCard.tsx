@@ -1,18 +1,18 @@
-import React, { memo, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
-import { Key, Copy, Check } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import { Check, Copy, Key } from 'lucide-react-native';
+import React, { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
-import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   accountInfo: {
     flex: 1,
-    marginLeft: 14,
+    marginStart: 14,
   },
   accountLabel: {
     fontSize: 12,

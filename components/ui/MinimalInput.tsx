@@ -1,16 +1,16 @@
+import { spacing, typography } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  TextInput,
-  Text,
   Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
   TextInputProps,
+  View,
 } from 'react-native';
-import { MotiView } from 'moti';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
-import { spacing, typography } from '@/constants/theme';
 
 interface MinimalInputProps extends TextInputProps {
   label: string;
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   icon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   inputContainer: {
     flex: 1,

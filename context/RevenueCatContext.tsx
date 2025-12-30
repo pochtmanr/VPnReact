@@ -102,6 +102,13 @@ export interface SubscriptionPackage {
     priceString: string;
     price: number;
     currencyCode: string;
+    // Intro pricing from RevenueCat (for free trials)
+    introPrice: {
+      priceString: string;
+      price: number;
+      periodNumberOfUnits: number;
+      periodUnit: string; // 'DAY', 'WEEK', 'MONTH', 'YEAR'
+    } | null;
   };
   packageType: 'MONTHLY' | 'SIX_MONTH' | 'ANNUAL' | 'LIFETIME' | 'WEEKLY' | 'UNKNOWN';
   offeringIdentifier: string;
@@ -132,6 +139,10 @@ interface RevenueCatContextType {
     isInGracePeriod: boolean;
   } | null;
 
+  // Trial eligibility - whether user can start a free trial
+  isTrialEligible: boolean;
+  trialDuration: { days: number; unit: string } | null;
+
   // Offerings
   offerings: PurchasesOfferings | null;
   packages: SubscriptionPackage[];
@@ -148,6 +159,7 @@ interface RevenueCatContextType {
   purchasePackage: (pkg: SubscriptionPackage) => Promise<{ success: boolean; error?: string }>;
   restorePurchases: () => Promise<{ success: boolean; restored: boolean; error?: string }>;
   refreshCustomerInfo: () => Promise<void>;
+  checkTrialEligibility: (pkg: SubscriptionPackage) => Promise<boolean>;
 
   // Helpers
   getPackageByProductId: (productId: string) => SubscriptionPackage | null;
@@ -181,6 +193,14 @@ function mapPackageType(type: string): SubscriptionPackage['packageType'] {
 }
 
 function convertPackage(pkg: PurchasesPackage): SubscriptionPackage {
+  // Extract intro pricing if available (for free trials)
+  const introPrice = pkg.product.introPrice ? {
+    priceString: pkg.product.introPrice.priceString,
+    price: pkg.product.introPrice.price,
+    periodNumberOfUnits: pkg.product.introPrice.periodNumberOfUnits,
+    periodUnit: pkg.product.introPrice.periodUnit,
+  } : null;
+
   return {
     identifier: pkg.identifier,
     product: {
@@ -190,6 +210,7 @@ function convertPackage(pkg: PurchasesPackage): SubscriptionPackage {
       priceString: pkg.product.priceString,
       price: pkg.product.price,
       currencyCode: pkg.product.currencyCode,
+      introPrice,
     },
     packageType: mapPackageType(pkg.identifier),
     offeringIdentifier: pkg.offeringIdentifier,
@@ -227,6 +248,12 @@ function getMockPackages(): SubscriptionPackage[] {
         priceString: '$9.99',
         price: 9.99,
         currencyCode: 'USD',
+        introPrice: {
+          priceString: '$0.00',
+          price: 0,
+          periodNumberOfUnits: 7,
+          periodUnit: 'DAY',
+        },
       },
       packageType: 'MONTHLY',
       offeringIdentifier: 'default',
@@ -241,6 +268,12 @@ function getMockPackages(): SubscriptionPackage[] {
         priceString: '$49.99',
         price: 49.99,
         currencyCode: 'USD',
+        introPrice: {
+          priceString: '$0.00',
+          price: 0,
+          periodNumberOfUnits: 7,
+          periodUnit: 'DAY',
+        },
       },
       packageType: 'SIX_MONTH',
       offeringIdentifier: 'default',
@@ -255,6 +288,12 @@ function getMockPackages(): SubscriptionPackage[] {
         priceString: '$79.99',
         price: 79.99,
         currencyCode: 'USD',
+        introPrice: {
+          priceString: '$0.00',
+          price: 0,
+          periodNumberOfUnits: 7,
+          periodUnit: 'DAY',
+        },
       },
       packageType: 'ANNUAL',
       offeringIdentifier: 'default',
@@ -282,6 +321,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const [isMockMode, setIsMockMode] = useState(!isRevenueCatAvailable);
   const [isPaywallVisible, setIsPaywallVisible] = useState(false);
+  const [isTrialEligible, setIsTrialEligible] = useState(true); // Default true for new users
 
   // Paywall visibility methods
   const showPaywall = useCallback(() => {
@@ -666,6 +706,49 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     return Math.round(savings);
   }, [monthlyPackage, yearlyPackage]);
 
+  // Check trial eligibility for a specific package
+  // Uses RevenueCat's checkTrialOrIntroDiscountEligibility API
+  const checkTrialEligibility = useCallback(async (pkg: SubscriptionPackage): Promise<boolean> => {
+    if (isMockMode) {
+      // In mock mode, assume trial eligible for new users
+      return true;
+    }
+
+    if (!Purchases || !pkg.rcPackage) {
+      return true; // Default to eligible if we can't check
+    }
+
+    try {
+      // RevenueCat provides intro eligibility checking
+      const eligibility = await Purchases.checkTrialOrIntroductoryPriceEligibility([pkg.product.identifier]);
+      const productEligibility = eligibility[pkg.product.identifier];
+
+      // INTRO_ELIGIBILITY_STATUS: UNKNOWN = 0, INELIGIBLE = 1, ELIGIBLE = 2
+      const isEligible = productEligibility?.status === 2;
+      setIsTrialEligible(isEligible);
+      return isEligible;
+    } catch (err) {
+      console.warn('[RevenueCat] Error checking trial eligibility:', err);
+      return true; // Default to eligible on error
+    }
+  }, [isMockMode]);
+
+  // Derive trial duration from yearly package (or first package with intro)
+  const trialDuration = useMemo(() => {
+    const pkgWithTrial = yearlyPackage || sixMonthPackage || monthlyPackage;
+    if (!pkgWithTrial?.product.introPrice) return null;
+
+    const intro = pkgWithTrial.product.introPrice;
+    if (intro.price > 0) return null; // Not a free trial
+
+    return {
+      days: intro.periodUnit === 'DAY' ? intro.periodNumberOfUnits :
+            intro.periodUnit === 'WEEK' ? intro.periodNumberOfUnits * 7 :
+            intro.periodUnit === 'MONTH' ? intro.periodNumberOfUnits * 30 : 0,
+      unit: intro.periodUnit,
+    };
+  }, [yearlyPackage, sixMonthPackage, monthlyPackage]);
+
   // ==========================================================================
   // CONTEXT VALUE
   // ==========================================================================
@@ -684,6 +767,10 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     currentTier,
     activeSubscription,
 
+    // Trial eligibility
+    isTrialEligible,
+    trialDuration,
+
     // Offerings
     offerings,
     packages,
@@ -700,6 +787,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     purchasePackage,
     restorePurchases,
     refreshCustomerInfo,
+    checkTrialEligibility,
 
     // Helpers
     getPackageByProductId,
@@ -715,6 +803,8 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     isPremium,
     currentTier,
     activeSubscription,
+    isTrialEligible,
+    trialDuration,
     offerings,
     packages,
     monthlyPackage,
@@ -726,6 +816,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     purchasePackage,
     restorePurchases,
     refreshCustomerInfo,
+    checkTrialEligibility,
     getPackageByProductId,
     formatPrice,
     getSavingsPercentage,

@@ -1,8 +1,8 @@
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowLeft,
   Calendar,
@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -27,13 +28,11 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { ScrollShadow } from '@/components/ui';
+import { useRevenueCat } from '@/context/RevenueCatContext';
 import { useTheme } from '@/context/ThemeContext';
 import { TIER_DISPLAY_NAMES, useTier } from '@/context/TierContext';
-import { useRevenueCat } from '@/context/RevenueCatContext';
-import { UpgradePrompt } from '@/components/tier/UpgradePrompt';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -44,10 +43,9 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Get RevenueCat subscription info
-  const { activeSubscription, restorePurchases, refreshCustomerInfo, isLoading: isRevenueCatLoading } = useRevenueCat();
+  // Get RevenueCat subscription info and paywall control
+  const { activeSubscription, restorePurchases, refreshCustomerInfo, isLoading: isRevenueCatLoading, showPaywall } = useRevenueCat();
 
   // Refresh subscription info when screen comes into focus
   useFocusEffect(
@@ -111,11 +109,11 @@ export default function SubscriptionScreen() {
     }
   }, [restorePurchases, router, t]);
 
-  // Open upgrade modal
+  // Open upgrade paywall
   const handleUpgrade = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowUpgradeModal(true);
-  }, []);
+    showPaywall();
+  }, [showPaywall]);
 
   const handleContactSupport = useCallback(() => {
     router.push('/(tabs)/profile/contact-support');
@@ -207,7 +205,7 @@ export default function SubscriptionScreen() {
               {isPro && (
                 <View style={[styles.activeBadge, { backgroundColor: `${colors.success}15` }]}>
                   {isRevenueCatLoading ? (
-                    <ActivityIndicator size="small" color={colors.success} style={{ marginRight: 4 }} />
+                    <ActivityIndicator size="small" color={colors.success} style={{ marginEnd: 4 }} />
                   ) : (
                     <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
                   )}
@@ -359,12 +357,6 @@ export default function SubscriptionScreen() {
           </AnimatedView>
         </Animated.ScrollView>
       </ScrollShadow>
-
-      {/* Upgrade Modal */}
-      <UpgradePrompt
-        visible={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-      />
     </View>
   );
 }
@@ -544,8 +536,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 64,
-    marginRight: 12,
+    marginStart: 64,
+    marginEnd: 12,
   },
   // Info Footer
   infoFooter: {

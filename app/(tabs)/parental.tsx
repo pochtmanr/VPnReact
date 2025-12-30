@@ -1,44 +1,44 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  Pressable,
-  TextInput,
-  Alert,
-  Modal,
-  RefreshControl,
-  InteractionManager,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import {
-  Shield,
-  Plus,
-  Trash2,
-  EyeOff,
-  Users,
-  Gamepad2,
-  PlayCircle,
-  Bug,
   Ban,
   BarChart3,
+  Bug,
+  EyeOff,
+  Gamepad2,
+  PlayCircle,
+  Plus,
+  Shield,
+  Trash2,
+  Users,
   X,
 } from 'lucide-react-native';
-import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { useTheme } from '@/context/ThemeContext';
-import { useVPN } from '@/context/VPNContext';
 import {
-  useParentalControls,
+  Alert,
+  InteractionManager,
+  Modal,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { ActivationButton, QuickStatsRow, ScrollShadow } from '@/components/ui';
+import {
+  CategoryInfo,
   CONTENT_CATEGORIES,
   ContentCategory,
-  CategoryInfo,
+  useParentalControls,
 } from '@/context/ParentalControlsContext';
-import { ScrollShadow, ActivationButton, QuickStatsRow } from '@/components/ui';
+import { useTheme } from '@/context/ThemeContext';
+import { useVPN } from '@/context/VPNContext';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     flex: 1,
-    marginRight: 12,
+    marginEnd: 12,
   },
   sectionTitle: {
     fontSize: 17,
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryText: {
-    marginLeft: 12,
+    marginStart: 12,
     flex: 1,
   },
   categoryName: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 56,
+    marginStart: 56,
   },
   disabledRow: {
     opacity: 0.5,

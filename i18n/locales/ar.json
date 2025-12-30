@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "confirm": "تأكيد",
+      "close": "إغلاق",
+      "back": "رجوع",
+      "next": "التالي",
+      "done": "تم",
+      "continue": "متابعة",
+      "retry": "إعادة المحاولة",
+      "submit": "إرسال",
+      "enable": "تفعيل",
+      "disable": "تعطيل",
+      "install": "تثبيت",
+      "installing": "جارٍ التثبيت..."
+    },
+    "status": {
+      "loading": "جارٍ التحميل...",
+      "error": "خطأ",
+      "success": "نجاح",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "connecting": "جارٍ الاتصال",
+      "connected": "متصل",
+      "disconnected": "غير متصل",
+      "failed": "فشل",
+      "protectionActive": "الحماية نشطة",
+      "protectionDisabled": "الحماية معطّلة"
+    },
+    "time": {
+      "morning": "صباح الخير",
+      "afternoon": "مساء الخير",
+      "evening": "مساء الخير"
+    },
+    "errors": {
+      "generic": "حدث خطأ غير متوقع",
+      "network": "خطأ في الشبكة. يرجى التحقق من اتصالك.",
+      "tryAgain": "يرجى المحاولة مرة أخرى"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "الرقابة",
+      "adblock": "حظر الإعلانات",
+      "profile": "الملف الشخصي"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "كل شخص له الحق",
+      "footer": {
+        "byContinuing": "بالمتابعة، أنت توافق على",
+        "and": "و"
+      },
+      "phrases": {
+        "privacy": "في الخصوصية",
+        "letAlone": "في أن يُترك وحده",
+        "disappear": "في الاختفاء",
+        "forgotten": "في أن يُنسى",
+        "sayNo": "في قول لا",
+        "silence": "في الصمت",
+        "unseen": "في أن لا يُرى",
+        "untracked": "في عدم التتبع",
+        "sovereignty": "في السيادة الرقمية",
+        "ownKeys": "في امتلاك مفاتيحه",
+        "watchWatchmen": "في مراقبة المراقبين",
+        "noneOfBusiness": "ليس من شأنك",
+        "anonymity": "في إخفاء الهوية",
+        "secrecy": "في السرية",
+        "invisible": "في أن يكون غير مرئي",
+        "goDark": "في الاختفاء",
+        "closeCurtains": "في إغلاق الستائر",
+        "lockDoor": "في قفل الباب",
+        "keepSecrets": "في الاحتفاظ بالأسرار",
+        "ownData": "في امتلاك بياناته",
+        "noTrace": "في عدم ترك أثر",
+        "privateLife": "في حياة خاصة",
+        "exit": "في الخروج",
+        "unreachable": "في أن يكون بعيد المنال",
+        "refuse": "في الرفض",
+        "encrypt": "في التشفير",
+        "closedDoor": "في باب مغلق"
+      }
+    },
+    "features": {
+      "title": "ميزات بريميوم",
+      "subtitle": "ما ستحصل عليه",
+      "description": "كل ما تحتاجه للخصوصية الكاملة عبر الإنترنت",
+      "vpnProtection": {
+        "title": "حماية VPN",
+        "description": "شفّر اتصالك وأخفِ عنوان IP الخاص بك من المتتبعين"
+      },
+      "adBlocker": {
+        "title": "حاجب الإعلانات",
+        "description": "احجب الإعلانات المزعجة والبرامج الضارة في جميع التطبيقات"
+      },
+      "fastServers": {
+        "title": "خوادم سريعة",
+        "description": "اتصل بخوادم محسّنة بأقل فقدان للسرعة"
+      },
+      "stats": {
+        "servers": "+100 خادم",
+        "countries": "+50 دولة",
+        "users": "+10 مليون مستخدم"
+      },
+      "startProtecting": "ابدأ الحماية",
+      "guarantee": "لا حاجة لحساب - ابدأ مجاناً"
+    },
+    "account": {
+      "title": "ابدأ",
+      "subtitle": "أنشئ حساباً جديداً أو سجّل الدخول بمعرّف موجود",
+      "createAccount": "إنشاء حساب",
+      "login": "تسجيل الدخول",
+      "accountIdPlaceholder": "أدخل معرّف حسابك",
+      "createDescription": "احصل على معرّف فريد للاستخدام على جميع أجهزتك",
+      "loginDescription": "أدخل معرّف حسابك الحالي للمتابعة",
+      "deviceInfo": "حسابك يعمل على ما يصل إلى {{count}} أجهزة",
+      "generateDescription": "سننشئ لك معرّفاً فريداً. احفظه للاستخدام على أجهزة أخرى.",
+      "idPreview": "سيبدو معرّف حسابك هكذا:",
+      "generateButton": "إنشاء معرّف حسابي",
+      "yourAccountId": "معرّف حسابك",
+      "saveWarning": "احفظ هذا المعرّف! ستحتاجه للوصول إلى حسابك على أجهزة أخرى.",
+      "share": "مشاركة",
+      "securityWarning": "هذه هي الطريقة الوحيدة للوصول إلى حسابك. احفظه بأمان.",
+      "continueToApp": "المتابعة إلى التطبيق",
+      "errors": {
+        "enterAccountId": "يرجى إدخال معرّف حسابك",
+        "invalidAccountId": "معرّف حساب غير صالح"
+      }
+    },
+    "login": {
+      "title": "مرحباً بعودتك",
+      "subtitle": "أدخل معرّف حسابك للمتابعة",
+      "accountIdRequired": "معرّف الحساب مطلوب",
+      "loginError": "خطأ في تسجيل الدخول"
+    },
+    "register": {
+      "title": "إنشاء حساب",
+      "emailPlaceholder": "البريد الإلكتروني",
+      "passwordPlaceholder": "كلمة المرور",
+      "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
+      "errors": {
+        "emailRequired": "البريد الإلكتروني مطلوب",
+        "emailInvalid": "يرجى إدخال بريد إلكتروني صالح",
+        "passwordRequired": "كلمة المرور مطلوبة",
+        "passwordLength": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+        "confirmRequired": "يرجى تأكيد كلمة المرور",
+        "passwordMismatch": "كلمات المرور غير متطابقة",
+        "registrationError": "خطأ في التسجيل"
+      },
+      "success": "يرجى التحقق من بريدك الإلكتروني لتأكيد حسابك."
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "مرحباً بعودتك!",
+      "allSet": "كل شيء جاهز!",
+      "plans": {
+        "monthly": "بريميوم شهري",
+        "sixMonths": "بريميوم 6 أشهر",
+        "yearly": "بريميوم سنوي"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "اتصالك آمن",
+      "connectPrompt": "اتصل لحماية خصوصيتك",
+      "connecting": "جارٍ الاتصال",
+      "establishing": "جارٍ إنشاء اتصال آمن...",
+      "protected": "محمي",
+      "tapDisconnect": "اضغط لقطع الاتصال",
+      "failed": "فشل الاتصال",
+      "notConnected": "غير متصل",
+      "tapRetry": "اضغط لإعادة المحاولة",
+      "tapConnect": "اضغط للاتصال"
+    },
+    "setup": {
+      "title": "يلزم إعداد VPN",
+      "description": "ثبّت ملف تعريف VPN لتفعيل الحماية"
+    },
+    "stats": {
+      "server": "الخادم",
+      "latency": "التأخير",
+      "status": "الحالة",
+      "active": "نشط",
+      "connecting": "جارٍ الاتصال",
+      "error": "خطأ",
+      "idle": "خامل"
+    },
+    "serverSelect": {
+      "title": "اختر خادماً",
+      "disconnectToChange": "اقطع الاتصال لتغيير الخادم",
+      "serversAvailable": "{{count}} خادم متاح"
+    },
+    "quickSettings": {
+      "title": "إعدادات سريعة",
+      "parentalControls": {
+        "title": "الرقابة الأبوية",
+        "active": "تصفية المحتوى نشطة",
+        "description": "احمِ الأطفال من المحتوى الضار"
+      },
+      "adBlocker": {
+        "title": "حاجب الإعلانات",
+        "description": "حظر الإعلانات والمتتبعين"
+      }
+    },
+    "signInPrompt": "سجّل الدخول لحفظ تفضيلاتك",
+    "serverInfo": "اختر خادماً واضغط للاتصال. سيتم تشفير حركة المرور الخاصة بك وتوجيهها عبر خوادمنا الآمنة.",
+    "widgets": {
+      "adsBlocked": {
+        "title": "حظر الإعلانات",
+        "blocked": "محظور",
+        "rate": "معدل الحظر"
+      },
+      "devices": {
+        "title": "الأجهزة",
+        "noDevices": "لا توجد أجهزة متصلة"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "الرقابة الأبوية",
+    "subtitle": "احمِ عائلتك عبر الإنترنت",
+    "description": "تحكّم في المحتوى الذي يمكن الوصول إليه",
+    "categories": {
+      "title": "فئات المحتوى",
+      "selectToBlock": "اختر الفئات للحظر",
+      "adult": {
+        "name": "محتوى للبالغين",
+        "description": "حظر المحتوى الصريح ومحتوى البالغين"
+      },
+      "gambling": {
+        "name": "القمار",
+        "description": "حظر مواقع المراهنات والقمار"
+      },
+      "socialMedia": {
+        "name": "وسائل التواصل الاجتماعي",
+        "description": "حظر منصات التواصل الاجتماعي"
+      },
+      "gaming": {
+        "name": "الألعاب",
+        "description": "حظر الألعاب ومواقع الألعاب عبر الإنترنت"
+      },
+      "streaming": {
+        "name": "البث",
+        "description": "حظر منصات بث الفيديو"
+      },
+      "malware": {
+        "name": "البرامج الضارة والتصيد",
+        "description": "حظر المواقع الخطيرة"
+      },
+      "adsTrackers": {
+        "name": "الإعلانات والمتتبعين",
+        "description": "حظر الإعلانات والمتتبعين"
+      }
+    },
+    "customDomains": {
+      "title": "مواقع محظورة مخصصة",
+      "description": "أضف مواقع محددة للحظر",
+      "placeholder": "example.com",
+      "add": "إضافة",
+      "empty": "لا توجد مواقع مخصصة محظورة بعد"
+    },
+    "stats": {
+      "blocked": "محظور",
+      "categories": "الفئات",
+      "custom": "مخصص"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}} فئات محظورة",
+      "tapToEnable": "اضغط لتفعيل تصفية المحتوى"
+    },
+    "disabled": {
+      "upgradeRequired": "قم بالترقية إلى Pro لإدارة الفئات",
+      "enableRequired": "فعّل الرقابة الأبوية أعلاه لإدارة الفئات",
+      "vpnRequired": "اتصل بـ VPN لإدارة الفئات",
+      "upgradeRequiredSites": "قم بالترقية إلى Pro لإدارة المواقع",
+      "enableRequiredSites": "فعّل الرقابة الأبوية أعلاه لإدارة المواقع",
+      "vpnRequiredSites": "اتصل بـ VPN لإدارة المواقع"
+    },
+    "modal": {
+      "title": "حظر موقع",
+      "description": "أدخل النطاق للحظر (مثال: example.com)",
+      "blockSite": "حظر الموقع"
+    },
+    "alerts": {
+      "connectionError": "خطأ في الاتصال",
+      "connectionErrorMessage": "تعذر الاتصال بالخادم. يرجى التأكد من اتصال VPN والمحاولة مرة أخرى.",
+      "removeDomain": "إزالة النطاق",
+      "removeDomainMessage": "إزالة \"{{domain}}\" من قائمة الحظر؟"
+    },
+    "info": "يتم تطبيق تصفية المحتوى عند الاتصال بـ VPN. تستخدم الفئات قواعد AdGuard DNS للحماية على مستوى النظام."
+  },
+
+  "adblock": {
+    "title": "حاجب الإعلانات",
+    "description": "حماية على مستوى DNS",
+    "stats": {
+      "blocked": "محظور",
+      "adsBlocked": "إعلانات محظورة",
+      "trackers": "متتبعين متوقفين",
+      "requests": "استعلامات DNS",
+      "blockRate": "معدل الحظر",
+      "rules": "القواعد"
+    },
+    "status": {
+      "enabled": "حظر الإعلانات مفعّل",
+      "disabled": "حظر الإعلانات معطّل"
+    },
+    "activation": {
+      "tapToDisable": "اضغط لتعطيل حظر الإعلانات",
+      "tapToEnable": "اضغط لتفعيل حظر الإعلانات"
+    },
+    "coverage": {
+      "title": "التغطية",
+      "subtitle": "الحماية تعمل على جهازك بالكامل",
+      "connectVPN": "اتصل بـ VPN لتفعيل التغطية",
+      "allBrowsers": "جميع المتصفحات",
+      "allApps": "جميع التطبيقات",
+      "systemWide": "على مستوى النظام"
+    },
+    "connectionInfo": {
+      "connected": "VPN متصل - حظر الإعلانات يستخدم AdGuard Home DNS على خادم VPN الخاص بك.",
+      "disconnected": "اتصل بـ VPN لحظر الإعلانات على مستوى DNS. الإحصائيات تتطلب اتصال VPN."
+    }
+  },
+
+  "profile": {
+    "title": "الملف الشخصي",
+    "manageAccount": "إدارة حسابك",
+    "signOut": "تسجيل الخروج",
+    "signOutConfirm": "هل أنت متأكد من تسجيل الخروج؟ ستحتاج معرّف حسابك لتسجيل الدخول مرة أخرى.",
+    "deleteAccount": "حذف الحساب",
+    "notLoggedIn": "غير مسجّل الدخول",
+    "accountId": "معرّف الحساب",
+    "copyId": "نسخ المعرّف",
+    "copied": "تم النسخ!",
+    "unknownDate": "تاريخ غير معروف",
+
+    "subscription": {
+      "title": "الاشتراك",
+      "managePlan": "إدارة خطتك",
+      "currentPlan": "الخطة الحالية",
+      "plans": {
+        "free": "الخطة المجانية",
+        "premium": "خطة بريميوم",
+        "pro": "خطة برو"
+      },
+      "status": {
+        "free": "مجاني",
+        "active": "نشط",
+        "canceled": "ملغي",
+        "expired": "منتهي",
+        "gracePeriod": "فترة سماح",
+        "refreshing": "جارٍ التحديث..."
+      },
+      "statusText": {
+        "upgradePrompt": "قم بالترقية لفتح جميع الميزات",
+        "updatePayment": "حدّث طريقة الدفع لمتابعة الوصول",
+        "activeSubscription": "اشتراك نشط",
+        "renewsOn": "يتجدد في {{date}}",
+        "accessUntil": "الوصول حتى {{date}}",
+        "expiredOn": "انتهى في {{date}}",
+        "lifetimeAccess": "وصول مدى الحياة"
+      },
+      "cta": {
+        "upgrade": "ترقية",
+        "upgradeNow": "قم بالترقية الآن",
+        "upgradeToPro": "ترقية إلى Pro",
+        "unlockFeatures": "افتح جميع ميزات بريميوم",
+        "manage": "إدارة الاشتراك",
+        "resubscribe": "إعادة الاشتراك",
+        "fixPayment": "إصلاح الدفع"
+      },
+      "management": {
+        "manageInStore": "الإدارة في {{store}}",
+        "changeOrCancel": "تغيير أو إلغاء الاشتراك",
+        "restorePurchases": "استعادة المشتريات",
+        "restoreDescription": "استعادة الاشتراكات السابقة",
+        "subscriptionHelp": "مساعدة الاشتراك",
+        "faqAndSupport": "الأسئلة الشائعة والدعم"
+      },
+      "infoFooter": {
+        "ios": "تتم إدارة الاشتراكات عبر App Store. يمكنك الإلغاء في أي وقت في إعدادات Apple ID.",
+        "android": "تتم إدارة الاشتراكات عبر Google Play. يمكنك الإلغاء في أي وقت في إعدادات Play Store."
+      },
+      "freeTrial": "تجربة مجانية",
+      "loadError": "تعذر تحميل الاشتراك",
+      "unableToOpen": "تعذر الفتح",
+      "manageInSettings": "يرجى إدارة اشتراكك في الإعدادات > Apple ID > الاشتراكات",
+      "noPurchasesFound": "لم يتم العثور على مشتريات سابقة لهذا الحساب.",
+      "restoreError": "فشل استعادة المشتريات. يرجى المحاولة مرة أخرى."
+    },
+
+    "devices": {
+      "title": "الأجهزة",
+      "thisDevice": "هذا الجهاز",
+      "mainDevice": "الجهاز الرئيسي",
+      "connected": "متصل",
+      "vpn": "VPN",
+      "control": "التحكم",
+      "adBlock": "حظر الإعلانات",
+      "childMode": "وضع الأطفال",
+      "noDevices": "لا توجد أجهزة متصلة",
+      "manageFromMain": "سجّل الدخول من جهازك الرئيسي لإدارة الأجهزة",
+      "limitReached": "تم الوصول لحد الأجهزة. أزل جهازاً لإضافة جديد.",
+      "removeTitle": "إزالة الجهاز؟",
+      "removeMessage": "سيتم تسجيل خروج \"{{name}}\" وإزالته من حسابك.",
+      "removeError": "تعذر إزالة الجهاز. تحقق من اتصالك."
+    },
+
+    "settings": {
+      "title": "الإعدادات",
+      "personalInfo": "المعلومات الشخصية",
+      "notifications": "الإشعارات",
+      "appearance": "المظهر",
+      "language": "اللغة",
+      "contactSupport": "الاتصال بالدعم",
+      "faqAndContact": "الأسئلة الشائعة والاتصال بنا"
+    },
+
+    "personalInfo": {
+      "title": "المعلومات الشخصية",
+      "manageDetails": "إدارة تفاصيل حسابك",
+      "changePhoto": "تغيير الصورة",
+      "profile": "الملف الشخصي",
+      "username": "اسم المستخدم",
+      "usernamePlaceholder": "أدخل اسم المستخدم",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "your@email.com",
+      "emailNote": "لا يمكن تغيير البريد الإلكتروني لأسباب أمنية",
+      "security": "الأمان",
+      "changePassword": "تغيير كلمة المرور",
+      "updatePassword": "تحديث كلمة مرور حسابك",
+      "passwordResetTitle": "تغيير كلمة المرور",
+      "passwordResetMessage": "سنرسل رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
+      "sendLink": "إرسال الرابط",
+      "emailSent": "تم إرسال البريد",
+      "checkInbox": "تحقق من صندوق الوارد لرابط إعادة تعيين كلمة المرور.",
+      "accountInfo": "معلومات الحساب",
+      "memberSince": "عضو منذ",
+      "saveChanges": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ...",
+      "profileUpdated": "تم تحديث ملفك الشخصي.",
+      "profileUpdateError": "فشل تحديث الملف الشخصي. يرجى المحاولة مرة أخرى.",
+      "deleteAccount": "حذف الحساب",
+      "deleteAccountConfirm": "هل أنت متأكد من حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء.",
+      "contactSupportToDelete": "يرجى الاتصال بالدعم لحذف حسابك."
+    },
+
+    "language": "اللغة",
+
+    "appearance": {
+      "title": "المظهر",
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "النظام",
+      "followDevice": "سيتبع التطبيق إعدادات جهازك",
+      "alwaysUse": "استخدم دائماً الوضع {{mode}}"
+    },
+
+    "notifications": {
+      "title": "الإشعارات",
+      "push": {
+        "title": "الإشعارات",
+        "description": "تلقي التحديثات المهمة"
+      },
+      "marketing": {
+        "title": "التسويق",
+        "description": "العروض الخاصة والأخبار"
+      },
+      "security": {
+        "title": "تنبيهات الأمان",
+        "description": "إشعارات الاختراقات والتهديدات"
+      }
+    },
+
+    "support": {
+      "title": "المساعدة والدعم",
+      "description": "احصل على مساعدة من فريقنا",
+      "emailUs": "راسلنا",
+      "telegram": "تيليجرام",
+      "faq": {
+        "title": "الأسئلة الشائعة",
+        "connect": {
+          "question": "كيف أتصل بخادم VPN؟",
+          "answer": "اذهب إلى تبويب VPN واضغط على زر الاتصال. يمكنك أيضاً اختيار خادم معين من تبويب الخوادم قبل الاتصال."
+        },
+        "slow": {
+          "question": "لماذا اتصالي بطيء؟",
+          "answer": "حاول الاتصال بخادم أقرب لموقعك. حمل الخادم وسرعة الإنترنت لديك تؤثر أيضاً على أداء VPN."
+        },
+        "subscription": {
+          "question": "كيف أغير خطة اشتراكي؟",
+          "answer": "اذهب إلى الملف الشخصي > الاشتراك لعرض وإدارة خطتك الحالية. يمكنك الترقية أو التخفيض في أي وقت."
+        },
+        "secure": {
+          "question": "هل بياناتي آمنة؟",
+          "answer": "نعم! نستخدم تشفير AES-256 بمستوى عسكري ونحافظ على سياسة صارمة بعدم الاحتفاظ بالسجلات لحماية خصوصيتك."
+        }
+      },
+      "bugReport": {
+        "title": "الإبلاغ عن خطأ",
+        "subtitle": "ساعدنا في تحسين التطبيق",
+        "placeholder": "صف المشكلة التي واجهتها...",
+        "submitReport": "إرسال التقرير",
+        "missingInfo": "معلومات ناقصة",
+        "pleaseDescribe": "يرجى وصف المشكلة التي واجهتها.",
+        "thankYou": "شكراً لك!",
+        "success": "تم إرسال تقرير الخطأ. نقدر ملاحظاتك!",
+        "errorTitle": "خطأ",
+        "error": "فشل إرسال تقرير الخطأ. يرجى المحاولة مرة أخرى."
+      },
+      "responseTime": {
+        "title": "أوقات الاستجابة",
+        "freeUsers": "المستخدمون المجانيون: 48-72 ساعة",
+        "proUsers": "مستخدمو Pro/Premium: 24 ساعة"
+      }
+    },
+
+    "thankYou": {
+      "title": "شكراً لك!",
+      "features": {
+        "premiumServers": "خوادم بريميوم",
+        "adBlocking": "حظر الإعلانات",
+        "parentalControls": "الرقابة الأبوية",
+        "devices": "5 أجهزة"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "مجاني",
+    "pro": "Pro",
+    "premium": "Premium",
+    "devMode": "وضع التطوير: المشتريات غير متاحة في التطوير. يرجى البناء والتشغيل على جهاز.",
+    "purchaseSuccess": "شكراً لاشتراكك!",
+    "purchaseError": "فشل إتمام الشراء. يرجى المحاولة مرة أخرى.",
+    "noPurchases": "لم يتم العثور على مشتريات سابقة لهذا الحساب.",
+
+    "features": {
+      "premiumServers": {
+        "title": "خوادم بريميوم",
+        "description": "خوادم سريعة حول العالم"
+      },
+      "adBlocking": {
+        "title": "حظر الإعلانات",
+        "description": "حماية على مستوى DNS"
+      },
+      "devices": {
+        "title": "5 أجهزة",
+        "description": "اتصل بأجهزة متعددة"
+      },
+      "parentalControls": {
+        "title": "الرقابة الأبوية",
+        "description": "حافظ على أمان عائلتك"
+      }
+    },
+
+    "paywall": {
+      "title": "ترقية إلى Premium",
+      "subtitle": "افتح جميع الميزات",
+      "restore": "استعادة المشتريات",
+      "terms": "شروط الخدمة",
+      "privacy": "سياسة الخصوصية",
+      "yearly": "سنوي",
+      "monthly": "شهري",
+      "sixMonths": "6 أشهر",
+      "perYear": "في السنة",
+      "perMonth": "في الشهر",
+      "monthAbbr": "شهر",
+      "save": "وفّر {{percent}}%",
+      "processing": "جارٍ المعالجة...",
+      "experience": "استمتع بـ",
+      "truePrivacy": "خصوصية حقيقية.",
+      "unlockPremium": "افتح جميع ميزات بريميوم",
+      "startFreeTrial": "ابدأ بتجربة مجانية لمدة 7 أيام",
+      "bestValue": "أفضل قيمة",
+      "startTrial": "ابدأ التجربة المجانية",
+      "cancelAnytime": "إلغاء في أي وقت. تجديد تلقائي.",
+      "restoreSuccess": "تمت استعادة مشترياتك!",
+      "noPurchasesFound": "لم يتم العثور على مشتريات سابقة لهذا الحساب.",
+      "purchaseSuccess": "شكراً لاشتراكك!",
+      "purchaseError": "فشل إتمام الشراء. يرجى المحاولة مرة أخرى.",
+      "devMode": "المشتريات غير متاحة في التطوير. يرجى البناء والتشغيل على جهاز."
+    }
+  },
+
+  "server": {
+    "title": "اختر خادماً",
+    "subtitle": "خادم WireGuard الخاص بك",
+    "recommended": "موصى به",
+    "allServers": "جميع الخوادم",
+    "premium": "Premium",
+    "free": "مجاني",
+    "ping": "{{ms}}مللي ثانية",
+    "load": "{{percent}}% حمل",
+    "selected": "مختار",
+    "available": "متاح",
+    "protocol": "البروتوكول",
+    "encryption": "التشفير",
+    "empty": {
+      "title": "لا يوجد خادم متاح",
+      "subtitle": "سيظهر خادم WireGuard الخاص بك هنا بمجرد إعداده"
+    },
+    "info": "WireGuard يوفر تشفير VPN سريع وحديث بأقل استهلاك للموارد."
+  },
+
+  "speedTest": {
+    "title": "اختبار السرعة",
+    "start": "بدء الاختبار",
+    "testing": "جارٍ الاختبار...",
+    "download": "التحميل",
+    "upload": "الرفع",
+    "ping": "البنج",
+    "mbps": "ميجابت/ث",
+    "ms": "مللي ثانية"
+  }
+}

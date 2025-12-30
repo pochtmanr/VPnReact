@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "ذخیره",
+      "cancel": "لغو",
+      "confirm": "تایید",
+      "close": "بستن",
+      "back": "بازگشت",
+      "next": "بعدی",
+      "done": "انجام شد",
+      "continue": "ادامه",
+      "retry": "تلاش مجدد",
+      "submit": "ارسال",
+      "enable": "فعال کردن",
+      "disable": "غیرفعال کردن",
+      "install": "نصب",
+      "installing": "در حال نصب..."
+    },
+    "status": {
+      "loading": "در حال بارگذاری...",
+      "error": "خطا",
+      "success": "موفق",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "enabled": "فعال شده",
+      "disabled": "غیرفعال شده",
+      "connecting": "در حال اتصال",
+      "connected": "متصل",
+      "disconnected": "قطع شده",
+      "failed": "ناموفق",
+      "protectionActive": "محافظت فعال",
+      "protectionDisabled": "محافظت غیرفعال"
+    },
+    "time": {
+      "morning": "صبح بخیر",
+      "afternoon": "ظهر بخیر",
+      "evening": "عصر بخیر"
+    },
+    "errors": {
+      "generic": "خطای غیرمنتظره‌ای رخ داد",
+      "network": "خطای شبکه. لطفا اتصال خود را بررسی کنید.",
+      "tryAgain": "لطفا دوباره تلاش کنید"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "کنترل والدین",
+      "adblock": "مسدودکننده تبلیغات",
+      "profile": "پروفایل"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "همه حق دارند",
+      "footer": {
+        "byContinuing": "با ادامه دادن، شما موافقت می‌کنید با",
+        "and": "و"
+      },
+      "phrases": {
+        "privacy": "حریم خصوصی",
+        "letAlone": "تنها گذاشته شدن",
+        "disappear": "ناپدید شدن",
+        "forgotten": "فراموش شدن",
+        "sayNo": "نه گفتن",
+        "silence": "سکوت",
+        "unseen": "دیده نشدن",
+        "untracked": "ردیابی نشدن",
+        "sovereignty": "حاکمیت دیجیتال",
+        "ownKeys": "داشتن کلیدهای خود",
+        "watchWatchmen": "نظارت بر ناظران",
+        "noneOfBusiness": "به شما ربطی ندارد",
+        "anonymity": "ناشناس ماندن",
+        "secrecy": "محرمانگی",
+        "invisible": "نامرئی بودن",
+        "goDark": "ناپدید شدن",
+        "closeCurtains": "بستن پرده‌ها",
+        "lockDoor": "قفل کردن در",
+        "keepSecrets": "نگه داشتن رازها",
+        "ownData": "مالکیت داده‌های خود",
+        "noTrace": "ردی نگذاشتن",
+        "privateLife": "زندگی خصوصی",
+        "exit": "خروج",
+        "unreachable": "غیرقابل دسترس بودن",
+        "refuse": "امتناع کردن",
+        "encrypt": "رمزگذاری",
+        "closedDoor": "در بسته"
+      }
+    },
+    "features": {
+      "title": "ویژگی‌های پریمیوم",
+      "subtitle": "آنچه دریافت می‌کنید",
+      "description": "همه چیز برای حریم خصوصی کامل آنلاین",
+      "vpnProtection": {
+        "title": "محافظت VPN",
+        "description": "اتصال خود را رمزگذاری کنید و IP خود را از ردیاب‌ها پنهان کنید"
+      },
+      "adBlocker": {
+        "title": "مسدودکننده تبلیغات",
+        "description": "تبلیغات آزاردهنده و بدافزار را در همه برنامه‌ها مسدود کنید"
+      },
+      "fastServers": {
+        "title": "سرورهای سریع",
+        "description": "به سرورهای بهینه‌شده با حداقل افت سرعت متصل شوید"
+      },
+      "stats": {
+        "servers": "+۱۰۰ سرور",
+        "countries": "+۵۰ کشور",
+        "users": "+۱۰ میلیون کاربر"
+      },
+      "startProtecting": "شروع محافظت",
+      "guarantee": "نیازی به حساب نیست - شروع رایگان"
+    },
+    "account": {
+      "title": "شروع کنید",
+      "subtitle": "یک حساب جدید بسازید یا با شناسه موجود وارد شوید",
+      "createAccount": "ایجاد حساب",
+      "login": "ورود",
+      "accountIdPlaceholder": "شناسه حساب خود را وارد کنید",
+      "createDescription": "یک شناسه منحصر به فرد برای استفاده در همه دستگاه‌هایتان دریافت کنید",
+      "loginDescription": "شناسه حساب موجود خود را برای ادامه وارد کنید",
+      "deviceInfo": "حساب شما روی حداکثر {{count}} دستگاه کار می‌کند",
+      "generateDescription": "ما یک شناسه منحصر به فرد برای شما ایجاد می‌کنیم. آن را برای استفاده در دستگاه‌های دیگر ذخیره کنید.",
+      "idPreview": "شناسه حساب شما به این شکل خواهد بود:",
+      "generateButton": "ایجاد شناسه حساب من",
+      "yourAccountId": "شناسه حساب شما",
+      "saveWarning": "این شناسه را ذخیره کنید! برای دسترسی به حساب خود در دستگاه‌های دیگر به آن نیاز دارید.",
+      "share": "اشتراک‌گذاری",
+      "securityWarning": "این تنها راه دسترسی به حساب شماست. آن را امن نگه دارید.",
+      "continueToApp": "ادامه به برنامه",
+      "errors": {
+        "enterAccountId": "لطفا شناسه حساب خود را وارد کنید",
+        "invalidAccountId": "شناسه حساب نامعتبر"
+      }
+    },
+    "login": {
+      "title": "خوش آمدید",
+      "subtitle": "شناسه حساب خود را برای ادامه وارد کنید",
+      "accountIdRequired": "شناسه حساب الزامی است",
+      "loginError": "خطا در ورود"
+    },
+    "register": {
+      "title": "ایجاد حساب",
+      "emailPlaceholder": "آدرس ایمیل",
+      "passwordPlaceholder": "رمز عبور",
+      "confirmPasswordPlaceholder": "تایید رمز عبور",
+      "errors": {
+        "emailRequired": "ایمیل الزامی است",
+        "emailInvalid": "لطفا یک ایمیل معتبر وارد کنید",
+        "passwordRequired": "رمز عبور الزامی است",
+        "passwordLength": "رمز عبور باید حداقل ۶ کاراکتر باشد",
+        "confirmRequired": "لطفا رمز عبور خود را تایید کنید",
+        "passwordMismatch": "رمزهای عبور مطابقت ندارند",
+        "registrationError": "خطا در ثبت‌نام"
+      },
+      "success": "لطفا ایمیل خود را برای تایید حساب بررسی کنید."
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "خوش آمدید!",
+      "allSet": "همه چیز آماده است!",
+      "plans": {
+        "monthly": "پریمیوم ماهانه",
+        "sixMonths": "پریمیوم ۶ ماهه",
+        "yearly": "پریمیوم سالانه"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "اتصال شما امن است",
+      "connectPrompt": "برای محافظت از حریم خصوصی خود متصل شوید",
+      "connecting": "در حال اتصال",
+      "establishing": "در حال برقراری اتصال امن...",
+      "protected": "محافظت شده",
+      "tapDisconnect": "برای قطع اتصال ضربه بزنید",
+      "failed": "اتصال ناموفق",
+      "notConnected": "متصل نیست",
+      "tapRetry": "برای تلاش مجدد ضربه بزنید",
+      "tapConnect": "برای اتصال ضربه بزنید"
+    },
+    "setup": {
+      "title": "راه‌اندازی VPN لازم است",
+      "description": "پروفایل VPN را برای فعال کردن محافظت نصب کنید"
+    },
+    "stats": {
+      "server": "سرور",
+      "latency": "تاخیر",
+      "status": "وضعیت",
+      "active": "فعال",
+      "connecting": "در حال اتصال",
+      "error": "خطا",
+      "idle": "بیکار"
+    },
+    "serverSelect": {
+      "title": "انتخاب سرور",
+      "disconnectToChange": "برای تغییر سرور قطع کنید",
+      "serversAvailable": "{{count}} سرور در دسترس"
+    },
+    "quickSettings": {
+      "title": "تنظیمات سریع",
+      "parentalControls": {
+        "title": "کنترل والدین",
+        "active": "فیلتر محتوا فعال است",
+        "description": "کودکان را از محتوای مضر محافظت کنید"
+      },
+      "adBlocker": {
+        "title": "مسدودکننده تبلیغات",
+        "description": "مسدود کردن تبلیغات و ردیاب‌ها"
+      }
+    },
+    "signInPrompt": "برای ذخیره تنظیمات وارد شوید",
+    "serverInfo": "یک سرور انتخاب کنید و برای اتصال ضربه بزنید. ترافیک شما رمزگذاری شده و از طریق سرورهای امن ما هدایت می‌شود.",
+    "widgets": {
+      "adsBlocked": {
+        "title": "مسدودسازی تبلیغات",
+        "blocked": "مسدود شده",
+        "rate": "نرخ مسدودسازی"
+      },
+      "devices": {
+        "title": "دستگاه‌ها",
+        "noDevices": "هیچ دستگاهی متصل نیست"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "کنترل والدین",
+    "subtitle": "خانواده خود را آنلاین محافظت کنید",
+    "description": "کنترل کنید چه محتوایی قابل دسترسی است",
+    "categories": {
+      "title": "دسته‌بندی محتوا",
+      "selectToBlock": "دسته‌ها را برای مسدود کردن انتخاب کنید",
+      "adult": {
+        "name": "محتوای بزرگسال",
+        "description": "مسدود کردن محتوای صریح و بزرگسال"
+      },
+      "gambling": {
+        "name": "قمار",
+        "description": "مسدود کردن سایت‌های شرط‌بندی و قمار"
+      },
+      "socialMedia": {
+        "name": "شبکه‌های اجتماعی",
+        "description": "مسدود کردن پلتفرم‌های شبکه اجتماعی"
+      },
+      "gaming": {
+        "name": "بازی",
+        "description": "مسدود کردن بازی‌های آنلاین و سایت‌های بازی"
+      },
+      "streaming": {
+        "name": "پخش ویدیو",
+        "description": "مسدود کردن پلتفرم‌های پخش ویدیو"
+      },
+      "malware": {
+        "name": "بدافزار و فیشینگ",
+        "description": "مسدود کردن وب‌سایت‌های خطرناک"
+      },
+      "adsTrackers": {
+        "name": "تبلیغات و ردیاب‌ها",
+        "description": "مسدود کردن تبلیغات و ردیاب‌ها"
+      }
+    },
+    "customDomains": {
+      "title": "سایت‌های مسدود شده سفارشی",
+      "description": "وب‌سایت‌های خاص را برای مسدود کردن اضافه کنید",
+      "placeholder": "example.com",
+      "add": "افزودن",
+      "empty": "هنوز سایت سفارشی مسدود نشده"
+    },
+    "stats": {
+      "blocked": "مسدود شده",
+      "categories": "دسته‌ها",
+      "custom": "سفارشی"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}} دسته مسدود شده",
+      "tapToEnable": "برای فعال کردن فیلتر محتوا ضربه بزنید"
+    },
+    "disabled": {
+      "upgradeRequired": "برای مدیریت دسته‌ها به Pro ارتقا دهید",
+      "enableRequired": "کنترل والدین بالا را برای مدیریت دسته‌ها فعال کنید",
+      "vpnRequired": "برای مدیریت دسته‌ها به VPN متصل شوید",
+      "upgradeRequiredSites": "برای مدیریت سایت‌ها به Pro ارتقا دهید",
+      "enableRequiredSites": "کنترل والدین بالا را برای مدیریت سایت‌ها فعال کنید",
+      "vpnRequiredSites": "برای مدیریت سایت‌ها به VPN متصل شوید"
+    },
+    "modal": {
+      "title": "مسدود کردن وب‌سایت",
+      "description": "دامنه را برای مسدود کردن وارد کنید (مثال: example.com)",
+      "blockSite": "مسدود کردن سایت"
+    },
+    "alerts": {
+      "connectionError": "خطای اتصال",
+      "connectionErrorMessage": "اتصال به سرور ممکن نیست. لطفا مطمئن شوید VPN متصل است و دوباره تلاش کنید.",
+      "removeDomain": "حذف دامنه",
+      "removeDomainMessage": "\"{{domain}}\" از لیست مسدود حذف شود؟"
+    },
+    "info": "فیلتر محتوا هنگام اتصال به VPN اعمال می‌شود. دسته‌ها از قوانین AdGuard DNS برای محافظت سراسری استفاده می‌کنند."
+  },
+
+  "adblock": {
+    "title": "مسدودکننده تبلیغات",
+    "description": "محافظت در سطح DNS",
+    "stats": {
+      "blocked": "مسدود شده",
+      "adsBlocked": "تبلیغات مسدود شده",
+      "trackers": "ردیاب‌های متوقف شده",
+      "requests": "درخواست‌های DNS",
+      "blockRate": "نرخ مسدودسازی",
+      "rules": "قوانین"
+    },
+    "status": {
+      "enabled": "مسدودسازی تبلیغات فعال است",
+      "disabled": "مسدودسازی تبلیغات غیرفعال است"
+    },
+    "activation": {
+      "tapToDisable": "برای غیرفعال کردن مسدودسازی تبلیغات ضربه بزنید",
+      "tapToEnable": "برای فعال کردن مسدودسازی تبلیغات ضربه بزنید"
+    },
+    "coverage": {
+      "title": "پوشش",
+      "subtitle": "محافظت در کل دستگاه شما کار می‌کند",
+      "connectVPN": "برای فعال کردن پوشش به VPN متصل شوید",
+      "allBrowsers": "همه مرورگرها",
+      "allApps": "همه برنامه‌ها",
+      "systemWide": "سراسری"
+    },
+    "connectionInfo": {
+      "connected": "VPN متصل است - مسدودسازی تبلیغات از AdGuard Home DNS روی سرور VPN شما استفاده می‌کند.",
+      "disconnected": "برای مسدودسازی تبلیغات در سطح DNS به VPN متصل شوید. آمار نیاز به اتصال VPN دارد."
+    }
+  },
+
+  "profile": {
+    "title": "پروفایل",
+    "manageAccount": "مدیریت حساب شما",
+    "signOut": "خروج",
+    "signOutConfirm": "آیا مطمئن هستید که می‌خواهید خارج شوید؟ برای ورود مجدد به شناسه حساب خود نیاز دارید.",
+    "deleteAccount": "حذف حساب",
+    "notLoggedIn": "وارد نشده‌اید",
+    "accountId": "شناسه حساب",
+    "copyId": "کپی شناسه",
+    "copied": "کپی شد!",
+    "unknownDate": "تاریخ نامشخص",
+
+    "subscription": {
+      "title": "اشتراک",
+      "managePlan": "مدیریت طرح شما",
+      "currentPlan": "طرح فعلی",
+      "plans": {
+        "free": "طرح رایگان",
+        "premium": "طرح پریمیوم",
+        "pro": "طرح Pro"
+      },
+      "status": {
+        "free": "رایگان",
+        "active": "فعال",
+        "canceled": "لغو شده",
+        "expired": "منقضی شده",
+        "gracePeriod": "دوره مهلت",
+        "refreshing": "در حال به‌روزرسانی..."
+      },
+      "statusText": {
+        "upgradePrompt": "برای باز کردن همه امکانات ارتقا دهید",
+        "updatePayment": "روش پرداخت را برای ادامه دسترسی به‌روز کنید",
+        "activeSubscription": "اشتراک فعال",
+        "renewsOn": "تمدید در {{date}}",
+        "accessUntil": "دسترسی تا {{date}}",
+        "expiredOn": "منقضی شده در {{date}}",
+        "lifetimeAccess": "دسترسی مادام‌العمر"
+      },
+      "cta": {
+        "upgrade": "ارتقا",
+        "upgradeNow": "همین الان ارتقا دهید",
+        "upgradeToPro": "ارتقا به Pro",
+        "unlockFeatures": "باز کردن همه امکانات پریمیوم",
+        "manage": "مدیریت اشتراک",
+        "resubscribe": "اشتراک مجدد",
+        "fixPayment": "اصلاح پرداخت"
+      },
+      "management": {
+        "manageInStore": "مدیریت در {{store}}",
+        "changeOrCancel": "تغییر یا لغو اشتراک",
+        "restorePurchases": "بازیابی خریدها",
+        "restoreDescription": "بازیابی اشتراک‌های قبلی",
+        "subscriptionHelp": "کمک اشتراک",
+        "faqAndSupport": "سوالات متداول و پشتیبانی"
+      },
+      "infoFooter": {
+        "ios": "اشتراک‌ها از طریق App Store مدیریت می‌شوند. می‌توانید هر زمان در تنظیمات Apple ID لغو کنید.",
+        "android": "اشتراک‌ها از طریق Google Play مدیریت می‌شوند. می‌توانید هر زمان در تنظیمات Play Store لغو کنید."
+      },
+      "freeTrial": "دوره آزمایشی رایگان",
+      "loadError": "بارگذاری اشتراک ممکن نیست",
+      "unableToOpen": "باز کردن ممکن نیست",
+      "manageInSettings": "لطفا اشتراک خود را در تنظیمات > Apple ID > اشتراک‌ها مدیریت کنید",
+      "noPurchasesFound": "هیچ خرید قبلی برای این حساب یافت نشد.",
+      "restoreError": "بازیابی خریدها ناموفق بود. لطفا دوباره تلاش کنید."
+    },
+
+    "devices": {
+      "title": "دستگاه‌ها",
+      "thisDevice": "این دستگاه",
+      "mainDevice": "دستگاه اصلی",
+      "connected": "متصل",
+      "vpn": "VPN",
+      "control": "کنترل",
+      "adBlock": "مسدودکننده تبلیغات",
+      "childMode": "حالت کودک",
+      "noDevices": "هیچ دستگاهی متصل نیست",
+      "manageFromMain": "از دستگاه اصلی خود برای مدیریت دستگاه‌ها وارد شوید",
+      "limitReached": "به حد دستگاه رسیدید. یک دستگاه را حذف کنید تا دستگاه جدید اضافه شود.",
+      "removeTitle": "حذف دستگاه؟",
+      "removeMessage": "\"{{name}}\" خارج شده و از حساب شما حذف خواهد شد.",
+      "removeError": "حذف دستگاه ممکن نیست. اتصال خود را بررسی کنید."
+    },
+
+    "settings": {
+      "title": "تنظیمات",
+      "personalInfo": "اطلاعات شخصی",
+      "notifications": "اعلان‌ها",
+      "appearance": "ظاهر",
+      "language": "زبان",
+      "contactSupport": "تماس با پشتیبانی",
+      "faqAndContact": "سوالات متداول و تماس با ما"
+    },
+
+    "personalInfo": {
+      "title": "اطلاعات شخصی",
+      "manageDetails": "مدیریت جزئیات حساب شما",
+      "changePhoto": "تغییر عکس",
+      "profile": "پروفایل",
+      "username": "نام کاربری",
+      "usernamePlaceholder": "نام کاربری خود را وارد کنید",
+      "email": "آدرس ایمیل",
+      "emailPlaceholder": "your@email.com",
+      "emailNote": "ایمیل به دلایل امنیتی قابل تغییر نیست",
+      "security": "امنیت",
+      "changePassword": "تغییر رمز عبور",
+      "updatePassword": "به‌روزرسانی رمز عبور حساب",
+      "passwordResetTitle": "تغییر رمز عبور",
+      "passwordResetMessage": "یک لینک بازنشانی رمز عبور به ایمیل شما ارسال خواهیم کرد.",
+      "sendLink": "ارسال لینک",
+      "emailSent": "ایمیل ارسال شد",
+      "checkInbox": "صندوق ورودی خود را برای لینک بازنشانی رمز عبور بررسی کنید.",
+      "accountInfo": "اطلاعات حساب",
+      "memberSince": "عضو از",
+      "saveChanges": "ذخیره تغییرات",
+      "saving": "در حال ذخیره...",
+      "profileUpdated": "پروفایل شما به‌روز شد.",
+      "profileUpdateError": "به‌روزرسانی پروفایل ناموفق بود. لطفا دوباره تلاش کنید.",
+      "deleteAccount": "حذف حساب",
+      "deleteAccountConfirm": "آیا مطمئن هستید که می‌خواهید حساب خود را حذف کنید؟ این عمل قابل بازگشت نیست.",
+      "contactSupportToDelete": "لطفا برای حذف حساب با پشتیبانی تماس بگیرید."
+    },
+
+    "language": "زبان",
+
+    "appearance": {
+      "title": "ظاهر",
+      "light": "روشن",
+      "dark": "تاریک",
+      "system": "سیستم",
+      "followDevice": "برنامه تنظیمات دستگاه شما را دنبال می‌کند",
+      "alwaysUse": "همیشه از حالت {{mode}} استفاده کن"
+    },
+
+    "notifications": {
+      "title": "اعلان‌ها",
+      "push": {
+        "title": "اعلان‌های فوری",
+        "description": "دریافت به‌روزرسانی‌های مهم"
+      },
+      "marketing": {
+        "title": "بازاریابی",
+        "description": "پیشنهادات ویژه و اخبار"
+      },
+      "security": {
+        "title": "هشدارهای امنیتی",
+        "description": "اعلان‌های نقض و تهدید"
+      }
+    },
+
+    "support": {
+      "title": "کمک و پشتیبانی",
+      "description": "از تیم ما کمک بگیرید",
+      "emailUs": "ایمیل به ما",
+      "telegram": "تلگرام",
+      "faq": {
+        "title": "سوالات متداول",
+        "connect": {
+          "question": "چگونه به سرور VPN متصل شوم؟",
+          "answer": "به برگه VPN بروید و روی دکمه اتصال ضربه بزنید. همچنین می‌توانید قبل از اتصال یک سرور خاص از برگه سرورها انتخاب کنید."
+        },
+        "slow": {
+          "question": "چرا اتصال من کند است؟",
+          "answer": "سعی کنید به سروری نزدیک‌تر به مکان خود متصل شوید. بار سرور و سرعت اینترنت شما نیز بر عملکرد VPN تاثیر می‌گذارد."
+        },
+        "subscription": {
+          "question": "چگونه طرح اشتراک خود را تغییر دهم؟",
+          "answer": "به پروفایل > اشتراک بروید تا طرح فعلی خود را مشاهده و مدیریت کنید. می‌توانید هر زمان ارتقا یا تنزل دهید."
+        },
+        "secure": {
+          "question": "آیا داده‌های من امن هستند؟",
+          "answer": "بله! ما از رمزگذاری AES-256 درجه نظامی استفاده می‌کنیم و سیاست سختگیرانه بدون لاگ را برای محافظت از حریم خصوصی شما حفظ می‌کنیم."
+        }
+      },
+      "bugReport": {
+        "title": "گزارش اشکال",
+        "subtitle": "به ما کمک کنید برنامه را بهتر کنیم",
+        "placeholder": "اشکالی که با آن مواجه شدید را توضیح دهید...",
+        "submitReport": "ارسال گزارش",
+        "missingInfo": "اطلاعات ناقص",
+        "pleaseDescribe": "لطفا اشکالی که با آن مواجه شدید را توضیح دهید.",
+        "thankYou": "متشکریم!",
+        "success": "گزارش اشکال شما ارسال شد. از بازخورد شما قدردانی می‌کنیم!",
+        "errorTitle": "خطا",
+        "error": "ارسال گزارش اشکال ناموفق بود. لطفا دوباره تلاش کنید."
+      },
+      "responseTime": {
+        "title": "زمان پاسخ",
+        "freeUsers": "کاربران رایگان: ۴۸-۷۲ ساعت",
+        "proUsers": "کاربران Pro/Premium: ۲۴ ساعت"
+      }
+    },
+
+    "thankYou": {
+      "title": "متشکریم!",
+      "features": {
+        "premiumServers": "سرورهای پریمیوم",
+        "adBlocking": "مسدودسازی تبلیغات",
+        "parentalControls": "کنترل والدین",
+        "devices": "۵ دستگاه"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "رایگان",
+    "pro": "Pro",
+    "premium": "Premium",
+    "devMode": "حالت توسعه: خریدها در حالت توسعه در دسترس نیستند. لطفا روی دستگاه بسازید و اجرا کنید.",
+    "purchaseSuccess": "از اشتراک شما متشکریم!",
+    "purchaseError": "تکمیل خرید ناموفق بود. لطفا دوباره تلاش کنید.",
+    "noPurchases": "هیچ خرید قبلی برای این حساب یافت نشد.",
+
+    "features": {
+      "premiumServers": {
+        "title": "سرورهای پریمیوم",
+        "description": "سرورهای سریع جهانی"
+      },
+      "adBlocking": {
+        "title": "مسدودسازی تبلیغات",
+        "description": "محافظت در سطح DNS"
+      },
+      "devices": {
+        "title": "۵ دستگاه",
+        "description": "اتصال چند دستگاه"
+      },
+      "parentalControls": {
+        "title": "کنترل والدین",
+        "description": "خانواده خود را امن نگه دارید"
+      }
+    },
+
+    "paywall": {
+      "title": "ارتقا به Premium",
+      "subtitle": "باز کردن همه امکانات",
+      "restore": "بازیابی خریدها",
+      "terms": "شرایط خدمات",
+      "privacy": "سیاست حریم خصوصی",
+      "yearly": "سالانه",
+      "monthly": "ماهانه",
+      "sixMonths": "۶ ماهه",
+      "perYear": "در سال",
+      "perMonth": "در ماه",
+      "monthAbbr": "ماه",
+      "save": "{{percent}}% صرفه‌جویی",
+      "processing": "در حال پردازش...",
+      "experience": "تجربه کنید",
+      "truePrivacy": "حریم خصوصی واقعی.",
+      "unlockPremium": "باز کردن همه امکانات پریمیوم",
+      "startFreeTrial": "با ۷ روز آزمایشی رایگان شروع کنید",
+      "bestValue": "بهترین ارزش",
+      "startTrial": "شروع آزمایشی رایگان",
+      "cancelAnytime": "هر زمان لغو کنید. تمدید خودکار.",
+      "restoreSuccess": "خریدهای شما بازیابی شد!",
+      "noPurchasesFound": "هیچ خرید قبلی برای این حساب یافت نشد.",
+      "purchaseSuccess": "از اشتراک شما متشکریم!",
+      "purchaseError": "تکمیل خرید ناموفق بود. لطفا دوباره تلاش کنید.",
+      "devMode": "خریدها در حالت توسعه در دسترس نیستند. لطفا روی دستگاه بسازید و اجرا کنید."
+    }
+  },
+
+  "server": {
+    "title": "انتخاب سرور",
+    "subtitle": "سرور خصوصی WireGuard شما",
+    "recommended": "پیشنهادی",
+    "allServers": "همه سرورها",
+    "premium": "Premium",
+    "free": "رایگان",
+    "ping": "{{ms}} میلی‌ثانیه",
+    "load": "{{percent}}% بار",
+    "selected": "انتخاب شده",
+    "available": "در دسترس",
+    "protocol": "پروتکل",
+    "encryption": "رمزگذاری",
+    "empty": {
+      "title": "سروری در دسترس نیست",
+      "subtitle": "سرور WireGuard شما پس از پیکربندی اینجا ظاهر می‌شود"
+    },
+    "info": "WireGuard رمزگذاری سریع و مدرن VPN با حداقل سربار ارائه می‌دهد."
+  },
+
+  "speedTest": {
+    "title": "تست سرعت",
+    "start": "شروع تست",
+    "testing": "در حال تست...",
+    "download": "دانلود",
+    "upload": "آپلود",
+    "ping": "پینگ",
+    "mbps": "مگابیت/ثانیه",
+    "ms": "میلی‌ثانیه"
+  }
+}

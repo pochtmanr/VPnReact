@@ -1,13 +1,13 @@
+import { borderRadius, colors, spacing, typography } from '@/constants/theme';
 import React from 'react';
 import {
-  StyleSheet,
-  View,
-  TextInput,
-  Text,
-  TextInputProps,
-  ViewStyle,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputProps,
+    View,
+    ViewStyle,
 } from 'react-native';
-import { colors, borderRadius, spacing, typography } from '@/constants/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -74,16 +74,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
   },
   inputWithLeftIcon: {
-    paddingLeft: spacing.xs,
+    paddingStart: spacing.xs,
   },
   inputWithRightIcon: {
-    paddingRight: spacing.xs,
+    paddingEnd: spacing.xs,
   },
   iconLeft: {
-    paddingLeft: spacing.md,
+    paddingStart: spacing.md,
   },
   iconRight: {
-    paddingRight: spacing.md,
+    paddingEnd: spacing.md,
   },
   errorText: {
     color: colors.error,

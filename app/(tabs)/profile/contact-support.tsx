@@ -2,38 +2,38 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
-  ArrowLeft,
-  Bug,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Mail,
-  MessageCircle,
-  Send,
+    ArrowLeft,
+    Bug,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    Mail,
+    MessageCircle,
+    Send,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Linking,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import Animated, {
-  Easing,
-  FadeInDown,
+    Easing,
+    FadeInDown,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { supabase } from '@/lib/supabase';
 import { useRTL } from '@/i18n/useRTL';
+import { supabase } from '@/lib/supabase';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   faqAnswer: {
     fontSize: 14,

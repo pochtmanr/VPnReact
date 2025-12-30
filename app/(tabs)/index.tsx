@@ -19,6 +19,7 @@ import {
   Wifi
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   RefreshControl,
@@ -40,7 +41,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import ServerBottomSheet, { ServerBottomSheetRef } from '@/components/ServerBottomSheet';
 import { QuickStatsRow, ScrollShadow } from '@/components/ui';
@@ -1028,7 +1028,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
-    marginRight: 12,
+    marginEnd: 12,
   },
   headerTitle: {
     fontSize: 28,
@@ -1237,7 +1237,7 @@ const styles = StyleSheet.create({
   },
   settingDivider: {
     height: 1,
-    marginLeft: 52,
+    marginStart: 52,
   },
   loginPrompt: {
     flexDirection: 'row',
@@ -1346,7 +1346,7 @@ const styles = StyleSheet.create({
   },
   deviceDivider: {
     height: 1,
-    marginLeft: 38,
+    marginStart: 38,
   },
   connectedDot: {
     width: 8,

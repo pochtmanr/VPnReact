@@ -1,9 +1,9 @@
-import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { ConnectionLog } from '@/types/database';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface ChatBubbleProps {
   log: ConnectionLog;
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     marginBottom: spacing.xs,
-    paddingLeft: spacing.sm,
+    paddingStart: spacing.sm,
   },
   time: {
     ...typography.caption,

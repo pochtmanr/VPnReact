@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "保存",
+      "cancel": "キャンセル",
+      "confirm": "確認",
+      "close": "閉じる",
+      "back": "戻る",
+      "next": "次へ",
+      "done": "完了",
+      "continue": "続ける",
+      "retry": "再試行",
+      "submit": "送信",
+      "enable": "有効にする",
+      "disable": "無効にする",
+      "install": "インストール",
+      "installing": "インストール中..."
+    },
+    "status": {
+      "loading": "読み込み中...",
+      "error": "エラー",
+      "success": "成功",
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "enabled": "有効",
+      "disabled": "無効",
+      "connecting": "接続中",
+      "connected": "接続済み",
+      "disconnected": "切断済み",
+      "failed": "失敗",
+      "protectionActive": "保護が有効",
+      "protectionDisabled": "保護が無効"
+    },
+    "time": {
+      "morning": "おはようございます",
+      "afternoon": "こんにちは",
+      "evening": "こんばんは"
+    },
+    "errors": {
+      "generic": "予期せぬエラーが発生しました",
+      "network": "ネットワークエラー。接続を確認してください。",
+      "tryAgain": "もう一度お試しください"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "ペアレンタル",
+      "adblock": "広告ブロック",
+      "profile": "プロフィール"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "誰もが権利を持っています",
+      "footer": {
+        "byContinuing": "続けることで、以下に同意したことになります",
+        "and": "と"
+      },
+      "phrases": {
+        "privacy": "プライバシーの",
+        "letAlone": "放っておかれる",
+        "disappear": "消える",
+        "forgotten": "忘れられる",
+        "sayNo": "断る",
+        "silence": "沈黙の",
+        "unseen": "見られない",
+        "untracked": "追跡されない",
+        "sovereignty": "デジタル主権の",
+        "ownKeys": "自分の鍵を持つ",
+        "watchWatchmen": "監視者を監視する",
+        "noneOfBusiness": "あなたには関係ない",
+        "anonymity": "匿名性の",
+        "secrecy": "秘密の",
+        "invisible": "見えなくなる",
+        "goDark": "姿を消す",
+        "closeCurtains": "カーテンを閉める",
+        "lockDoor": "ドアを閉める",
+        "keepSecrets": "秘密を守る",
+        "ownData": "自分のデータを所有する",
+        "noTrace": "痕跡を残さない",
+        "privateLife": "プライベートな生活の",
+        "exit": "出口の",
+        "unreachable": "連絡が取れなくなる",
+        "refuse": "拒否する",
+        "encrypt": "暗号化する",
+        "closedDoor": "閉じたドアの"
+      }
+    },
+    "features": {
+      "title": "プレミアム機能",
+      "subtitle": "得られるもの",
+      "description": "完全なオンラインプライバシーに必要なすべて",
+      "vpnProtection": {
+        "title": "VPN保護",
+        "description": "接続を暗号化し、トラッカーからIPを隠します"
+      },
+      "adBlocker": {
+        "title": "広告ブロッカー",
+        "description": "すべてのアプリで煩わしい広告とマルウェアをブロック"
+      },
+      "fastServers": {
+        "title": "高速サーバー",
+        "description": "速度低下を最小限に抑えた最適化されたサーバーに接続"
+      },
+      "stats": {
+        "servers": "100以上のサーバー",
+        "countries": "50以上の国",
+        "users": "1000万以上のユーザー"
+      },
+      "startProtecting": "保護を開始",
+      "guarantee": "アカウント不要 - 無料で開始"
+    },
+    "account": {
+      "title": "はじめる",
+      "subtitle": "新しいアカウントを作成するか、既存のIDでログイン",
+      "createAccount": "アカウント作成",
+      "login": "ログイン",
+      "accountIdPlaceholder": "アカウントIDを入力",
+      "createDescription": "すべてのデバイスで使用できる固有のIDを取得",
+      "loginDescription": "続けるには既存のアカウントIDを入力",
+      "deviceInfo": "あなたのアカウントは最大{{count}}台のデバイスで使用できます",
+      "generateDescription": "固有のIDを生成します。他のデバイスで使用するために保存してください。",
+      "idPreview": "アカウントIDは次のようになります：",
+      "generateButton": "アカウントIDを生成",
+      "yourAccountId": "あなたのアカウントID",
+      "saveWarning": "このIDを保存してください！他のデバイスでアカウントにアクセスするために必要です。",
+      "share": "共有",
+      "securityWarning": "これがアカウントにアクセスする唯一の方法です。安全に保管してください。",
+      "continueToApp": "アプリに進む",
+      "errors": {
+        "enterAccountId": "アカウントIDを入力してください",
+        "invalidAccountId": "無効なアカウントID"
+      }
+    },
+    "login": {
+      "title": "おかえりなさい",
+      "subtitle": "続けるにはアカウントIDを入力してください",
+      "accountIdRequired": "アカウントIDが必要です",
+      "loginError": "ログインエラー"
+    },
+    "register": {
+      "title": "アカウント作成",
+      "emailPlaceholder": "メールアドレス",
+      "passwordPlaceholder": "パスワード",
+      "confirmPasswordPlaceholder": "パスワードを確認",
+      "errors": {
+        "emailRequired": "メールアドレスが必要です",
+        "emailInvalid": "有効なメールアドレスを入力してください",
+        "passwordRequired": "パスワードが必要です",
+        "passwordLength": "パスワードは6文字以上必要です",
+        "confirmRequired": "パスワードを確認してください",
+        "passwordMismatch": "パスワードが一致しません",
+        "registrationError": "登録エラー"
+      },
+      "success": "アカウントを確認するためにメールを確認してください。"
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "おかえりなさい！",
+      "allSet": "準備完了！",
+      "plans": {
+        "monthly": "月額プレミアム",
+        "sixMonths": "6ヶ月プレミアム",
+        "yearly": "年間プレミアム"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "接続は安全です",
+      "connectPrompt": "プライバシーを保護するために接続",
+      "connecting": "接続中",
+      "establishing": "安全な接続を確立中...",
+      "protected": "保護済み",
+      "tapDisconnect": "タップして切断",
+      "failed": "接続失敗",
+      "notConnected": "未接続",
+      "tapRetry": "タップして再試行",
+      "tapConnect": "タップして接続"
+    },
+    "setup": {
+      "title": "VPN設定が必要です",
+      "description": "保護を有効にするにはVPNプロファイルをインストール"
+    },
+    "stats": {
+      "server": "サーバー",
+      "latency": "遅延",
+      "status": "ステータス",
+      "active": "アクティブ",
+      "connecting": "接続中",
+      "error": "エラー",
+      "idle": "待機中"
+    },
+    "serverSelect": {
+      "title": "サーバーを選択",
+      "disconnectToChange": "サーバーを変更するには切断してください",
+      "serversAvailable": "{{count}}台のサーバーが利用可能"
+    },
+    "quickSettings": {
+      "title": "クイック設定",
+      "parentalControls": {
+        "title": "ペアレンタルコントロール",
+        "active": "コンテンツフィルタリングが有効",
+        "description": "有害なコンテンツから子供を保護"
+      },
+      "adBlocker": {
+        "title": "広告ブロッカー",
+        "description": "広告とトラッカーをブロック"
+      }
+    },
+    "signInPrompt": "設定を保存するにはサインイン",
+    "serverInfo": "サーバーを選択してタップして接続。トラフィックは暗号化され、安全なサーバー経由でルーティングされます。",
+    "widgets": {
+      "adsBlocked": {
+        "title": "広告ブロック",
+        "blocked": "ブロック済み",
+        "rate": "ブロック率"
+      },
+      "devices": {
+        "title": "デバイス",
+        "noDevices": "接続されているデバイスはありません"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "ペアレンタルコントロール",
+    "subtitle": "家族をオンラインで保護",
+    "description": "アクセスできるコンテンツを制御",
+    "categories": {
+      "title": "コンテンツカテゴリ",
+      "selectToBlock": "ブロックするカテゴリを選択",
+      "adult": {
+        "name": "アダルトコンテンツ",
+        "description": "露骨で成人向けのコンテンツをブロック"
+      },
+      "gambling": {
+        "name": "ギャンブル",
+        "description": "賭け事とギャンブルサイトをブロック"
+      },
+      "socialMedia": {
+        "name": "ソーシャルメディア",
+        "description": "SNSプラットフォームをブロック"
+      },
+      "gaming": {
+        "name": "ゲーム",
+        "description": "オンラインゲームとゲームサイトをブロック"
+      },
+      "streaming": {
+        "name": "ストリーミング",
+        "description": "動画ストリーミングプラットフォームをブロック"
+      },
+      "malware": {
+        "name": "マルウェアとフィッシング",
+        "description": "危険なウェブサイトをブロック"
+      },
+      "adsTrackers": {
+        "name": "広告とトラッカー",
+        "description": "広告とトラッカーをブロック"
+      }
+    },
+    "customDomains": {
+      "title": "カスタムブロックサイト",
+      "description": "ブロックする特定のウェブサイトを追加",
+      "placeholder": "example.com",
+      "add": "追加",
+      "empty": "カスタムブロックサイトはまだありません"
+    },
+    "stats": {
+      "blocked": "ブロック済み",
+      "categories": "カテゴリ",
+      "custom": "カスタム"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}}カテゴリがブロック済み",
+      "tapToEnable": "タップしてコンテンツフィルタリングを有効化"
+    },
+    "disabled": {
+      "upgradeRequired": "カテゴリを管理するにはProにアップグレード",
+      "enableRequired": "カテゴリを管理するには上のペアレンタルコントロールを有効化",
+      "vpnRequired": "カテゴリを管理するにはVPNに接続",
+      "upgradeRequiredSites": "サイトを管理するにはProにアップグレード",
+      "enableRequiredSites": "サイトを管理するには上のペアレンタルコントロールを有効化",
+      "vpnRequiredSites": "サイトを管理するにはVPNに接続"
+    },
+    "modal": {
+      "title": "ウェブサイトをブロック",
+      "description": "ブロックするドメインを入力（例：example.com）",
+      "blockSite": "サイトをブロック"
+    },
+    "alerts": {
+      "connectionError": "接続エラー",
+      "connectionErrorMessage": "サーバーに接続できません。VPNが接続されていることを確認して再試行してください。",
+      "removeDomain": "ドメインを削除",
+      "removeDomainMessage": "ブロックリストから「{{domain}}」を削除しますか？"
+    },
+    "info": "コンテンツフィルタリングはVPN接続時に適用されます。カテゴリはシステム全体の保護のためにAdGuard DNSルールを使用します。"
+  },
+
+  "adblock": {
+    "title": "広告ブロッカー",
+    "description": "DNSレベルの保護",
+    "stats": {
+      "blocked": "ブロック済み",
+      "adsBlocked": "広告ブロック数",
+      "trackers": "停止したトラッカー",
+      "requests": "DNSクエリ",
+      "blockRate": "ブロック率",
+      "rules": "ルール"
+    },
+    "status": {
+      "enabled": "広告ブロックが有効",
+      "disabled": "広告ブロックが無効"
+    },
+    "activation": {
+      "tapToDisable": "タップして広告ブロックを無効化",
+      "tapToEnable": "タップして広告ブロックを有効化"
+    },
+    "coverage": {
+      "title": "カバレッジ",
+      "subtitle": "保護はデバイス全体で機能します",
+      "connectVPN": "カバレッジを有効にするにはVPNに接続",
+      "allBrowsers": "すべてのブラウザ",
+      "allApps": "すべてのアプリ",
+      "systemWide": "システム全体"
+    },
+    "connectionInfo": {
+      "connected": "VPN接続済み - 広告ブロックはVPNサーバーのAdGuard Home DNSを使用しています。",
+      "disconnected": "DNSレベルの広告ブロックにはVPNに接続してください。統計にはVPN接続が必要です。"
+    }
+  },
+
+  "profile": {
+    "title": "プロフィール",
+    "manageAccount": "アカウントを管理",
+    "signOut": "サインアウト",
+    "signOutConfirm": "サインアウトしてもよろしいですか？再度サインインするにはアカウントIDが必要です。",
+    "deleteAccount": "アカウントを削除",
+    "notLoggedIn": "ログインしていません",
+    "accountId": "アカウントID",
+    "copyId": "IDをコピー",
+    "copied": "コピーしました！",
+    "unknownDate": "不明な日付",
+
+    "subscription": {
+      "title": "サブスクリプション",
+      "managePlan": "プランを管理",
+      "currentPlan": "現在のプラン",
+      "plans": {
+        "free": "無料プラン",
+        "premium": "プレミアムプラン",
+        "pro": "Proプラン"
+      },
+      "status": {
+        "free": "無料",
+        "active": "アクティブ",
+        "canceled": "キャンセル済み",
+        "expired": "期限切れ",
+        "gracePeriod": "猶予期間",
+        "refreshing": "更新中..."
+      },
+      "statusText": {
+        "upgradePrompt": "すべての機能をアンロックするにはアップグレード",
+        "updatePayment": "アクセスを続けるには支払い方法を更新",
+        "activeSubscription": "アクティブなサブスクリプション",
+        "renewsOn": "{{date}}に更新",
+        "accessUntil": "{{date}}までアクセス可能",
+        "expiredOn": "{{date}}に期限切れ",
+        "lifetimeAccess": "永久アクセス"
+      },
+      "cta": {
+        "upgrade": "アップグレード",
+        "upgradeNow": "今すぐアップグレード",
+        "upgradeToPro": "Proにアップグレード",
+        "unlockFeatures": "すべてのプレミアム機能をアンロック",
+        "manage": "サブスクリプションを管理",
+        "resubscribe": "再購読",
+        "fixPayment": "支払いを修正"
+      },
+      "management": {
+        "manageInStore": "{{store}}で管理",
+        "changeOrCancel": "サブスクリプションを変更またはキャンセル",
+        "restorePurchases": "購入を復元",
+        "restoreDescription": "以前のサブスクリプションを復元",
+        "subscriptionHelp": "サブスクリプションヘルプ",
+        "faqAndSupport": "FAQとサポート"
+      },
+      "infoFooter": {
+        "ios": "サブスクリプションはApp Storeを通じて管理されます。Apple ID設定でいつでもキャンセルできます。",
+        "android": "サブスクリプションはGoogle Playを通じて管理されます。Play Store設定でいつでもキャンセルできます。"
+      },
+      "freeTrial": "無料トライアル",
+      "loadError": "サブスクリプションを読み込めませんでした",
+      "unableToOpen": "開けません",
+      "manageInSettings": "設定 > Apple ID > サブスクリプションでサブスクリプションを管理してください",
+      "noPurchasesFound": "このアカウントの以前の購入は見つかりませんでした。",
+      "restoreError": "購入の復元に失敗しました。もう一度お試しください。"
+    },
+
+    "devices": {
+      "title": "デバイス",
+      "thisDevice": "このデバイス",
+      "mainDevice": "メインデバイス",
+      "connected": "接続済み",
+      "vpn": "VPN",
+      "control": "コントロール",
+      "adBlock": "広告ブロック",
+      "childMode": "子供モード",
+      "noDevices": "接続されているデバイスはありません",
+      "manageFromMain": "デバイスを管理するにはメインデバイスからサインイン",
+      "limitReached": "デバイス制限に達しました。新しいデバイスを追加するには1つ削除してください。",
+      "removeTitle": "デバイスを削除しますか？",
+      "removeMessage": "「{{name}}」はサインアウトされ、アカウントから削除されます。",
+      "removeError": "デバイスを削除できませんでした。接続を確認してください。"
+    },
+
+    "settings": {
+      "title": "設定",
+      "personalInfo": "個人情報",
+      "notifications": "通知",
+      "appearance": "外観",
+      "language": "言語",
+      "contactSupport": "サポートに連絡",
+      "faqAndContact": "FAQとお問い合わせ"
+    },
+
+    "personalInfo": {
+      "title": "個人情報",
+      "manageDetails": "アカウントの詳細を管理",
+      "changePhoto": "写真を変更",
+      "profile": "プロフィール",
+      "username": "ユーザー名",
+      "usernamePlaceholder": "ユーザー名を入力",
+      "email": "メールアドレス",
+      "emailPlaceholder": "your@email.com",
+      "emailNote": "セキュリティ上の理由でメールアドレスは変更できません",
+      "security": "セキュリティ",
+      "changePassword": "パスワードを変更",
+      "updatePassword": "アカウントのパスワードを更新",
+      "passwordResetTitle": "パスワードを変更",
+      "passwordResetMessage": "パスワードリセットリンクをメールアドレスに送信します。",
+      "sendLink": "リンクを送信",
+      "emailSent": "メール送信済み",
+      "checkInbox": "パスワードリセットリンクの受信箱を確認してください。",
+      "accountInfo": "アカウント情報",
+      "memberSince": "登録日",
+      "saveChanges": "変更を保存",
+      "saving": "保存中...",
+      "profileUpdated": "プロフィールが更新されました。",
+      "profileUpdateError": "プロフィールの更新に失敗しました。もう一度お試しください。",
+      "deleteAccount": "アカウントを削除",
+      "deleteAccountConfirm": "アカウントを削除してもよろしいですか？この操作は元に戻せません。",
+      "contactSupportToDelete": "アカウントを削除するにはサポートにお問い合わせください。"
+    },
+
+    "language": "言語",
+
+    "appearance": {
+      "title": "外観",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システム",
+      "followDevice": "アプリはデバイスの設定に従います",
+      "alwaysUse": "常に{{mode}}モードを使用"
+    },
+
+    "notifications": {
+      "title": "通知",
+      "push": {
+        "title": "プッシュ通知",
+        "description": "重要な更新を受け取る"
+      },
+      "marketing": {
+        "title": "マーケティング",
+        "description": "特別オファーとニュース"
+      },
+      "security": {
+        "title": "セキュリティアラート",
+        "description": "侵害と脅威の通知"
+      }
+    },
+
+    "support": {
+      "title": "ヘルプとサポート",
+      "description": "チームからのサポートを受ける",
+      "emailUs": "メールを送る",
+      "telegram": "Telegram",
+      "faq": {
+        "title": "よくある質問",
+        "connect": {
+          "question": "VPNサーバーに接続するには？",
+          "answer": "VPNタブに移動して接続ボタンをタップします。接続前にサーバータブから特定のサーバーを選択することもできます。"
+        },
+        "slow": {
+          "question": "接続が遅いのはなぜ？",
+          "answer": "お住まいの地域に近いサーバーに接続してみてください。サーバーの負荷とインターネット速度もVPNのパフォーマンスに影響します。"
+        },
+        "subscription": {
+          "question": "サブスクリプションプランを変更するには？",
+          "answer": "プロフィール > サブスクリプションで現在のプランを確認・管理できます。いつでもアップグレードまたはダウングレードできます。"
+        },
+        "secure": {
+          "question": "データは安全ですか？",
+          "answer": "はい！軍用グレードのAES-256暗号化を使用し、プライバシーを保護するために厳格なノーログポリシーを維持しています。"
+        }
+      },
+      "bugReport": {
+        "title": "バグを報告",
+        "subtitle": "アプリの改善にご協力ください",
+        "placeholder": "発生したバグを説明してください...",
+        "submitReport": "レポートを送信",
+        "missingInfo": "情報が不足しています",
+        "pleaseDescribe": "発生したバグを説明してください。",
+        "thankYou": "ありがとうございます！",
+        "success": "バグレポートが送信されました。フィードバックに感謝します！",
+        "errorTitle": "エラー",
+        "error": "バグレポートの送信に失敗しました。もう一度お試しください。"
+      },
+      "responseTime": {
+        "title": "応答時間",
+        "freeUsers": "無料ユーザー：48-72時間",
+        "proUsers": "Pro/Premiumユーザー：24時間"
+      }
+    },
+
+    "thankYou": {
+      "title": "ありがとうございます！",
+      "features": {
+        "premiumServers": "プレミアムサーバー",
+        "adBlocking": "広告ブロック",
+        "parentalControls": "ペアレンタルコントロール",
+        "devices": "5台のデバイス"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "無料",
+    "pro": "Pro",
+    "premium": "Premium",
+    "devMode": "開発モード：開発中は購入できません。デバイスでビルドして実行してください。",
+    "purchaseSuccess": "ご購読ありがとうございます！",
+    "purchaseError": "購入を完了できませんでした。もう一度お試しください。",
+    "noPurchases": "このアカウントの以前の購入は見つかりませんでした。",
+
+    "features": {
+      "premiumServers": {
+        "title": "プレミアムサーバー",
+        "description": "世界中の高速サーバー"
+      },
+      "adBlocking": {
+        "title": "広告ブロック",
+        "description": "DNSレベルの保護"
+      },
+      "devices": {
+        "title": "5台のデバイス",
+        "description": "複数のデバイスを接続"
+      },
+      "parentalControls": {
+        "title": "ペアレンタルコントロール",
+        "description": "家族を安全に"
+      }
+    },
+
+    "paywall": {
+      "title": "Premiumにアップグレード",
+      "subtitle": "すべての機能をアンロック",
+      "restore": "購入を復元",
+      "terms": "利用規約",
+      "privacy": "プライバシーポリシー",
+      "yearly": "年間",
+      "monthly": "月間",
+      "sixMonths": "6ヶ月",
+      "perYear": "年額",
+      "perMonth": "月額",
+      "monthAbbr": "月",
+      "save": "{{percent}}%お得",
+      "processing": "処理中...",
+      "experience": "体験する",
+      "truePrivacy": "本当のプライバシー。",
+      "unlockPremium": "すべてのプレミアム機能をアンロック",
+      "startFreeTrial": "7日間の無料トライアルから開始",
+      "bestValue": "最もお得",
+      "startTrial": "無料トライアルを開始",
+      "cancelAnytime": "いつでもキャンセル可能。自動更新。",
+      "restoreSuccess": "購入が復元されました！",
+      "noPurchasesFound": "このアカウントの以前の購入は見つかりませんでした。",
+      "purchaseSuccess": "ご購読ありがとうございます！",
+      "purchaseError": "購入を完了できませんでした。もう一度お試しください。",
+      "devMode": "開発中は購入できません。デバイスでビルドして実行してください。"
+    }
+  },
+
+  "server": {
+    "title": "サーバーを選択",
+    "subtitle": "プライベートWireGuardサーバー",
+    "recommended": "おすすめ",
+    "allServers": "すべてのサーバー",
+    "premium": "Premium",
+    "free": "無料",
+    "ping": "{{ms}}ms",
+    "load": "{{percent}}%負荷",
+    "selected": "選択済み",
+    "available": "利用可能",
+    "protocol": "プロトコル",
+    "encryption": "暗号化",
+    "empty": {
+      "title": "利用可能なサーバーがありません",
+      "subtitle": "設定後、WireGuardサーバーがここに表示されます"
+    },
+    "info": "WireGuardは最小限のオーバーヘッドで高速で最新のVPN暗号化を提供します。"
+  },
+
+  "speedTest": {
+    "title": "速度テスト",
+    "start": "テスト開始",
+    "testing": "テスト中...",
+    "download": "ダウンロード",
+    "upload": "アップロード",
+    "ping": "Ping",
+    "mbps": "Mbps",
+    "ms": "ms"
+  }
+}

@@ -1,34 +1,34 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import { SubscriptionPackage, usePaywall } from '@/context/RevenueCatContext';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+    Feature,
+    FEATURE_INFO,
+    TIER_DISPLAY_NAMES,
+    useTier,
+} from '@/context/TierContext';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Crown,
-  X,
-  Check,
-  Zap,
-  Shield,
-  Globe,
-  Smartphone,
+    Check,
+    Crown,
+    Globe,
+    Shield,
+    Smartphone,
+    X,
+    Zap,
 } from 'lucide-react-native';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/context/ThemeContext';
 import {
-  useTier,
-  Feature,
-  FEATURE_INFO,
-  TIER_DISPLAY_NAMES,
-} from '@/context/TierContext';
-import { usePaywall, SubscriptionPackage } from '@/context/RevenueCatContext';
+    ActivityIndicator,
+    Alert,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
+} from 'react-native';
 
 interface UpgradePromptProps {
   /** Whether the modal is visible */
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bannerArrow: {
-    paddingLeft: 8,
+    paddingStart: 8,
   },
   // Compact banner
   compactBanner: {

@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Calendar, CheckCircle, Crown, RefreshCw } from 'lucide-react-native';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Linking,
   Platform,
@@ -12,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { useRevenueCat } from '@/context/RevenueCatContext';
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginEnd: 12,
   },
   detailLabel: {
     flex: 1,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    marginLeft: 44,
+    marginStart: 44,
   },
   // Spacer
   spacer: {

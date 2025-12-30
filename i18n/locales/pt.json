@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar",
+      "close": "Fechar",
+      "back": "Voltar",
+      "next": "Próximo",
+      "done": "Concluído",
+      "continue": "Continuar",
+      "retry": "Tentar novamente",
+      "submit": "Enviar",
+      "enable": "Ativar",
+      "disable": "Desativar",
+      "install": "Instalar",
+      "installing": "Instalando..."
+    },
+    "status": {
+      "loading": "Carregando...",
+      "error": "Erro",
+      "success": "Sucesso",
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "enabled": "Ativado",
+      "disabled": "Desativado",
+      "connecting": "Conectando",
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "failed": "Falhou",
+      "protectionActive": "Proteção ativa",
+      "protectionDisabled": "Proteção desativada"
+    },
+    "time": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite"
+    },
+    "errors": {
+      "generic": "Ocorreu um erro inesperado",
+      "network": "Erro de rede. Por favor, verifique sua conexão.",
+      "tryAgain": "Por favor, tente novamente"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "Parental",
+      "adblock": "Bloqueador",
+      "profile": "Perfil"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "Todos têm o direito",
+      "footer": {
+        "byContinuing": "Ao continuar, você concorda com nossos",
+        "and": "e"
+      },
+      "phrases": {
+        "privacy": "à privacidade",
+        "letAlone": "de ser deixado em paz",
+        "disappear": "de desaparecer",
+        "forgotten": "de ser esquecido",
+        "sayNo": "de dizer não",
+        "silence": "ao silêncio",
+        "unseen": "de não ser visto",
+        "untracked": "de não ser rastreado",
+        "sovereignty": "à soberania digital",
+        "ownKeys": "de ter suas próprias chaves",
+        "watchWatchmen": "de vigiar os vigilantes",
+        "noneOfBusiness": "não é da sua conta",
+        "anonymity": "ao anonimato",
+        "secrecy": "ao sigilo",
+        "invisible": "de ser invisível",
+        "goDark": "de sumir",
+        "closeCurtains": "de fechar as cortinas",
+        "lockDoor": "de trancar a porta",
+        "keepSecrets": "de guardar segredos",
+        "ownData": "de possuir seus dados",
+        "noTrace": "de não deixar rastros",
+        "privateLife": "a uma vida privada",
+        "exit": "a uma saída",
+        "unreachable": "de ser inalcançável",
+        "refuse": "de recusar",
+        "encrypt": "de criptografar",
+        "closedDoor": "a uma porta fechada"
+      }
+    },
+    "features": {
+      "title": "Recursos Premium",
+      "subtitle": "O que você recebe",
+      "description": "Tudo que você precisa para privacidade online completa",
+      "vpnProtection": {
+        "title": "Proteção VPN",
+        "description": "Criptografe sua conexão e oculte seu IP de rastreadores"
+      },
+      "adBlocker": {
+        "title": "Bloqueador de anúncios",
+        "description": "Bloqueie anúncios irritantes e malware em todos os apps"
+      },
+      "fastServers": {
+        "title": "Servidores rápidos",
+        "description": "Conecte-se a servidores otimizados com perda mínima de velocidade"
+      },
+      "stats": {
+        "servers": "100+ Servidores",
+        "countries": "50+ Países",
+        "users": "10M+ Usuários"
+      },
+      "startProtecting": "Começar proteção",
+      "guarantee": "Sem necessidade de conta - Grátis para começar"
+    },
+    "account": {
+      "title": "Começar",
+      "subtitle": "Crie uma nova conta ou faça login com um ID existente",
+      "createAccount": "Criar conta",
+      "login": "Entrar",
+      "accountIdPlaceholder": "Digite seu ID de conta",
+      "createDescription": "Obtenha um ID único para usar em todos os seus dispositivos",
+      "loginDescription": "Digite seu ID de conta existente para continuar",
+      "deviceInfo": "Sua conta funciona em até {{count}} dispositivos",
+      "generateDescription": "Vamos gerar um ID único para você. Salve-o para usar em outros dispositivos.",
+      "idPreview": "Seu ID de conta será assim:",
+      "generateButton": "Gerar meu ID de conta",
+      "yourAccountId": "Seu ID de conta",
+      "saveWarning": "Salve este ID! Você precisará dele para acessar sua conta em outros dispositivos.",
+      "share": "Compartilhar",
+      "securityWarning": "Esta é a única forma de acessar sua conta. Guarde-o com segurança.",
+      "continueToApp": "Continuar para o app",
+      "errors": {
+        "enterAccountId": "Por favor, digite seu ID de conta",
+        "invalidAccountId": "ID de conta inválido"
+      }
+    },
+    "login": {
+      "title": "Bem-vindo de volta",
+      "subtitle": "Digite seu ID de conta para continuar",
+      "accountIdRequired": "ID de conta é obrigatório",
+      "loginError": "Erro de login"
+    },
+    "register": {
+      "title": "Criar conta",
+      "emailPlaceholder": "Endereço de e-mail",
+      "passwordPlaceholder": "Senha",
+      "confirmPasswordPlaceholder": "Confirmar senha",
+      "errors": {
+        "emailRequired": "E-mail é obrigatório",
+        "emailInvalid": "Por favor, digite um e-mail válido",
+        "passwordRequired": "Senha é obrigatória",
+        "passwordLength": "A senha deve ter pelo menos 6 caracteres",
+        "confirmRequired": "Por favor, confirme sua senha",
+        "passwordMismatch": "As senhas não coincidem",
+        "registrationError": "Erro de registro"
+      },
+      "success": "Por favor, verifique seu e-mail para confirmar sua conta."
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "Bem-vindo de volta!",
+      "allSet": "Tudo pronto!",
+      "plans": {
+        "monthly": "Premium Mensal",
+        "sixMonths": "Premium 6 Meses",
+        "yearly": "Premium Anual"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "Sua conexão está segura",
+      "connectPrompt": "Conecte para proteger sua privacidade",
+      "connecting": "Conectando",
+      "establishing": "Estabelecendo conexão segura...",
+      "protected": "Protegido",
+      "tapDisconnect": "Toque para desconectar",
+      "failed": "Conexão falhou",
+      "notConnected": "Não conectado",
+      "tapRetry": "Toque para tentar novamente",
+      "tapConnect": "Toque para conectar"
+    },
+    "setup": {
+      "title": "Configuração VPN necessária",
+      "description": "Instale o perfil VPN para ativar a proteção"
+    },
+    "stats": {
+      "server": "Servidor",
+      "latency": "Latência",
+      "status": "Status",
+      "active": "Ativo",
+      "connecting": "Conectando",
+      "error": "Erro",
+      "idle": "Inativo"
+    },
+    "serverSelect": {
+      "title": "Selecionar servidor",
+      "disconnectToChange": "Desconecte para mudar o servidor",
+      "serversAvailable": "{{count}} servidores disponíveis"
+    },
+    "quickSettings": {
+      "title": "Configurações rápidas",
+      "parentalControls": {
+        "title": "Controle parental",
+        "active": "Filtragem de conteúdo ativa",
+        "description": "Proteja crianças de conteúdo prejudicial"
+      },
+      "adBlocker": {
+        "title": "Bloqueador de anúncios",
+        "description": "Bloquear anúncios e rastreadores"
+      }
+    },
+    "signInPrompt": "Entre para salvar suas preferências",
+    "serverInfo": "Selecione um servidor e toque para conectar. Seu tráfego será criptografado e roteado através de nossos servidores seguros.",
+    "widgets": {
+      "adsBlocked": {
+        "title": "Bloqueio de anúncios",
+        "blocked": "Bloqueados",
+        "rate": "Taxa de bloqueio"
+      },
+      "devices": {
+        "title": "Dispositivos",
+        "noDevices": "Nenhum dispositivo conectado"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "Controle parental",
+    "subtitle": "Proteja sua família online",
+    "description": "Controle que conteúdo pode ser acessado",
+    "categories": {
+      "title": "Categorias de conteúdo",
+      "selectToBlock": "Selecione categorias para bloquear",
+      "adult": {
+        "name": "Conteúdo adulto",
+        "description": "Bloquear conteúdo explícito e adulto"
+      },
+      "gambling": {
+        "name": "Apostas",
+        "description": "Bloquear sites de apostas e jogos de azar"
+      },
+      "socialMedia": {
+        "name": "Redes sociais",
+        "description": "Bloquear plataformas de redes sociais"
+      },
+      "gaming": {
+        "name": "Jogos",
+        "description": "Bloquear jogos online e sites de jogos"
+      },
+      "streaming": {
+        "name": "Streaming",
+        "description": "Bloquear plataformas de streaming de vídeo"
+      },
+      "malware": {
+        "name": "Malware e phishing",
+        "description": "Bloquear sites perigosos"
+      },
+      "adsTrackers": {
+        "name": "Anúncios e rastreadores",
+        "description": "Bloquear anúncios e rastreadores"
+      }
+    },
+    "customDomains": {
+      "title": "Sites bloqueados personalizados",
+      "description": "Adicione sites específicos para bloquear",
+      "placeholder": "exemplo.com",
+      "add": "Adicionar",
+      "empty": "Nenhum site personalizado bloqueado ainda"
+    },
+    "stats": {
+      "blocked": "Bloqueados",
+      "categories": "Categorias",
+      "custom": "Personalizados"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}} categorias bloqueadas",
+      "tapToEnable": "Toque para ativar filtragem de conteúdo"
+    },
+    "disabled": {
+      "upgradeRequired": "Atualize para Pro para gerenciar categorias",
+      "enableRequired": "Ative o Controle Parental acima para gerenciar categorias",
+      "vpnRequired": "Conecte VPN para gerenciar categorias",
+      "upgradeRequiredSites": "Atualize para Pro para gerenciar sites",
+      "enableRequiredSites": "Ative o Controle Parental acima para gerenciar sites",
+      "vpnRequiredSites": "Conecte VPN para gerenciar sites"
+    },
+    "modal": {
+      "title": "Bloquear site",
+      "description": "Digite o domínio para bloquear (ex: exemplo.com)",
+      "blockSite": "Bloquear site"
+    },
+    "alerts": {
+      "connectionError": "Erro de conexão",
+      "connectionErrorMessage": "Não foi possível conectar ao servidor. Verifique se o VPN está conectado e tente novamente.",
+      "removeDomain": "Remover domínio",
+      "removeDomainMessage": "Remover \"{{domain}}\" da lista de bloqueados?"
+    },
+    "info": "A filtragem de conteúdo é aplicada quando conectado ao VPN. As categorias usam regras do AdGuard DNS para proteção em todo o sistema."
+  },
+
+  "adblock": {
+    "title": "Bloqueador de anúncios",
+    "description": "Proteção em nível DNS",
+    "stats": {
+      "blocked": "Bloqueados",
+      "adsBlocked": "Anúncios bloqueados",
+      "trackers": "Rastreadores parados",
+      "requests": "Consultas DNS",
+      "blockRate": "Taxa de bloqueio",
+      "rules": "Regras"
+    },
+    "status": {
+      "enabled": "Bloqueio de anúncios ativado",
+      "disabled": "Bloqueio de anúncios desativado"
+    },
+    "activation": {
+      "tapToDisable": "Toque para desativar bloqueio de anúncios",
+      "tapToEnable": "Toque para ativar bloqueio de anúncios"
+    },
+    "coverage": {
+      "title": "Cobertura",
+      "subtitle": "A proteção funciona em todo o seu dispositivo",
+      "connectVPN": "Conecte VPN para ativar cobertura",
+      "allBrowsers": "Todos os navegadores",
+      "allApps": "Todos os apps",
+      "systemWide": "Em todo o sistema"
+    },
+    "connectionInfo": {
+      "connected": "VPN conectado - O bloqueio de anúncios usa o AdGuard Home DNS no seu servidor VPN.",
+      "disconnected": "Conecte ao VPN para bloqueio de anúncios em nível DNS. Estatísticas requerem conexão VPN."
+    }
+  },
+
+  "profile": {
+    "title": "Perfil",
+    "manageAccount": "Gerencie sua conta",
+    "signOut": "Sair",
+    "signOutConfirm": "Tem certeza que deseja sair? Você precisará do seu ID de conta para entrar novamente.",
+    "deleteAccount": "Excluir conta",
+    "notLoggedIn": "Não conectado",
+    "accountId": "ID de conta",
+    "copyId": "Copiar ID",
+    "copied": "Copiado!",
+    "unknownDate": "data desconhecida",
+
+    "subscription": {
+      "title": "Assinatura",
+      "managePlan": "Gerencie seu plano",
+      "currentPlan": "Plano atual",
+      "plans": {
+        "free": "Plano gratuito",
+        "premium": "Plano Premium",
+        "pro": "Plano Pro"
+      },
+      "status": {
+        "free": "Gratuito",
+        "active": "Ativo",
+        "canceled": "Cancelado",
+        "expired": "Expirado",
+        "gracePeriod": "Período de carência",
+        "refreshing": "Atualizando..."
+      },
+      "statusText": {
+        "upgradePrompt": "Atualize para desbloquear todos os recursos",
+        "updatePayment": "Atualize o método de pagamento para continuar o acesso",
+        "activeSubscription": "Assinatura ativa",
+        "renewsOn": "Renova em {{date}}",
+        "accessUntil": "Acesso até {{date}}",
+        "expiredOn": "Expirou em {{date}}",
+        "lifetimeAccess": "Acesso vitalício"
+      },
+      "cta": {
+        "upgrade": "Atualizar",
+        "upgradeNow": "Atualizar agora",
+        "upgradeToPro": "Atualizar para Pro",
+        "unlockFeatures": "Desbloqueie todos os recursos premium",
+        "manage": "Gerenciar assinatura",
+        "resubscribe": "Reassinar",
+        "fixPayment": "Corrigir pagamento"
+      },
+      "management": {
+        "manageInStore": "Gerenciar na {{store}}",
+        "changeOrCancel": "Alterar ou cancelar assinatura",
+        "restorePurchases": "Restaurar compras",
+        "restoreDescription": "Restaurar assinaturas anteriores",
+        "subscriptionHelp": "Ajuda com assinatura",
+        "faqAndSupport": "FAQ e suporte"
+      },
+      "infoFooter": {
+        "ios": "As assinaturas são gerenciadas pela App Store. Você pode cancelar a qualquer momento nas configurações do seu Apple ID.",
+        "android": "As assinaturas são gerenciadas pelo Google Play. Você pode cancelar a qualquer momento nas configurações da Play Store."
+      },
+      "freeTrial": "Teste gratuito",
+      "loadError": "Não foi possível carregar a assinatura",
+      "unableToOpen": "Não foi possível abrir",
+      "manageInSettings": "Por favor, gerencie sua assinatura em Ajustes > Apple ID > Assinaturas",
+      "noPurchasesFound": "Nenhuma compra anterior encontrada para esta conta.",
+      "restoreError": "Falha ao restaurar compras. Por favor, tente novamente."
+    },
+
+    "devices": {
+      "title": "Dispositivos",
+      "thisDevice": "Este dispositivo",
+      "mainDevice": "Dispositivo principal",
+      "connected": "Conectado",
+      "vpn": "VPN",
+      "control": "Controle",
+      "adBlock": "Bloqueador",
+      "childMode": "Modo criança",
+      "noDevices": "Nenhum dispositivo conectado",
+      "manageFromMain": "Entre pelo seu dispositivo principal para gerenciar dispositivos",
+      "limitReached": "Limite de dispositivos atingido. Remova um dispositivo para adicionar outro.",
+      "removeTitle": "Remover dispositivo?",
+      "removeMessage": "\"{{name}}\" será desconectado e removido da sua conta.",
+      "removeError": "Não foi possível remover o dispositivo. Verifique sua conexão."
+    },
+
+    "settings": {
+      "title": "Configurações",
+      "personalInfo": "Informações pessoais",
+      "notifications": "Notificações",
+      "appearance": "Aparência",
+      "language": "Idioma",
+      "contactSupport": "Contatar suporte",
+      "faqAndContact": "FAQ e fale conosco"
+    },
+
+    "personalInfo": {
+      "title": "Informações pessoais",
+      "manageDetails": "Gerencie os detalhes da sua conta",
+      "changePhoto": "Alterar foto",
+      "profile": "Perfil",
+      "username": "NOME DE USUÁRIO",
+      "usernamePlaceholder": "Digite seu nome de usuário",
+      "email": "ENDEREÇO DE E-MAIL",
+      "emailPlaceholder": "seu@email.com",
+      "emailNote": "O e-mail não pode ser alterado por razões de segurança",
+      "security": "Segurança",
+      "changePassword": "Alterar senha",
+      "updatePassword": "Atualize a senha da sua conta",
+      "passwordResetTitle": "Alterar senha",
+      "passwordResetMessage": "Enviaremos um link de redefinição de senha para seu e-mail.",
+      "sendLink": "Enviar link",
+      "emailSent": "E-mail enviado",
+      "checkInbox": "Verifique sua caixa de entrada para o link de redefinição de senha.",
+      "accountInfo": "Informações da conta",
+      "memberSince": "Membro desde",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando...",
+      "profileUpdated": "Seu perfil foi atualizado.",
+      "profileUpdateError": "Falha ao atualizar o perfil. Por favor, tente novamente.",
+      "deleteAccount": "Excluir conta",
+      "deleteAccountConfirm": "Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.",
+      "contactSupportToDelete": "Por favor, entre em contato com o suporte para excluir sua conta."
+    },
+
+    "language": "Idioma",
+
+    "appearance": {
+      "title": "Aparência",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema",
+      "followDevice": "O app seguirá as configurações do seu dispositivo",
+      "alwaysUse": "Sempre usar modo {{mode}}"
+    },
+
+    "notifications": {
+      "title": "Notificações",
+      "push": {
+        "title": "Notificações push",
+        "description": "Receba atualizações importantes"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Ofertas especiais e novidades"
+      },
+      "security": {
+        "title": "Alertas de segurança",
+        "description": "Notificações de violações e ameaças"
+      }
+    },
+
+    "support": {
+      "title": "Ajuda e suporte",
+      "description": "Obtenha ajuda da nossa equipe",
+      "emailUs": "Envie-nos um e-mail",
+      "telegram": "Telegram",
+      "faq": {
+        "title": "Perguntas frequentes",
+        "connect": {
+          "question": "Como me conecto a um servidor VPN?",
+          "answer": "Vá para a aba VPN e toque no botão conectar. Você também pode selecionar um servidor específico na aba Servidores antes de conectar."
+        },
+        "slow": {
+          "question": "Por que minha conexão está lenta?",
+          "answer": "Tente conectar a um servidor mais próximo da sua localização. A carga do servidor e sua velocidade de internet também afetam o desempenho do VPN."
+        },
+        "subscription": {
+          "question": "Como altero meu plano de assinatura?",
+          "answer": "Vá para Perfil > Assinatura para ver e gerenciar seu plano atual. Você pode atualizar ou rebaixar a qualquer momento."
+        },
+        "secure": {
+          "question": "Meus dados estão seguros?",
+          "answer": "Sim! Usamos criptografia AES-256 de nível militar e mantemos uma política rigorosa de não manter registros para proteger sua privacidade."
+        }
+      },
+      "bugReport": {
+        "title": "Reportar um bug",
+        "subtitle": "Ajude-nos a melhorar o app",
+        "placeholder": "Descreva o bug que você encontrou...",
+        "submitReport": "Enviar relatório",
+        "missingInfo": "Informação faltando",
+        "pleaseDescribe": "Por favor, descreva o bug que você encontrou.",
+        "thankYou": "Obrigado!",
+        "success": "Seu relatório de bug foi enviado. Agradecemos seu feedback!",
+        "errorTitle": "Erro",
+        "error": "Falha ao enviar o relatório de bug. Por favor, tente novamente."
+      },
+      "responseTime": {
+        "title": "Tempos de resposta",
+        "freeUsers": "Usuários gratuitos: 48-72 horas",
+        "proUsers": "Usuários Pro/Premium: 24 horas"
+      }
+    },
+
+    "thankYou": {
+      "title": "Obrigado!",
+      "features": {
+        "premiumServers": "Servidores Premium",
+        "adBlocking": "Bloqueio de anúncios",
+        "parentalControls": "Controle parental",
+        "devices": "5 dispositivos"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "Gratuito",
+    "pro": "Pro",
+    "premium": "Premium",
+    "devMode": "Modo de desenvolvimento: Compras não estão disponíveis em desenvolvimento. Por favor, compile e execute em um dispositivo.",
+    "purchaseSuccess": "Obrigado por assinar!",
+    "purchaseError": "Falha ao completar a compra. Por favor, tente novamente.",
+    "noPurchases": "Nenhuma compra anterior encontrada para esta conta.",
+
+    "features": {
+      "premiumServers": {
+        "title": "Servidores Premium",
+        "description": "Servidores rápidos no mundo todo"
+      },
+      "adBlocking": {
+        "title": "Bloqueio de anúncios",
+        "description": "Proteção em nível DNS"
+      },
+      "devices": {
+        "title": "5 dispositivos",
+        "description": "Conecte múltiplos dispositivos"
+      },
+      "parentalControls": {
+        "title": "Controle parental",
+        "description": "Mantenha sua família segura"
+      }
+    },
+
+    "paywall": {
+      "title": "Atualizar para Premium",
+      "subtitle": "Desbloqueie todos os recursos",
+      "restore": "Restaurar compras",
+      "terms": "Termos de serviço",
+      "privacy": "Política de privacidade",
+      "yearly": "Anual",
+      "monthly": "Mensal",
+      "sixMonths": "6 Meses",
+      "perYear": "por ano",
+      "perMonth": "por mês",
+      "monthAbbr": "mês",
+      "save": "Economize {{percent}}%",
+      "processing": "Processando...",
+      "experience": "Experimente",
+      "truePrivacy": "privacidade real.",
+      "unlockPremium": "Desbloqueie todos os recursos premium",
+      "startFreeTrial": "Comece com 7 dias de teste grátis",
+      "bestValue": "Melhor valor",
+      "startTrial": "Iniciar teste grátis",
+      "cancelAnytime": "Cancele a qualquer momento. Renovação automática.",
+      "restoreSuccess": "Suas compras foram restauradas!",
+      "noPurchasesFound": "Nenhuma compra anterior encontrada para esta conta.",
+      "purchaseSuccess": "Obrigado por assinar!",
+      "purchaseError": "Falha ao completar a compra. Por favor, tente novamente.",
+      "devMode": "Compras não estão disponíveis em desenvolvimento. Por favor, compile e execute em um dispositivo."
+    }
+  },
+
+  "server": {
+    "title": "Selecionar servidor",
+    "subtitle": "Seu servidor WireGuard privado",
+    "recommended": "Recomendado",
+    "allServers": "Todos os servidores",
+    "premium": "Premium",
+    "free": "Gratuito",
+    "ping": "{{ms}}ms",
+    "load": "{{percent}}% carga",
+    "selected": "Selecionado",
+    "available": "Disponível",
+    "protocol": "Protocolo",
+    "encryption": "Criptografia",
+    "empty": {
+      "title": "Nenhum servidor disponível",
+      "subtitle": "Seu servidor WireGuard aparecerá aqui quando configurado"
+    },
+    "info": "WireGuard oferece criptografia VPN rápida e moderna com sobrecarga mínima."
+  },
+
+  "speedTest": {
+    "title": "Teste de velocidade",
+    "start": "Iniciar teste",
+    "testing": "Testando...",
+    "download": "Download",
+    "upload": "Upload",
+    "ping": "Ping",
+    "mbps": "Mbps",
+    "ms": "ms"
+  }
+}

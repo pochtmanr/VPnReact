@@ -1,12 +1,12 @@
+import { borderRadius, colors, spacing, typography } from '@/constants/theme';
 import React from 'react';
 import {
+  ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
-  Pressable,
-  ActivityIndicator,
   ViewStyle,
 } from 'react-native';
-import { colors, borderRadius, spacing, typography } from '@/constants/theme';
 
 interface GradientButtonProps {
   title: string;
@@ -75,7 +75,7 @@ export function GradientButton({
             style={[
               styles.text,
               variantStyles.text,
-              icon ? { marginLeft: spacing.sm } : null,
+              icon ? { marginStart: spacing.sm } : null,
               disabled && styles.textDisabled,
             ]}
           >

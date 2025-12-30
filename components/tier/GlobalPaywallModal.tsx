@@ -1,9 +1,11 @@
 import { SubscriptionPackage, useRevenueCat } from '@/context/RevenueCatContext';
+import { useRTL } from '@/i18n/useRTL';
 import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm-plex-serif';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { X } from 'lucide-react-native';
 import React, { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +32,8 @@ const PRIVACY_URL = 'https://dopplervpn.com/privacy';
  */
 export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const { isRTL } = useRTL();
   const {
     isPaywallVisible,
     hidePaywall,
@@ -40,6 +44,8 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     restorePurchases,
     isLoading,
     isMockMode,
+    isTrialEligible,
+    trialDuration,
   } = useRevenueCat();
 
   const [fontsLoaded] = useFonts({
@@ -57,8 +63,8 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
 
     if (isMockMode) {
       Alert.alert(
-        'Development Mode',
-        'Purchases are not available in development. Please build and run on a device.'
+        t('common.status.error'),
+        t('tier.paywall.devMode')
       );
       return;
     }
@@ -67,18 +73,18 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     try {
       const result = await purchasePackage(effectiveSelected);
       if (result.success) {
-        Alert.alert('Success', 'Thank you for subscribing!', [
+        Alert.alert(t('common.status.success'), t('tier.paywall.purchaseSuccess'), [
           { text: 'OK', onPress: hidePaywall },
         ]);
       } else if (result.error && result.error !== 'Purchase cancelled') {
-        Alert.alert('Error', result.error);
+        Alert.alert(t('common.status.error'), result.error);
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to complete purchase. Please try again.');
+      Alert.alert(t('common.status.error'), t('tier.paywall.purchaseError'));
     } finally {
       setIsPurchasing(false);
     }
-  }, [effectiveSelected, purchasePackage, hidePaywall, isMockMode]);
+  }, [effectiveSelected, purchasePackage, hidePaywall, isMockMode, t]);
 
   const handleRestore = useCallback(async () => {
     setIsPurchasing(true);
@@ -86,23 +92,24 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
       const result = await restorePurchases();
       if (result.success) {
         if (result.restored) {
-          Alert.alert('Success', 'Your purchases have been restored!', [
+          Alert.alert(t('common.status.success'), t('tier.paywall.restoreSuccess'), [
             { text: 'OK', onPress: hidePaywall },
           ]);
         } else {
-          Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+          Alert.alert(t('common.status.error'), t('tier.paywall.noPurchasesFound'));
         }
       } else if (result.error) {
-        Alert.alert('Error', result.error);
+        Alert.alert(t('common.status.error'), result.error);
       }
     } finally {
       setIsPurchasing(false);
     }
-  }, [restorePurchases, hidePaywall]);
+  }, [restorePurchases, hidePaywall, t]);
 
   const isProcessing = isPurchasing || isLoading;
 
-  // Format price per month using the product's currency formatting
+  // Format price per month using the user's locale and product's currency
+  // This ensures EU users see € and proper formatting (e.g., "8,33 €/mo" not "$8.33/mo")
   const formatPerMonthPrice = (pkg: SubscriptionPackage) => {
     const price = pkg.product.price;
     const currencyCode = pkg.product.currencyCode;
@@ -115,28 +122,30 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     }
 
     const perMonth = price / months;
+    const monthAbbr = t('tier.paywall.monthAbbr', { defaultValue: 'mo' });
 
-    // Use Intl.NumberFormat for proper currency formatting
+    // Use Intl.NumberFormat with undefined locale to use device's locale
+    // This is required by EU law to show prices in local currency format
     try {
-      const formatter = new Intl.NumberFormat('en-US', {
+      const formatter = new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: currencyCode || 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-      return `${formatter.format(perMonth)}/mo`;
+      return `${formatter.format(perMonth)}/${monthAbbr}`;
     } catch {
-      // Fallback if currency code is invalid
-      return `$${perMonth.toFixed(2)}/mo`;
+      // Fallback: use the currency code directly
+      return `${perMonth.toFixed(2)} ${currencyCode || 'USD'}/${monthAbbr}`;
     }
   };
 
   // Get package display name
   const getPackageName = (pkg: SubscriptionPackage) => {
     switch (pkg.packageType) {
-      case 'MONTHLY': return 'Monthly';
-      case 'SIX_MONTH': return '6 Months';
-      case 'ANNUAL': return 'Yearly';
+      case 'MONTHLY': return t('tier.paywall.monthly');
+      case 'SIX_MONTH': return t('tier.paywall.sixMonths');
+      case 'ANNUAL': return t('tier.paywall.yearly');
       default: return pkg.product.title;
     }
   };
@@ -187,7 +196,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
         >
           {/* Close Button */}
           <TouchableOpacity
-            style={styles.closeButton}
+            style={[styles.closeButton, isRTL && styles.closeButtonRTL]}
             onPress={hidePaywall}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -203,12 +212,33 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               resizeMode="contain"
             />
 
-            <Text style={styles.titleLight}>Experience</Text>
-            <Text style={[styles.titleItalic, fontsLoaded && { fontFamily: 'IBMPlexSerif_400Regular_Italic' }]}>
-              true privacy.
+            <Text
+              style={[styles.titleLight, isRTL && styles.textRTL]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {t('tier.paywall.experience')}
             </Text>
-            <Text style={styles.subtitle}>
-              Unlock all premium features
+            <Text
+              style={[
+                styles.titleItalic,
+                fontsLoaded && { fontFamily: 'IBMPlexSerif_400Regular_Italic' },
+                isRTL && styles.textRTL,
+              ]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {t('tier.paywall.truePrivacy')}
+            </Text>
+            <Text
+              style={[styles.subtitle, isRTL && styles.textRTL]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {t('tier.paywall.unlockPremium')}
             </Text>
           </View>
 
@@ -217,10 +247,19 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
 
           {/* Bottom Section - Pricing */}
           <View style={styles.bottomSection}>
-            {/* Free Trial Banner */}
-            <View style={styles.trialBanner}>
-              <Text style={styles.trialText}>Start with a 7-day free trial</Text>
-            </View>
+            {/* Free Trial Banner - only show if trial eligible */}
+            {isTrialEligible && trialDuration && trialDuration.days > 0 && (
+              <View style={styles.trialBanner}>
+                <Text
+                  style={[styles.trialText, isRTL && styles.textRTL]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('tier.paywall.startFreeTrial', { days: trialDuration.days })}
+                </Text>
+              </View>
+            )}
 
             {/* Package Options */}
             <View style={styles.packagesContainer}>
@@ -229,20 +268,27 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                 <Pressable
                   style={[
                     styles.packageCard,
+                    isRTL && styles.packageCardRTL,
                     isSelected(yearlyPackage) && styles.packageSelected,
                   ]}
                   onPress={() => setSelectedPackage(yearlyPackage)}
                   disabled={isProcessing}
                 >
-                  <View style={styles.savingsBadge}>
-                    <Text style={styles.savingsText}>Best Value</Text>
+                  <View style={[styles.savingsBadge, isRTL && styles.savingsBadgeRTL]}>
+                    <Text style={styles.savingsText} numberOfLines={1} adjustsFontSizeToFit>
+                      {t('tier.paywall.bestValue')}
+                    </Text>
                   </View>
                   <View style={[styles.radioOuter, isSelected(yearlyPackage) && styles.radioOuterSelected]}>
                     {isSelected(yearlyPackage) && <View style={styles.radioInner} />}
                   </View>
-                  <View style={styles.packageInfo}>
-                    <Text style={styles.packageName}>{getPackageName(yearlyPackage)}</Text>
-                    <Text style={styles.packagePerMonth}>{formatPerMonthPrice(yearlyPackage)}</Text>
+                  <View style={[styles.packageInfo, isRTL && styles.packageInfoRTL]}>
+                    <Text style={[styles.packageName, isRTL && styles.textRTL]} numberOfLines={1}>
+                      {getPackageName(yearlyPackage)}
+                    </Text>
+                    <Text style={[styles.packagePerMonth, isRTL && styles.textRTL]} numberOfLines={1}>
+                      {formatPerMonthPrice(yearlyPackage)}
+                    </Text>
                   </View>
                   <Text style={styles.packagePrice}>{yearlyPackage.product.priceString}</Text>
                 </Pressable>
@@ -253,6 +299,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                 <Pressable
                   style={[
                     styles.packageCard,
+                    isRTL && styles.packageCardRTL,
                     isSelected(sixMonthPackage) && styles.packageSelected,
                   ]}
                   onPress={() => setSelectedPackage(sixMonthPackage)}
@@ -261,9 +308,13 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                   <View style={[styles.radioOuter, isSelected(sixMonthPackage) && styles.radioOuterSelected]}>
                     {isSelected(sixMonthPackage) && <View style={styles.radioInner} />}
                   </View>
-                  <View style={styles.packageInfo}>
-                    <Text style={styles.packageName}>{getPackageName(sixMonthPackage)}</Text>
-                    <Text style={styles.packagePerMonth}>{formatPerMonthPrice(sixMonthPackage)}</Text>
+                  <View style={[styles.packageInfo, isRTL && styles.packageInfoRTL]}>
+                    <Text style={[styles.packageName, isRTL && styles.textRTL]} numberOfLines={1}>
+                      {getPackageName(sixMonthPackage)}
+                    </Text>
+                    <Text style={[styles.packagePerMonth, isRTL && styles.textRTL]} numberOfLines={1}>
+                      {formatPerMonthPrice(sixMonthPackage)}
+                    </Text>
                   </View>
                   <Text style={styles.packagePrice}>{sixMonthPackage.product.priceString}</Text>
                 </Pressable>
@@ -274,6 +325,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                 <Pressable
                   style={[
                     styles.packageCard,
+                    isRTL && styles.packageCardRTL,
                     isSelected(monthlyPackage) && styles.packageSelected,
                   ]}
                   onPress={() => setSelectedPackage(monthlyPackage)}
@@ -282,8 +334,10 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                   <View style={[styles.radioOuter, isSelected(monthlyPackage) && styles.radioOuterSelected]}>
                     {isSelected(monthlyPackage) && <View style={styles.radioInner} />}
                   </View>
-                  <View style={styles.packageInfo}>
-                    <Text style={styles.packageName}>{getPackageName(monthlyPackage)}</Text>
+                  <View style={[styles.packageInfo, isRTL && styles.packageInfoRTL]}>
+                    <Text style={[styles.packageName, isRTL && styles.textRTL]} numberOfLines={1}>
+                      {getPackageName(monthlyPackage)}
+                    </Text>
                   </View>
                   <Text style={styles.packagePrice}>{monthlyPackage.product.priceString}</Text>
                 </Pressable>
@@ -309,29 +363,51 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                 {isProcessing ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.continueText}>Start Free Trial</Text>
+                  <Text
+                    style={[styles.continueText, isRTL && styles.textRTL]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {t('tier.paywall.startTrial')}
+                  </Text>
                 )}
               </LinearGradient>
             </Pressable>
 
-            {/* Legal Row - Restore | Terms | Privacy */}
-            <View style={styles.legalRow}>
-              <TouchableOpacity onPress={handleRestore} disabled={isProcessing}>
-                <Text style={styles.legalLink}>Restore</Text>
-              </TouchableOpacity>
-              <Text style={styles.legalSeparator}>|</Text>
-              <TouchableOpacity onPress={openTerms}>
-                <Text style={styles.legalLink}>Terms</Text>
-              </TouchableOpacity>
-              <Text style={styles.legalSeparator}>|</Text>
-              <TouchableOpacity onPress={openPrivacy}>
-                <Text style={styles.legalLink}>Privacy</Text>
-              </TouchableOpacity>
+            {/* Legal Links - Two-row layout for long translations */}
+            <View style={styles.legalContainer}>
+              {/* First Row: Restore | Terms */}
+              <View style={[styles.legalRow, isRTL && styles.legalRowRTL]}>
+                <TouchableOpacity
+                  onPress={handleRestore}
+                  disabled={isProcessing}
+                  style={styles.legalLinkTouchable}
+                >
+                  <Text style={[styles.legalLink, isRTL && styles.textRTL]} numberOfLines={1}>
+                    {t('tier.paywall.restore')}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.legalSeparator}>|</Text>
+                <TouchableOpacity onPress={openTerms} style={styles.legalLinkTouchable}>
+                  <Text style={[styles.legalLink, isRTL && styles.textRTL]} numberOfLines={1}>
+                    {t('tier.paywall.terms')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {/* Second Row: Privacy */}
+              <View style={[styles.legalRow, isRTL && styles.legalRowRTL]}>
+                <TouchableOpacity onPress={openPrivacy} style={styles.legalLinkTouchable}>
+                  <Text style={[styles.legalLink, isRTL && styles.textRTL]} numberOfLines={1}>
+                    {t('tier.paywall.privacy')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Auto-renew notice */}
-            <Text style={styles.autoRenewText}>
-              Cancel anytime. Subscription auto-renews.
+            <Text style={[styles.autoRenewText, isRTL && styles.textRTL]} numberOfLines={2}>
+              {t('tier.paywall.cancelAnytime')}
             </Text>
           </View>
         </View>
@@ -361,11 +437,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 56,
     right: 20,
+    left: undefined,
     zIndex: 10,
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  closeButtonRTL: {
+    right: undefined,
+    left: 20,
   },
 
   // Top Section
@@ -436,6 +517,9 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     position: 'relative',
   },
+  packageCardRTL: {
+    flexDirection: 'row-reverse',
+  },
   packageSelected: {
     backgroundColor: 'rgba(59, 130, 246, 0.12)',
     borderColor: '#3B82F6',
@@ -444,10 +528,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -9,
     right: 14,
+    left: undefined,
     backgroundColor: '#10B981',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    maxWidth: 100,
+  },
+  savingsBadgeRTL: {
+    right: undefined,
+    left: 14,
   },
   savingsText: {
     color: '#FFFFFF',
@@ -462,7 +552,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginEnd: 12,
   },
   radioOuterSelected: {
     borderColor: '#3B82F6',
@@ -475,6 +565,9 @@ const styles = StyleSheet.create({
   },
   packageInfo: {
     flex: 1,
+  },
+  packageInfoRTL: {
+    alignItems: 'flex-end',
   },
   packageName: {
     fontSize: 15,
@@ -490,6 +583,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  textRTL: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
 
   // Continue Button
@@ -509,13 +606,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Legal Row
+  // Legal Links Container - ensures max 2 rows
+  legalContainer: {
+    alignItems: 'center',
+    gap: 2,
+  },
   legalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    marginTop: 4,
+    gap: 8,
+  },
+  legalRowRTL: {
+    flexDirection: 'row-reverse',
+  },
+  legalLinkTouchable: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    minHeight: 32,
+    justifyContent: 'center',
   },
   legalLink: {
     fontSize: 13,

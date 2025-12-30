@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, TextInput, Text, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface GlassInputProps {
   placeholder: string;
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   icon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   input: {
     flex: 1,
@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.caption,
     marginTop: spacing.xs,
-    marginLeft: spacing.sm,
+    marginStart: spacing.sm,
   },
 });

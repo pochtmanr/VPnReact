@@ -5,8 +5,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { I18nManager, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { I18nManager, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { RTL_LANGUAGES } from './index';
 
 /**
@@ -148,17 +148,17 @@ export const createRTLStyles = <T extends StyleSheet.NamedStyles<T>>(
     const style = rtlStyles[key as keyof T] as ViewStyle & TextStyle;
     if (style) {
       // Swap left/right margins
-      if (style.marginLeft !== undefined || style.marginRight !== undefined) {
-        const temp = style.marginLeft;
-        style.marginLeft = style.marginRight;
-        style.marginRight = temp;
+      if (style.marginStart !== undefined || style.marginEnd !== undefined) {
+        const temp = style.marginStart;
+        style.marginStart = style.marginEnd;
+        style.marginEnd = temp;
       }
 
       // Swap left/right padding
-      if (style.paddingLeft !== undefined || style.paddingRight !== undefined) {
-        const temp = style.paddingLeft;
-        style.paddingLeft = style.paddingRight;
-        style.paddingRight = temp;
+      if (style.paddingStart !== undefined || style.paddingEnd !== undefined) {
+        const temp = style.paddingStart;
+        style.paddingStart = style.paddingEnd;
+        style.paddingEnd = temp;
       }
 
       // Swap left/right positioning

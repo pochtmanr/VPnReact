@@ -17,22 +17,38 @@ import en from './locales/en.json';
 // Storage key for language preference
 const LANGUAGE_STORAGE_KEY = '@app_language';
 
-// RTL languages (none currently supported)
-export const RTL_LANGUAGES: string[] = [];
+// RTL languages
+export const RTL_LANGUAGES: string[] = ['ar', 'fa'];
 
-// All supported language codes - English and Russian only
-export const SUPPORTED_LANGUAGES = ['en', 'ru'];
+// All supported language codes
+export const SUPPORTED_LANGUAGES = ['en', 'es', 'zh', 'hi', 'ar', 'pt', 'ru', 'ja', 'de', 'fa'];
 
 // Language display names (in their native language)
 export const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
+  es: 'Español',
+  zh: '中文',
+  hi: 'हिन्दी',
+  ar: 'العربية',
+  pt: 'Português',
   ru: 'Русский',
+  ja: '日本語',
+  de: 'Deutsch',
+  fa: 'فارسی',
 };
 
 // Language flag emojis for visual identification
 export const LANGUAGE_FLAGS: Record<string, string> = {
   en: '🇺🇸',
+  es: '🇪🇸',
+  zh: '🇨🇳',
+  hi: '🇮🇳',
+  ar: '🇸🇦',
+  pt: '🇧🇷',
   ru: '🇷🇺',
+  ja: '🇯🇵',
+  de: '🇩🇪',
+  fa: '🇮🇷',
 };
 
 // Get the device's preferred language
@@ -71,8 +87,24 @@ export const configureRTL = (language: string): void => {
 // Lazy load language resources
 const loadLanguageResources = async (lang: string): Promise<Record<string, unknown>> => {
   switch (lang) {
+    case 'es':
+      return (await import('./locales/es.json')).default;
+    case 'zh':
+      return (await import('./locales/zh.json')).default;
+    case 'hi':
+      return (await import('./locales/hi.json')).default;
+    case 'ar':
+      return (await import('./locales/ar.json')).default;
+    case 'pt':
+      return (await import('./locales/pt.json')).default;
     case 'ru':
       return (await import('./locales/ru.json')).default;
+    case 'ja':
+      return (await import('./locales/ja.json')).default;
+    case 'de':
+      return (await import('./locales/de.json')).default;
+    case 'fa':
+      return (await import('./locales/fa.json')).default;
     default:
       return en;
   }

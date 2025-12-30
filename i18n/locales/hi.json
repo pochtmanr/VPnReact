@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "सहेजें",
+      "cancel": "रद्द करें",
+      "confirm": "पुष्टि करें",
+      "close": "बंद करें",
+      "back": "वापस",
+      "next": "अगला",
+      "done": "हो गया",
+      "continue": "जारी रखें",
+      "retry": "पुनः प्रयास करें",
+      "submit": "जमा करें",
+      "enable": "सक्षम करें",
+      "disable": "अक्षम करें",
+      "install": "इंस्टॉल करें",
+      "installing": "इंस्टॉल हो रहा है..."
+    },
+    "status": {
+      "loading": "लोड हो रहा है...",
+      "error": "त्रुटि",
+      "success": "सफल",
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "enabled": "सक्षम",
+      "disabled": "अक्षम",
+      "connecting": "कनेक्ट हो रहा है",
+      "connected": "कनेक्टेड",
+      "disconnected": "डिस्कनेक्टेड",
+      "failed": "विफल",
+      "protectionActive": "सुरक्षा सक्रिय",
+      "protectionDisabled": "सुरक्षा अक्षम"
+    },
+    "time": {
+      "morning": "सुप्रभात",
+      "afternoon": "नमस्कार",
+      "evening": "शुभ संध्या"
+    },
+    "errors": {
+      "generic": "एक अप्रत्याशित त्रुटि हुई",
+      "network": "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।",
+      "tryAgain": "कृपया पुनः प्रयास करें"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "पैरेंटल",
+      "adblock": "एड ब्लॉक",
+      "profile": "प्रोफ़ाइल"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "हर किसी को अधिकार है",
+      "footer": {
+        "byContinuing": "जारी रखकर, आप हमारी",
+        "and": "और"
+      },
+      "phrases": {
+        "privacy": "गोपनीयता का",
+        "letAlone": "अकेला छोड़े जाने का",
+        "disappear": "गायब होने का",
+        "forgotten": "भुला दिए जाने का",
+        "sayNo": "ना कहने का",
+        "silence": "चुप रहने का",
+        "unseen": "अदृश्य रहने का",
+        "untracked": "ट्रैक न होने का",
+        "sovereignty": "डिजिटल संप्रभुता का",
+        "ownKeys": "अपनी चाबियां रखने का",
+        "watchWatchmen": "निगरानी करने वालों पर नजर रखने का",
+        "noneOfBusiness": "यह आपका काम नहीं",
+        "anonymity": "गुमनामी का",
+        "secrecy": "गोपनीयता का",
+        "invisible": "अदृश्य होने का",
+        "goDark": "अंधेरे में जाने का",
+        "closeCurtains": "पर्दे बंद करने का",
+        "lockDoor": "दरवाजा बंद करने का",
+        "keepSecrets": "राज रखने का",
+        "ownData": "अपने डेटा का मालिक होने का",
+        "noTrace": "कोई निशान न छोड़ने का",
+        "privateLife": "निजी जीवन का",
+        "exit": "बाहर निकलने का",
+        "unreachable": "अप्राप्य रहने का",
+        "refuse": "मना करने का",
+        "encrypt": "एन्क्रिप्ट करने का",
+        "closedDoor": "बंद दरवाजे का"
+      }
+    },
+    "features": {
+      "title": "प्रीमियम सुविधाएं",
+      "subtitle": "आपको क्या मिलेगा",
+      "description": "पूर्ण ऑनलाइन गोपनीयता के लिए सब कुछ",
+      "vpnProtection": {
+        "title": "VPN सुरक्षा",
+        "description": "अपने कनेक्शन को एन्क्रिप्ट करें और ट्रैकर्स से IP छुपाएं"
+      },
+      "adBlocker": {
+        "title": "एड ब्लॉकर",
+        "description": "सभी ऐप्स में कष्टप्रद विज्ञापन और मैलवेयर ब्लॉक करें"
+      },
+      "fastServers": {
+        "title": "तेज़ सर्वर",
+        "description": "न्यूनतम स्पीड हानि के साथ अनुकूलित सर्वर से कनेक्ट करें"
+      },
+      "stats": {
+        "servers": "100+ सर्वर",
+        "countries": "50+ देश",
+        "users": "10M+ उपयोगकर्ता"
+      },
+      "startProtecting": "सुरक्षा शुरू करें",
+      "guarantee": "खाते की आवश्यकता नहीं - मुफ्त में शुरू करें"
+    },
+    "account": {
+      "title": "शुरू करें",
+      "subtitle": "नया खाता बनाएं या मौजूदा ID से लॉगिन करें",
+      "createAccount": "खाता बनाएं",
+      "login": "लॉगिन",
+      "accountIdPlaceholder": "अपना खाता ID दर्ज करें",
+      "createDescription": "अपने सभी उपकरणों पर उपयोग के लिए एक अद्वितीय ID प्राप्त करें",
+      "loginDescription": "जारी रखने के लिए अपना मौजूदा खाता ID दर्ज करें",
+      "deviceInfo": "आपका खाता {{count}} उपकरणों पर काम करता है",
+      "generateDescription": "हम आपके लिए एक अद्वितीय ID बनाएंगे। अन्य उपकरणों पर उपयोग के लिए इसे सहेजें।",
+      "idPreview": "आपका खाता ID ऐसा दिखेगा:",
+      "generateButton": "मेरा खाता ID बनाएं",
+      "yourAccountId": "आपका खाता ID",
+      "saveWarning": "इस ID को सहेजें! आपको अन्य उपकरणों पर अपने खाते तक पहुंचने के लिए इसकी आवश्यकता होगी।",
+      "share": "शेयर करें",
+      "securityWarning": "यह आपके खाते तक पहुंचने का एकमात्र तरीका है। इसे सुरक्षित रखें।",
+      "continueToApp": "ऐप में जारी रखें",
+      "errors": {
+        "enterAccountId": "कृपया अपना खाता ID दर्ज करें",
+        "invalidAccountId": "अमान्य खाता ID"
+      }
+    },
+    "login": {
+      "title": "वापसी पर स्वागत है",
+      "subtitle": "जारी रखने के लिए अपना खाता ID दर्ज करें",
+      "accountIdRequired": "खाता ID आवश्यक है",
+      "loginError": "लॉगिन त्रुटि"
+    },
+    "register": {
+      "title": "खाता बनाएं",
+      "emailPlaceholder": "ईमेल पता",
+      "passwordPlaceholder": "पासवर्ड",
+      "confirmPasswordPlaceholder": "पासवर्ड की पुष्टि करें",
+      "errors": {
+        "emailRequired": "ईमेल आवश्यक है",
+        "emailInvalid": "कृपया एक वैध ईमेल दर्ज करें",
+        "passwordRequired": "पासवर्ड आवश्यक है",
+        "passwordLength": "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए",
+        "confirmRequired": "कृपया अपने पासवर्ड की पुष्टि करें",
+        "passwordMismatch": "पासवर्ड मेल नहीं खाते",
+        "registrationError": "पंजीकरण त्रुटि"
+      },
+      "success": "कृपया अपना खाता सत्यापित करने के लिए अपना ईमेल जांचें।"
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "वापसी पर स्वागत है!",
+      "allSet": "आप तैयार हैं!",
+      "plans": {
+        "monthly": "प्रीमियम मासिक",
+        "sixMonths": "प्रीमियम 6 महीने",
+        "yearly": "प्रीमियम वार्षिक"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "आपका कनेक्शन सुरक्षित है",
+      "connectPrompt": "अपनी गोपनीयता की सुरक्षा के लिए कनेक्ट करें",
+      "connecting": "कनेक्ट हो रहा है",
+      "establishing": "सुरक्षित कनेक्शन स्थापित हो रहा है...",
+      "protected": "सुरक्षित",
+      "tapDisconnect": "डिस्कनेक्ट करने के लिए टैप करें",
+      "failed": "कनेक्शन विफल",
+      "notConnected": "कनेक्ट नहीं है",
+      "tapRetry": "पुनः प्रयास के लिए टैप करें",
+      "tapConnect": "कनेक्ट करने के लिए टैप करें"
+    },
+    "setup": {
+      "title": "VPN सेटअप आवश्यक",
+      "description": "सुरक्षा सक्षम करने के लिए VPN प्रोफ़ाइल इंस्टॉल करें"
+    },
+    "stats": {
+      "server": "सर्वर",
+      "latency": "विलंबता",
+      "status": "स्थिति",
+      "active": "सक्रिय",
+      "connecting": "कनेक्ट हो रहा है",
+      "error": "त्रुटि",
+      "idle": "निष्क्रिय"
+    },
+    "serverSelect": {
+      "title": "सर्वर चुनें",
+      "disconnectToChange": "सर्वर बदलने के लिए डिस्कनेक्ट करें",
+      "serversAvailable": "{{count}} सर्वर उपलब्ध"
+    },
+    "quickSettings": {
+      "title": "त्वरित सेटिंग्स",
+      "parentalControls": {
+        "title": "पैरेंटल कंट्रोल",
+        "active": "कंटेंट फ़िल्टरिंग सक्रिय",
+        "description": "बच्चों को हानिकारक सामग्री से बचाएं"
+      },
+      "adBlocker": {
+        "title": "एड ब्लॉकर",
+        "description": "विज्ञापन और ट्रैकर्स ब्लॉक करें"
+      }
+    },
+    "signInPrompt": "अपनी प्राथमिकताएं सहेजने के लिए साइन इन करें",
+    "serverInfo": "एक सर्वर चुनें और कनेक्ट करने के लिए टैप करें। आपका ट्रैफ़िक एन्क्रिप्ट किया जाएगा और हमारे सुरक्षित सर्वरों के माध्यम से रूट किया जाएगा।",
+    "widgets": {
+      "adsBlocked": {
+        "title": "एड ब्लॉकिंग",
+        "blocked": "ब्लॉक किए गए",
+        "rate": "ब्लॉक दर"
+      },
+      "devices": {
+        "title": "उपकरण",
+        "noDevices": "कोई उपकरण कनेक्ट नहीं"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "पैरेंटल कंट्रोल",
+    "subtitle": "अपने परिवार को ऑनलाइन सुरक्षित रखें",
+    "description": "नियंत्रित करें कि कौन सी सामग्री एक्सेस की जा सकती है",
+    "categories": {
+      "title": "सामग्री श्रेणियां",
+      "selectToBlock": "ब्लॉक करने के लिए श्रेणियां चुनें",
+      "adult": {
+        "name": "वयस्क सामग्री",
+        "description": "अश्लील और वयस्क सामग्री ब्लॉक करें"
+      },
+      "gambling": {
+        "name": "जुआ",
+        "description": "सट्टेबाजी और जुआ साइटें ब्लॉक करें"
+      },
+      "socialMedia": {
+        "name": "सोशल मीडिया",
+        "description": "सोशल नेटवर्किंग प्लेटफ़ॉर्म ब्लॉक करें"
+      },
+      "gaming": {
+        "name": "गेमिंग",
+        "description": "ऑनलाइन गेम्स और गेमिंग साइट्स ब्लॉक करें"
+      },
+      "streaming": {
+        "name": "स्ट्रीमिंग",
+        "description": "वीडियो स्ट्रीमिंग प्लेटफ़ॉर्म ब्लॉक करें"
+      },
+      "malware": {
+        "name": "मैलवेयर और फ़िशिंग",
+        "description": "खतरनाक वेबसाइटें ब्लॉक करें"
+      },
+      "adsTrackers": {
+        "name": "विज्ञापन और ट्रैकर्स",
+        "description": "विज्ञापन और ट्रैकर्स ब्लॉक करें"
+      }
+    },
+    "customDomains": {
+      "title": "कस्टम ब्लॉक की गई साइट्स",
+      "description": "ब्लॉक करने के लिए विशिष्ट वेबसाइटें जोड़ें",
+      "placeholder": "example.com",
+      "add": "जोड़ें",
+      "empty": "अभी तक कोई कस्टम साइट ब्लॉक नहीं की गई"
+    },
+    "stats": {
+      "blocked": "ब्लॉक किए गए",
+      "categories": "श्रेणियां",
+      "custom": "कस्टम"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}} श्रेणियां ब्लॉक की गईं",
+      "tapToEnable": "कंटेंट फ़िल्टरिंग सक्षम करने के लिए टैप करें"
+    },
+    "disabled": {
+      "upgradeRequired": "श्रेणियां प्रबंधित करने के लिए Pro में अपग्रेड करें",
+      "enableRequired": "श्रेणियां प्रबंधित करने के लिए ऊपर पैरेंटल कंट्रोल सक्षम करें",
+      "vpnRequired": "श्रेणियां प्रबंधित करने के लिए VPN कनेक्ट करें",
+      "upgradeRequiredSites": "साइट्स प्रबंधित करने के लिए Pro में अपग्रेड करें",
+      "enableRequiredSites": "साइट्स प्रबंधित करने के लिए ऊपर पैरेंटल कंट्रोल सक्षम करें",
+      "vpnRequiredSites": "साइट्स प्रबंधित करने के लिए VPN कनेक्ट करें"
+    },
+    "modal": {
+      "title": "वेबसाइट ब्लॉक करें",
+      "description": "ब्लॉक करने के लिए डोमेन दर्ज करें (उदा., example.com)",
+      "blockSite": "साइट ब्लॉक करें"
+    },
+    "alerts": {
+      "connectionError": "कनेक्शन त्रुटि",
+      "connectionErrorMessage": "सर्वर से कनेक्ट नहीं हो सका। कृपया सुनिश्चित करें कि VPN कनेक्ट है और पुनः प्रयास करें।",
+      "removeDomain": "डोमेन हटाएं",
+      "removeDomainMessage": "ब्लॉक सूची से \"{{domain}}\" हटाएं?"
+    },
+    "info": "VPN से कनेक्ट होने पर कंटेंट फ़िल्टरिंग लागू होती है। श्रेणियां सिस्टम-व्यापी सुरक्षा के लिए AdGuard DNS नियमों का उपयोग करती हैं।"
+  },
+
+  "adblock": {
+    "title": "एड ब्लॉकर",
+    "description": "DNS-स्तरीय सुरक्षा",
+    "stats": {
+      "blocked": "ब्लॉक किए गए",
+      "adsBlocked": "विज्ञापन ब्लॉक किए गए",
+      "trackers": "ट्रैकर्स रोके गए",
+      "requests": "DNS क्वेरीज़",
+      "blockRate": "ब्लॉक दर",
+      "rules": "नियम"
+    },
+    "status": {
+      "enabled": "एड ब्लॉकिंग सक्षम है",
+      "disabled": "एड ब्लॉकिंग अक्षम है"
+    },
+    "activation": {
+      "tapToDisable": "एड ब्लॉकिंग अक्षम करने के लिए टैप करें",
+      "tapToEnable": "एड ब्लॉकिंग सक्षम करने के लिए टैप करें"
+    },
+    "coverage": {
+      "title": "कवरेज",
+      "subtitle": "सुरक्षा आपके पूरे उपकरण पर काम करती है",
+      "connectVPN": "कवरेज सक्षम करने के लिए VPN कनेक्ट करें",
+      "allBrowsers": "सभी ब्राउज़र",
+      "allApps": "सभी ऐप्स",
+      "systemWide": "सिस्टम-व्यापी"
+    },
+    "connectionInfo": {
+      "connected": "VPN कनेक्टेड - एड ब्लॉकिंग आपके VPN सर्वर पर AdGuard Home DNS का उपयोग करती है।",
+      "disconnected": "DNS-स्तरीय एड ब्लॉकिंग के लिए VPN से कनेक्ट करें। आंकड़ों के लिए VPN कनेक्शन आवश्यक है।"
+    }
+  },
+
+  "profile": {
+    "title": "प्रोफ़ाइल",
+    "manageAccount": "अपना खाता प्रबंधित करें",
+    "signOut": "साइन आउट",
+    "signOutConfirm": "क्या आप वाकई साइन आउट करना चाहते हैं? वापस साइन इन करने के लिए आपको अपने खाता ID की आवश्यकता होगी।",
+    "deleteAccount": "खाता हटाएं",
+    "notLoggedIn": "लॉग इन नहीं है",
+    "accountId": "खाता ID",
+    "copyId": "ID कॉपी करें",
+    "copied": "कॉपी किया गया!",
+    "unknownDate": "अज्ञात तिथि",
+
+    "subscription": {
+      "title": "सदस्यता",
+      "managePlan": "अपना प्लान प्रबंधित करें",
+      "currentPlan": "वर्तमान प्लान",
+      "plans": {
+        "free": "मुफ्त प्लान",
+        "premium": "प्रीमियम प्लान",
+        "pro": "प्रो प्लान"
+      },
+      "status": {
+        "free": "मुफ्त",
+        "active": "सक्रिय",
+        "canceled": "रद्द",
+        "expired": "समाप्त",
+        "gracePeriod": "ग्रेस पीरियड",
+        "refreshing": "रिफ्रेश हो रहा है..."
+      },
+      "statusText": {
+        "upgradePrompt": "सभी सुविधाएं अनलॉक करने के लिए अपग्रेड करें",
+        "updatePayment": "एक्सेस जारी रखने के लिए भुगतान विधि अपडेट करें",
+        "activeSubscription": "सक्रिय सदस्यता",
+        "renewsOn": "{{date}} को नवीनीकृत होगी",
+        "accessUntil": "{{date}} तक एक्सेस",
+        "expiredOn": "{{date}} को समाप्त हुई",
+        "lifetimeAccess": "आजीवन एक्सेस"
+      },
+      "cta": {
+        "upgrade": "अपग्रेड",
+        "upgradeNow": "अभी अपग्रेड करें",
+        "upgradeToPro": "Pro में अपग्रेड करें",
+        "unlockFeatures": "सभी प्रीमियम सुविधाएं अनलॉक करें",
+        "manage": "सदस्यता प्रबंधित करें",
+        "resubscribe": "पुनः सदस्यता लें",
+        "fixPayment": "भुगतान ठीक करें"
+      },
+      "management": {
+        "manageInStore": "{{store}} में प्रबंधित करें",
+        "changeOrCancel": "सदस्यता बदलें या रद्द करें",
+        "restorePurchases": "खरीदारी पुनर्स्थापित करें",
+        "restoreDescription": "पिछली सदस्यताएं पुनर्स्थापित करें",
+        "subscriptionHelp": "सदस्यता सहायता",
+        "faqAndSupport": "FAQ और सहायता"
+      },
+      "infoFooter": {
+        "ios": "सदस्यताएं App Store के माध्यम से प्रबंधित की जाती हैं। आप किसी भी समय अपनी Apple ID सेटिंग्स में रद्द कर सकते हैं।",
+        "android": "सदस्यताएं Google Play के माध्यम से प्रबंधित की जाती हैं। आप किसी भी समय अपनी Play Store सेटिंग्स में रद्द कर सकते हैं।"
+      },
+      "freeTrial": "मुफ्त ट्रायल",
+      "loadError": "सदस्यता लोड नहीं हो सकी",
+      "unableToOpen": "खोलने में असमर्थ",
+      "manageInSettings": "कृपया अपनी सदस्यता सेटिंग्स > Apple ID > सदस्यताएं में प्रबंधित करें",
+      "noPurchasesFound": "इस खाते के लिए कोई पिछली खरीदारी नहीं मिली।",
+      "restoreError": "खरीदारी पुनर्स्थापित करने में विफल। कृपया पुनः प्रयास करें।"
+    },
+
+    "devices": {
+      "title": "उपकरण",
+      "thisDevice": "यह उपकरण",
+      "mainDevice": "मुख्य उपकरण",
+      "connected": "कनेक्टेड",
+      "vpn": "VPN",
+      "control": "कंट्रोल",
+      "adBlock": "एड ब्लॉक",
+      "childMode": "चाइल्ड मोड",
+      "noDevices": "कोई उपकरण कनेक्ट नहीं",
+      "manageFromMain": "उपकरण प्रबंधित करने के लिए अपने मुख्य उपकरण से साइन इन करें",
+      "limitReached": "उपकरण सीमा पूरी हुई। नया जोड़ने के लिए एक उपकरण हटाएं।",
+      "removeTitle": "उपकरण हटाएं?",
+      "removeMessage": "\"{{name}}\" साइन आउट किया जाएगा और आपके खाते से हटा दिया जाएगा।",
+      "removeError": "उपकरण नहीं हटा सका। अपना कनेक्शन जांचें।"
+    },
+
+    "settings": {
+      "title": "सेटिंग्स",
+      "personalInfo": "व्यक्तिगत जानकारी",
+      "notifications": "सूचनाएं",
+      "appearance": "दिखावट",
+      "language": "भाषा",
+      "contactSupport": "सहायता से संपर्क करें",
+      "faqAndContact": "FAQ और संपर्क करें"
+    },
+
+    "personalInfo": {
+      "title": "व्यक्तिगत जानकारी",
+      "manageDetails": "अपने खाते का विवरण प्रबंधित करें",
+      "changePhoto": "फ़ोटो बदलें",
+      "profile": "प्रोफ़ाइल",
+      "username": "उपयोगकर्ता नाम",
+      "usernamePlaceholder": "अपना उपयोगकर्ता नाम दर्ज करें",
+      "email": "ईमेल पता",
+      "emailPlaceholder": "your@email.com",
+      "emailNote": "सुरक्षा कारणों से ईमेल नहीं बदला जा सकता",
+      "security": "सुरक्षा",
+      "changePassword": "पासवर्ड बदलें",
+      "updatePassword": "अपना खाता पासवर्ड अपडेट करें",
+      "passwordResetTitle": "पासवर्ड बदलें",
+      "passwordResetMessage": "हम आपके ईमेल पते पर पासवर्ड रीसेट लिंक भेजेंगे।",
+      "sendLink": "लिंक भेजें",
+      "emailSent": "ईमेल भेजा गया",
+      "checkInbox": "पासवर्ड रीसेट लिंक के लिए अपना इनबॉक्स देखें।",
+      "accountInfo": "खाता जानकारी",
+      "memberSince": "सदस्य बने",
+      "saveChanges": "परिवर्तन सहेजें",
+      "saving": "सहेज रहा है...",
+      "profileUpdated": "आपकी प्रोफ़ाइल अपडेट की गई।",
+      "profileUpdateError": "प्रोफ़ाइल अपडेट करने में विफल। कृपया पुनः प्रयास करें।",
+      "deleteAccount": "खाता हटाएं",
+      "deleteAccountConfirm": "क्या आप वाकई अपना खाता हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+      "contactSupportToDelete": "कृपया अपना खाता हटाने के लिए सहायता से संपर्क करें।"
+    },
+
+    "language": "भाषा",
+
+    "appearance": {
+      "title": "दिखावट",
+      "light": "लाइट",
+      "dark": "डार्क",
+      "system": "सिस्टम",
+      "followDevice": "ऐप आपके उपकरण सेटिंग्स का पालन करेगा",
+      "alwaysUse": "हमेशा {{mode}} मोड उपयोग करें"
+    },
+
+    "notifications": {
+      "title": "सूचनाएं",
+      "push": {
+        "title": "पुश सूचनाएं",
+        "description": "महत्वपूर्ण अपडेट प्राप्त करें"
+      },
+      "marketing": {
+        "title": "मार्केटिंग",
+        "description": "विशेष ऑफर और समाचार"
+      },
+      "security": {
+        "title": "सुरक्षा अलर्ट",
+        "description": "उल्लंघन और खतरे की सूचनाएं"
+      }
+    },
+
+    "support": {
+      "title": "सहायता और समर्थन",
+      "description": "हमारी टीम से मदद प्राप्त करें",
+      "emailUs": "हमें ईमेल करें",
+      "telegram": "Telegram",
+      "faq": {
+        "title": "अक्सर पूछे जाने वाले प्रश्न",
+        "connect": {
+          "question": "मैं VPN सर्वर से कैसे कनेक्ट करूं?",
+          "answer": "VPN टैब पर जाएं और कनेक्ट बटन टैप करें। आप कनेक्ट करने से पहले सर्वर टैब से एक विशिष्ट सर्वर भी चुन सकते हैं।"
+        },
+        "slow": {
+          "question": "मेरा कनेक्शन धीमा क्यों है?",
+          "answer": "अपने स्थान के करीब के सर्वर से कनेक्ट करने का प्रयास करें। सर्वर लोड और आपकी इंटरनेट स्पीड भी VPN प्रदर्शन को प्रभावित करती है।"
+        },
+        "subscription": {
+          "question": "मैं अपना सदस्यता प्लान कैसे बदलूं?",
+          "answer": "अपना वर्तमान प्लान देखने और प्रबंधित करने के लिए प्रोफ़ाइल > सदस्यता पर जाएं। आप किसी भी समय अपग्रेड या डाउनग्रेड कर सकते हैं।"
+        },
+        "secure": {
+          "question": "क्या मेरा डेटा सुरक्षित है?",
+          "answer": "हां! हम आपकी गोपनीयता की सुरक्षा के लिए सैन्य-ग्रेड AES-256 एन्क्रिप्शन और सख्त नो-लॉग नीति का उपयोग करते हैं।"
+        }
+      },
+      "bugReport": {
+        "title": "बग रिपोर्ट करें",
+        "subtitle": "ऐप को बेहतर बनाने में हमारी मदद करें",
+        "placeholder": "आपको मिली समस्या का वर्णन करें...",
+        "submitReport": "रिपोर्ट जमा करें",
+        "missingInfo": "जानकारी गायब है",
+        "pleaseDescribe": "कृपया आपको मिली समस्या का वर्णन करें।",
+        "thankYou": "धन्यवाद!",
+        "success": "आपकी बग रिपोर्ट जमा की गई। आपकी प्रतिक्रिया के लिए धन्यवाद!",
+        "errorTitle": "त्रुटि",
+        "error": "बग रिपोर्ट जमा करने में विफल। कृपया पुनः प्रयास करें।"
+      },
+      "responseTime": {
+        "title": "प्रतिक्रिया समय",
+        "freeUsers": "मुफ्त उपयोगकर्ता: 48-72 घंटे",
+        "proUsers": "Pro/Premium उपयोगकर्ता: 24 घंटे"
+      }
+    },
+
+    "thankYou": {
+      "title": "धन्यवाद!",
+      "features": {
+        "premiumServers": "प्रीमियम सर्वर",
+        "adBlocking": "एड ब्लॉकिंग",
+        "parentalControls": "पैरेंटल कंट्रोल",
+        "devices": "5 उपकरण"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "मुफ्त",
+    "pro": "Pro",
+    "premium": "Premium",
+    "devMode": "डेवलपमेंट मोड: डेवलपमेंट में खरीदारी उपलब्ध नहीं है। कृपया किसी उपकरण पर बिल्ड और रन करें।",
+    "purchaseSuccess": "सदस्यता के लिए धन्यवाद!",
+    "purchaseError": "खरीदारी पूर्ण करने में विफल। कृपया पुनः प्रयास करें।",
+    "noPurchases": "इस खाते के लिए कोई पिछली खरीदारी नहीं मिली।",
+
+    "features": {
+      "premiumServers": {
+        "title": "प्रीमियम सर्वर",
+        "description": "दुनिया भर में तेज़ सर्वर"
+      },
+      "adBlocking": {
+        "title": "एड ब्लॉकिंग",
+        "description": "DNS-स्तरीय सुरक्षा"
+      },
+      "devices": {
+        "title": "5 उपकरण",
+        "description": "कई उपकरण कनेक्ट करें"
+      },
+      "parentalControls": {
+        "title": "पैरेंटल कंट्रोल",
+        "description": "अपने परिवार को सुरक्षित रखें"
+      }
+    },
+
+    "paywall": {
+      "title": "Premium में अपग्रेड करें",
+      "subtitle": "सभी सुविधाएं अनलॉक करें",
+      "restore": "खरीदारी पुनर्स्थापित करें",
+      "terms": "सेवा की शर्तें",
+      "privacy": "गोपनीयता नीति",
+      "yearly": "वार्षिक",
+      "monthly": "मासिक",
+      "sixMonths": "6 महीने",
+      "perYear": "प्रति वर्ष",
+      "perMonth": "प्रति माह",
+      "monthAbbr": "माह",
+      "save": "{{percent}}% बचाएं",
+      "processing": "प्रोसेसिंग...",
+      "experience": "अनुभव करें",
+      "truePrivacy": "वास्तविक गोपनीयता।",
+      "unlockPremium": "सभी प्रीमियम सुविधाएं अनलॉक करें",
+      "startFreeTrial": "7 दिन की मुफ्त ट्रायल से शुरू करें",
+      "bestValue": "सर्वोत्तम मूल्य",
+      "startTrial": "मुफ्त ट्रायल शुरू करें",
+      "cancelAnytime": "कभी भी रद्द करें। स्वचालित नवीनीकरण।",
+      "restoreSuccess": "आपकी खरीदारी पुनर्स्थापित हो गई!",
+      "noPurchasesFound": "इस खाते के लिए कोई पिछली खरीदारी नहीं मिली।",
+      "purchaseSuccess": "सदस्यता के लिए धन्यवाद!",
+      "purchaseError": "खरीदारी पूर्ण करने में विफल। कृपया पुनः प्रयास करें।",
+      "devMode": "डेवलपमेंट में खरीदारी उपलब्ध नहीं है। कृपया किसी उपकरण पर बिल्ड और रन करें।"
+    }
+  },
+
+  "server": {
+    "title": "सर्वर चुनें",
+    "subtitle": "आपका निजी WireGuard सर्वर",
+    "recommended": "अनुशंसित",
+    "allServers": "सभी सर्वर",
+    "premium": "Premium",
+    "free": "मुफ्त",
+    "ping": "{{ms}}ms",
+    "load": "{{percent}}% लोड",
+    "selected": "चयनित",
+    "available": "उपलब्ध",
+    "protocol": "प्रोटोकॉल",
+    "encryption": "एन्क्रिप्शन",
+    "empty": {
+      "title": "कोई सर्वर उपलब्ध नहीं",
+      "subtitle": "कॉन्फ़िगर होने के बाद आपका WireGuard सर्वर यहां दिखाई देगा"
+    },
+    "info": "WireGuard न्यूनतम ओवरहेड के साथ तेज़, आधुनिक VPN एन्क्रिप्शन प्रदान करता है।"
+  },
+
+  "speedTest": {
+    "title": "स्पीड टेस्ट",
+    "start": "टेस्ट शुरू करें",
+    "testing": "टेस्ट हो रहा है...",
+    "download": "डाउनलोड",
+    "upload": "अपलोड",
+    "ping": "पिंग",
+    "mbps": "Mbps",
+    "ms": "ms"
+  }
+}

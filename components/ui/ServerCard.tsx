@@ -1,9 +1,9 @@
-import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, spacing, typography } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { VPNServer } from '@/types/database';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface ServerCardProps {
   server: VPNServer;
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   flag: {
     fontSize: 28,
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   info: {
     flex: 1,

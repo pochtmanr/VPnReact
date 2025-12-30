@@ -15,6 +15,7 @@ import {
   Wifi
 } from 'lucide-react-native';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   InteractionManager,
   RefreshControl,
@@ -24,7 +25,6 @@ import {
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { ActivationButton, QuickStatsRow, ScrollShadow } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   coverageDivider: {
     height: 1,
-    marginLeft: 54,
+    marginStart: 54,
   },
   disabledSection: {
     opacity: 0.7,

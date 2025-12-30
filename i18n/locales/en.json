@@ -573,10 +573,24 @@
       "privacy": "Privacy Policy",
       "yearly": "Yearly",
       "monthly": "Monthly",
+      "sixMonths": "6 Months",
       "perYear": "per year",
       "perMonth": "per month",
+      "monthAbbr": "mo",
       "save": "Save {{percent}}%",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "experience": "Experience",
+      "truePrivacy": "true privacy.",
+      "unlockPremium": "Unlock all premium features",
+      "startFreeTrial": "Start with a 7-day free trial",
+      "bestValue": "Best Value",
+      "startTrial": "Start Free Trial",
+      "cancelAnytime": "Cancel anytime. Subscription auto-renews.",
+      "restoreSuccess": "Your purchases have been restored!",
+      "noPurchasesFound": "No previous purchases were found for this account.",
+      "purchaseSuccess": "Thank you for subscribing!",
+      "purchaseError": "Failed to complete purchase. Please try again.",
+      "devMode": "Purchases are not available in development. Please build and run on a device."
     }
   },
 

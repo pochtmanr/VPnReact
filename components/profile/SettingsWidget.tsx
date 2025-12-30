@@ -1,24 +1,24 @@
-import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import {
-  View,
-  Text,
+  ChevronRight,
+  FileText,
+  HelpCircle,
+  Info,
+  Settings,
+} from 'lucide-react-native';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Linking,
   Pressable,
   StyleSheet,
-  Linking,
+  Text,
+  View,
 } from 'react-native';
-import {
-  Settings,
-  HelpCircle,
-  FileText,
-  Info,
-  ChevronRight,
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
-import { useTranslation } from 'react-i18next';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
-import { useTheme } from '@/context/ThemeContext';
 import { SkeletonMenuItem } from '@/components/ui/Skeleton';
+import { useTheme } from '@/context/ThemeContext';
 import { getCurrentLanguage, LANGUAGE_FLAGS, LANGUAGE_NAMES } from '@/i18n';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -105,11 +105,11 @@ export const SettingsWidget = memo(function SettingsWidget({
   }, [themeMode, t]);
 
   const openPrivacyPolicy = useCallback(async () => {
-    await Linking.openURL('https://www.simnetiq.store/privacy-policy');
+    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-privacy-policy');
   }, []);
 
   const openTermsOfService = useCallback(async () => {
-    await Linking.openURL('https://www.simnetiq.store/terms-of-service');
+    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-terms-of-service');
   }, []);
 
   return (
@@ -206,6 +206,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 52,
+    marginStart: 52,
   },
 });

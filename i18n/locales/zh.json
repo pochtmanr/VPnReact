@@ -1,0 +1,627 @@
+{
+  "common": {
+    "buttons": {
+      "save": "保存",
+      "cancel": "取消",
+      "confirm": "确认",
+      "close": "关闭",
+      "back": "返回",
+      "next": "下一步",
+      "done": "完成",
+      "continue": "继续",
+      "retry": "重试",
+      "submit": "提交",
+      "enable": "启用",
+      "disable": "禁用",
+      "install": "安装",
+      "installing": "安装中..."
+    },
+    "status": {
+      "loading": "加载中...",
+      "error": "错误",
+      "success": "成功",
+      "active": "活跃",
+      "inactive": "非活跃",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "connecting": "连接中",
+      "connected": "已连接",
+      "disconnected": "已断开",
+      "failed": "失败",
+      "protectionActive": "保护已启用",
+      "protectionDisabled": "保护已禁用"
+    },
+    "time": {
+      "morning": "早上好",
+      "afternoon": "下午好",
+      "evening": "晚上好"
+    },
+    "errors": {
+      "generic": "发生意外错误",
+      "network": "网络错误，请检查您的连接。",
+      "tryAgain": "请重试"
+    }
+  },
+
+  "navigation": {
+    "tabs": {
+      "vpn": "VPN",
+      "parental": "家长控制",
+      "adblock": "广告拦截",
+      "profile": "个人资料"
+    }
+  },
+
+  "auth": {
+    "welcome": {
+      "everyoneHasRight": "每个人都有权利",
+      "footer": {
+        "byContinuing": "继续即表示您同意我们的",
+        "and": "和"
+      },
+      "phrases": {
+        "privacy": "保护隐私",
+        "letAlone": "独处",
+        "disappear": "消失",
+        "forgotten": "被遗忘",
+        "sayNo": "说不",
+        "silence": "保持沉默",
+        "unseen": "不被看见",
+        "untracked": "不被追踪",
+        "sovereignty": "数字主权",
+        "ownKeys": "持有自己的密钥",
+        "watchWatchmen": "监督监督者",
+        "noneOfBusiness": "这不关你的事",
+        "anonymity": "匿名",
+        "secrecy": "保密",
+        "invisible": "隐形",
+        "goDark": "隐匿行踪",
+        "closeCurtains": "拉上窗帘",
+        "lockDoor": "锁上门",
+        "keepSecrets": "保守秘密",
+        "ownData": "拥有自己的数据",
+        "noTrace": "不留痕迹",
+        "privateLife": "私生活",
+        "exit": "退出",
+        "unreachable": "无法联系",
+        "refuse": "拒绝",
+        "encrypt": "加密",
+        "closedDoor": "关门"
+      }
+    },
+    "features": {
+      "title": "高级功能",
+      "subtitle": "您将获得",
+      "description": "完整在线隐私保护所需的一切",
+      "vpnProtection": {
+        "title": "VPN保护",
+        "description": "加密您的连接并对追踪器隐藏您的IP"
+      },
+      "adBlocker": {
+        "title": "广告拦截器",
+        "description": "在所有应用中拦截烦人的广告和恶意软件"
+      },
+      "fastServers": {
+        "title": "高速服务器",
+        "description": "连接到优化的服务器，速度损失最小"
+      },
+      "stats": {
+        "servers": "100+服务器",
+        "countries": "50+国家",
+        "users": "1000万+用户"
+      },
+      "startProtecting": "开始保护",
+      "guarantee": "无需账户 - 免费开始"
+    },
+    "account": {
+      "title": "开始使用",
+      "subtitle": "创建新账户或使用现有ID登录",
+      "createAccount": "创建账户",
+      "login": "登录",
+      "accountIdPlaceholder": "输入您的账户ID",
+      "createDescription": "获取一个适用于所有设备的唯一ID",
+      "loginDescription": "输入您现有的账户ID以继续",
+      "deviceInfo": "您的账户可在{{count}}台设备上使用",
+      "generateDescription": "我们将为您生成一个唯一ID。请保存以便在其他设备上使用。",
+      "idPreview": "您的账户ID将如下所示：",
+      "generateButton": "生成我的账户ID",
+      "yourAccountId": "您的账户ID",
+      "saveWarning": "请保存此ID！您需要它在其他设备上访问您的账户。",
+      "share": "分享",
+      "securityWarning": "这是访问您账户的唯一方式。请妥善保管。",
+      "continueToApp": "继续进入应用",
+      "errors": {
+        "enterAccountId": "请输入您的账户ID",
+        "invalidAccountId": "无效的账户ID"
+      }
+    },
+    "login": {
+      "title": "欢迎回来",
+      "subtitle": "输入您的账户ID以继续",
+      "accountIdRequired": "需要账户ID",
+      "loginError": "登录错误"
+    },
+    "register": {
+      "title": "创建账户",
+      "emailPlaceholder": "电子邮箱地址",
+      "passwordPlaceholder": "密码",
+      "confirmPasswordPlaceholder": "确认密码",
+      "errors": {
+        "emailRequired": "需要电子邮箱",
+        "emailInvalid": "请输入有效的电子邮箱",
+        "passwordRequired": "需要密码",
+        "passwordLength": "密码至少需要6个字符",
+        "confirmRequired": "请确认您的密码",
+        "passwordMismatch": "密码不匹配",
+        "registrationError": "注册错误"
+      },
+      "success": "请查看您的电子邮箱以验证您的账户。"
+    },
+    "subscriptionSuccess": {
+      "welcomeBack": "欢迎回来！",
+      "allSet": "一切就绪！",
+      "plans": {
+        "monthly": "月度高级版",
+        "sixMonths": "6个月高级版",
+        "yearly": "年度高级版"
+      }
+    }
+  },
+
+  "vpn": {
+    "connection": {
+      "secure": "您的连接是安全的",
+      "connectPrompt": "连接以保护您的隐私",
+      "connecting": "连接中",
+      "establishing": "正在建立安全连接...",
+      "protected": "已保护",
+      "tapDisconnect": "点击断开连接",
+      "failed": "连接失败",
+      "notConnected": "未连接",
+      "tapRetry": "点击重试",
+      "tapConnect": "点击连接"
+    },
+    "setup": {
+      "title": "需要VPN设置",
+      "description": "安装VPN配置文件以启用保护"
+    },
+    "stats": {
+      "server": "服务器",
+      "latency": "延迟",
+      "status": "状态",
+      "active": "活跃",
+      "connecting": "连接中",
+      "error": "错误",
+      "idle": "空闲"
+    },
+    "serverSelect": {
+      "title": "选择服务器",
+      "disconnectToChange": "断开连接以更换服务器",
+      "serversAvailable": "{{count}}个服务器可用"
+    },
+    "quickSettings": {
+      "title": "快速设置",
+      "parentalControls": {
+        "title": "家长控制",
+        "active": "内容过滤已启用",
+        "description": "保护儿童免受有害内容"
+      },
+      "adBlocker": {
+        "title": "广告拦截器",
+        "description": "拦截广告和追踪器"
+      }
+    },
+    "signInPrompt": "登录以保存您的偏好设置",
+    "serverInfo": "选择服务器并点击连接。您的流量将被加密并通过我们的安全服务器路由。",
+    "widgets": {
+      "adsBlocked": {
+        "title": "广告拦截",
+        "blocked": "已拦截",
+        "rate": "拦截率"
+      },
+      "devices": {
+        "title": "设备",
+        "noDevices": "没有已连接的设备"
+      }
+    }
+  },
+
+  "parental": {
+    "title": "家长控制",
+    "subtitle": "在线保护您的家人",
+    "description": "控制可访问的内容",
+    "categories": {
+      "title": "内容类别",
+      "selectToBlock": "选择要拦截的类别",
+      "adult": {
+        "name": "成人内容",
+        "description": "拦截露骨和成人内容"
+      },
+      "gambling": {
+        "name": "赌博",
+        "description": "拦截博彩和赌博网站"
+      },
+      "socialMedia": {
+        "name": "社交媒体",
+        "description": "拦截社交网络平台"
+      },
+      "gaming": {
+        "name": "游戏",
+        "description": "拦截在线游戏和游戏网站"
+      },
+      "streaming": {
+        "name": "流媒体",
+        "description": "拦截视频流媒体平台"
+      },
+      "malware": {
+        "name": "恶意软件和钓鱼",
+        "description": "拦截危险网站"
+      },
+      "adsTrackers": {
+        "name": "广告和追踪器",
+        "description": "拦截广告和追踪器"
+      }
+    },
+    "customDomains": {
+      "title": "自定义拦截网站",
+      "description": "添加要拦截的特定网站",
+      "placeholder": "example.com",
+      "add": "添加",
+      "empty": "尚未自定义拦截网站"
+    },
+    "stats": {
+      "blocked": "已拦截",
+      "categories": "类别",
+      "custom": "自定义"
+    },
+    "activation": {
+      "categoriesBlocked": "{{count}}个类别已拦截",
+      "tapToEnable": "点击启用内容过滤"
+    },
+    "disabled": {
+      "upgradeRequired": "升级到专业版以管理类别",
+      "enableRequired": "启用上方的家长控制以管理类别",
+      "vpnRequired": "连接VPN以管理类别",
+      "upgradeRequiredSites": "升级到专业版以管理网站",
+      "enableRequiredSites": "启用上方的家长控制以管理网站",
+      "vpnRequiredSites": "连接VPN以管理网站"
+    },
+    "modal": {
+      "title": "拦截网站",
+      "description": "输入要拦截的域名（例如，example.com）",
+      "blockSite": "拦截网站"
+    },
+    "alerts": {
+      "connectionError": "连接错误",
+      "connectionErrorMessage": "无法连接到服务器。请确保VPN已连接并重试。",
+      "removeDomain": "移除域名",
+      "removeDomainMessage": "从拦截列表中移除\"{{domain}}\"？"
+    },
+    "info": "内容过滤在连接到VPN时应用。类别使用AdGuard DNS规则进行系统级保护。"
+  },
+
+  "adblock": {
+    "title": "广告拦截器",
+    "description": "DNS级保护",
+    "stats": {
+      "blocked": "已拦截",
+      "adsBlocked": "已拦截广告",
+      "trackers": "已阻止追踪器",
+      "requests": "DNS查询",
+      "blockRate": "拦截率",
+      "rules": "规则"
+    },
+    "status": {
+      "enabled": "广告拦截已启用",
+      "disabled": "广告拦截已禁用"
+    },
+    "activation": {
+      "tapToDisable": "点击禁用广告拦截",
+      "tapToEnable": "点击启用广告拦截"
+    },
+    "coverage": {
+      "title": "覆盖范围",
+      "subtitle": "保护覆盖您的整个设备",
+      "connectVPN": "连接VPN以启用覆盖",
+      "allBrowsers": "所有浏览器",
+      "allApps": "所有应用",
+      "systemWide": "系统级"
+    },
+    "connectionInfo": {
+      "connected": "VPN已连接 - 广告拦截使用您VPN服务器上的AdGuard Home DNS。",
+      "disconnected": "连接VPN以获得DNS级广告拦截。统计数据需要VPN连接。"
+    }
+  },
+
+  "profile": {
+    "title": "个人资料",
+    "manageAccount": "管理您的账户",
+    "signOut": "退出登录",
+    "signOutConfirm": "确定要退出吗？您需要账户ID才能重新登录。",
+    "deleteAccount": "删除账户",
+    "notLoggedIn": "未登录",
+    "accountId": "账户ID",
+    "copyId": "复制ID",
+    "copied": "已复制！",
+    "unknownDate": "未知日期",
+
+    "subscription": {
+      "title": "订阅",
+      "managePlan": "管理您的计划",
+      "currentPlan": "当前计划",
+      "plans": {
+        "free": "免费计划",
+        "premium": "高级计划",
+        "pro": "专业计划"
+      },
+      "status": {
+        "free": "免费",
+        "active": "活跃",
+        "canceled": "已取消",
+        "expired": "已过期",
+        "gracePeriod": "宽限期",
+        "refreshing": "刷新中..."
+      },
+      "statusText": {
+        "upgradePrompt": "升级以解锁所有功能",
+        "updatePayment": "更新付款方式以继续访问",
+        "activeSubscription": "活跃订阅",
+        "renewsOn": "续订日期{{date}}",
+        "accessUntil": "访问有效期至{{date}}",
+        "expiredOn": "已于{{date}}过期",
+        "lifetimeAccess": "终身访问"
+      },
+      "cta": {
+        "upgrade": "升级",
+        "upgradeNow": "立即升级",
+        "upgradeToPro": "升级到专业版",
+        "unlockFeatures": "解锁所有高级功能",
+        "manage": "管理订阅",
+        "resubscribe": "重新订阅",
+        "fixPayment": "修复付款"
+      },
+      "management": {
+        "manageInStore": "在{{store}}中管理",
+        "changeOrCancel": "更改或取消订阅",
+        "restorePurchases": "恢复购买",
+        "restoreDescription": "恢复之前的订阅",
+        "subscriptionHelp": "订阅帮助",
+        "faqAndSupport": "常见问题和支持"
+      },
+      "infoFooter": {
+        "ios": "订阅通过App Store管理。您可以随时在Apple ID设置中取消。",
+        "android": "订阅通过Google Play管理。您可以随时在Play商店设置中取消。"
+      },
+      "freeTrial": "免费试用",
+      "loadError": "无法加载订阅",
+      "unableToOpen": "无法打开",
+      "manageInSettings": "请在设置 > Apple ID > 订阅中管理您的订阅",
+      "noPurchasesFound": "未找到此账户的先前购买记录。",
+      "restoreError": "恢复购买失败。请重试。"
+    },
+
+    "devices": {
+      "title": "设备",
+      "thisDevice": "本设备",
+      "mainDevice": "主设备",
+      "connected": "已连接",
+      "vpn": "VPN",
+      "control": "控制",
+      "adBlock": "广告拦截",
+      "childMode": "儿童模式",
+      "noDevices": "没有已连接的设备",
+      "manageFromMain": "从主设备登录以管理设备",
+      "limitReached": "已达到设备限制。移除一台设备以添加新设备。",
+      "removeTitle": "移除设备？",
+      "removeMessage": "\"{{name}}\"将被注销并从您的账户中移除。",
+      "removeError": "无法移除设备。请检查您的连接。"
+    },
+
+    "settings": {
+      "title": "设置",
+      "personalInfo": "个人信息",
+      "notifications": "通知",
+      "appearance": "外观",
+      "language": "语言",
+      "contactSupport": "联系支持",
+      "faqAndContact": "常见问题和联系我们"
+    },
+
+    "personalInfo": {
+      "title": "个人信息",
+      "manageDetails": "管理您的账户详情",
+      "changePhoto": "更换头像",
+      "profile": "个人资料",
+      "username": "用户名",
+      "usernamePlaceholder": "输入您的用户名",
+      "email": "电子邮箱地址",
+      "emailPlaceholder": "your@email.com",
+      "emailNote": "出于安全原因，电子邮箱无法更改",
+      "security": "安全",
+      "changePassword": "更改密码",
+      "updatePassword": "更新您的账户密码",
+      "passwordResetTitle": "更改密码",
+      "passwordResetMessage": "我们将向您的电子邮箱发送密码重置链接。",
+      "sendLink": "发送链接",
+      "emailSent": "邮件已发送",
+      "checkInbox": "请查看收件箱中的密码重置链接。",
+      "accountInfo": "账户信息",
+      "memberSince": "注册时间",
+      "saveChanges": "保存更改",
+      "saving": "保存中...",
+      "profileUpdated": "您的个人资料已更新。",
+      "profileUpdateError": "更新个人资料失败。请重试。",
+      "deleteAccount": "删除账户",
+      "deleteAccountConfirm": "确定要删除账户吗？此操作无法撤销。",
+      "contactSupportToDelete": "请联系支持以删除您的账户。"
+    },
+
+    "language": "语言",
+
+    "appearance": {
+      "title": "外观",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统",
+      "followDevice": "应用将跟随您的设备设置",
+      "alwaysUse": "始终使用{{mode}}模式"
+    },
+
+    "notifications": {
+      "title": "通知",
+      "push": {
+        "title": "推送通知",
+        "description": "接收重要更新"
+      },
+      "marketing": {
+        "title": "营销",
+        "description": "特别优惠和新闻"
+      },
+      "security": {
+        "title": "安全警报",
+        "description": "数据泄露和威胁通知"
+      }
+    },
+
+    "support": {
+      "title": "帮助与支持",
+      "description": "从我们的团队获得帮助",
+      "emailUs": "发送邮件",
+      "telegram": "Telegram",
+      "faq": {
+        "title": "常见问题",
+        "connect": {
+          "question": "如何连接到VPN服务器？",
+          "answer": "前往VPN标签页并点击连接按钮。您也可以在连接前从服务器标签页选择特定服务器。"
+        },
+        "slow": {
+          "question": "为什么我的连接很慢？",
+          "answer": "尝试连接到离您位置更近的服务器。服务器负载和您的网速也会影响VPN性能。"
+        },
+        "subscription": {
+          "question": "如何更改我的订阅计划？",
+          "answer": "前往个人资料 > 订阅查看和管理您的当前计划。您可以随时升级或降级。"
+        },
+        "secure": {
+          "question": "我的数据安全吗？",
+          "answer": "是的！我们使用军用级AES-256加密并保持严格的无日志政策来保护您的隐私。"
+        }
+      },
+      "bugReport": {
+        "title": "报告错误",
+        "subtitle": "帮助我们改进应用",
+        "placeholder": "描述您遇到的问题...",
+        "submitReport": "提交报告",
+        "missingInfo": "信息不完整",
+        "pleaseDescribe": "请描述您遇到的问题。",
+        "thankYou": "谢谢！",
+        "success": "您的错误报告已提交。感谢您的反馈！",
+        "errorTitle": "错误",
+        "error": "提交错误报告失败。请重试。"
+      },
+      "responseTime": {
+        "title": "响应时间",
+        "freeUsers": "免费用户：48-72小时",
+        "proUsers": "专业/高级用户：24小时"
+      }
+    },
+
+    "thankYou": {
+      "title": "谢谢！",
+      "features": {
+        "premiumServers": "高级服务器",
+        "adBlocking": "广告拦截",
+        "parentalControls": "家长控制",
+        "devices": "5台设备"
+      }
+    }
+  },
+
+  "tier": {
+    "free": "免费",
+    "pro": "专业版",
+    "premium": "高级版",
+    "devMode": "开发模式：开发环境中无法购买。请构建并在设备上运行。",
+    "purchaseSuccess": "感谢您的订阅！",
+    "purchaseError": "购买失败。请重试。",
+    "noPurchases": "未找到此账户的先前购买记录。",
+
+    "features": {
+      "premiumServers": {
+        "title": "高级服务器",
+        "description": "全球高速服务器"
+      },
+      "adBlocking": {
+        "title": "广告拦截",
+        "description": "DNS级保护"
+      },
+      "devices": {
+        "title": "5台设备",
+        "description": "连接多台设备"
+      },
+      "parentalControls": {
+        "title": "家长控制",
+        "description": "保护您的家人安全"
+      }
+    },
+
+    "paywall": {
+      "title": "升级到高级版",
+      "subtitle": "解锁所有功能",
+      "restore": "恢复购买",
+      "terms": "服务条款",
+      "privacy": "隐私政策",
+      "yearly": "年度",
+      "monthly": "月度",
+      "sixMonths": "6个月",
+      "perYear": "每年",
+      "perMonth": "每月",
+      "monthAbbr": "月",
+      "save": "节省{{percent}}%",
+      "processing": "处理中...",
+      "experience": "体验",
+      "truePrivacy": "真正的隐私。",
+      "unlockPremium": "解锁所有高级功能",
+      "startFreeTrial": "开始7天免费试用",
+      "bestValue": "最佳价值",
+      "startTrial": "开始免费试用",
+      "cancelAnytime": "随时取消。自动续订。",
+      "restoreSuccess": "您的购买已恢复！",
+      "noPurchasesFound": "未找到此账户的先前购买记录。",
+      "purchaseSuccess": "感谢您的订阅！",
+      "purchaseError": "购买失败。请重试。",
+      "devMode": "开发环境中无法购买。请构建并在设备上运行。"
+    }
+  },
+
+  "server": {
+    "title": "选择服务器",
+    "subtitle": "您的私人WireGuard服务器",
+    "recommended": "推荐",
+    "allServers": "所有服务器",
+    "premium": "高级",
+    "free": "免费",
+    "ping": "{{ms}}毫秒",
+    "load": "{{percent}}%负载",
+    "selected": "已选择",
+    "available": "可用",
+    "protocol": "协议",
+    "encryption": "加密",
+    "empty": {
+      "title": "无可用服务器",
+      "subtitle": "配置后您的WireGuard服务器将显示在此处"
+    },
+    "info": "WireGuard提供快速、现代的VPN加密，开销最小。"
+  },
+
+  "speedTest": {
+    "title": "速度测试",
+    "start": "开始测试",
+    "testing": "测试中...",
+    "download": "下载",
+    "upload": "上传",
+    "ping": "延迟",
+    "mbps": "Mbps",
+    "ms": "毫秒"
+  }
+}
