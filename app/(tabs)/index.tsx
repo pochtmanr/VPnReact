@@ -332,20 +332,28 @@ function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
   );
 }
 
-// Square Devices Widget (1:1 aspect ratio) with device list
+// Square Devices Widget (1:1 aspect ratio) with device list and status dots
 interface DevicesWidgetProps {
   devices: DeviceSession[];
   currentDeviceId: string | undefined;
   isVpnConnected: boolean;
+  isParentalEnabled: boolean;
+  isAdBlockEnabled: boolean;
 }
 
-function DevicesWidget({ devices, currentDeviceId, isVpnConnected }: DevicesWidgetProps) {
+function DevicesWidget({ devices, currentDeviceId, isVpnConnected, isParentalEnabled, isAdBlockEnabled }: DevicesWidgetProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
-  // Show max 4 devices, show +N for more
-  const displayDevices = devices.slice(0, 4);
-  const hasMoreDevices = devices.length > 4;
+  // Show max 3 devices to leave room for status dots
+  const displayDevices = devices.slice(0, 3);
+  const hasMoreDevices = devices.length > 3;
+
+  // Collect status dots for current device
+  const statusDots: Array<{ color: string; key: string }> = [];
+  if (isVpnConnected) statusDots.push({ color: '#22C55E', key: 'vpn' });
+  if (isParentalEnabled) statusDots.push({ color: '#3B82F6', key: 'parental' });
+  if (isAdBlockEnabled) statusDots.push({ color: '#EF4444', key: 'adblock' });
 
   return (
     <View
@@ -387,15 +395,23 @@ function DevicesWidget({ devices, currentDeviceId, isVpnConnected }: DevicesWidg
                 >
                   {deviceName}
                 </Text>
-                {isCurrentDevice && isVpnConnected && (
-                  <View style={styles.devicesWidgetDot} />
+                {/* Status dots for current device */}
+                {isCurrentDevice && statusDots.length > 0 && (
+                  <View style={styles.devicesStatusDots}>
+                    {statusDots.map((dot) => (
+                      <View
+                        key={dot.key}
+                        style={[styles.devicesWidgetDot, { backgroundColor: dot.color }]}
+                      />
+                    ))}
+                  </View>
                 )}
               </View>
             );
           })}
           {hasMoreDevices && (
             <Text style={[styles.devicesWidgetMore, { color: colors.textMuted }]}>
-              +{devices.length - 4}
+              +{devices.length - 3}
             </Text>
           )}
         </View>
@@ -917,6 +933,8 @@ export default function HomeScreen() {
               devices={devices}
               currentDeviceId={deviceSession?.device_id}
               isVpnConnected={isConnected}
+              isParentalEnabled={parentalEnabled}
+              isAdBlockEnabled={adBlockEnabled}
             />
           </AnimatedView>
 
@@ -1258,7 +1276,7 @@ const styles = StyleSheet.create({
   devicesWidget: {
     alignItems: 'stretch',
     justifyContent: 'flex-start',
-    padding: 12,
+    padding: 16,
   },
   devicesWidgetHeader: {
     flexDirection: 'row',
@@ -1293,14 +1311,18 @@ const styles = StyleSheet.create({
   },
   devicesWidgetItemName: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 14,
+    fontWeight: '500',
   },
   devicesWidgetDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#22C55E',
+  },
+  devicesStatusDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   devicesWidgetMore: {
     fontSize: 11,
