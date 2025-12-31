@@ -361,7 +361,7 @@ function DevicesWidget({ devices, currentDeviceId, isVpnConnected }: DevicesWidg
       {/* Header */}
       <View style={styles.devicesWidgetHeader}>
         <View style={[styles.devicesWidgetIconSmall, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-          <Smartphone size={16} color="#3B82F6" />
+          <Smartphone size={20} color="#3B82F6" />
         </View>
         <Text style={[styles.devicesWidgetTitle, { color: colors.text }]}>
           {t('vpn.widgets.devices.title')}
@@ -1267,9 +1267,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   devicesWidgetIconSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
