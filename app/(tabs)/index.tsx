@@ -18,6 +18,7 @@ import {
   Users,
   Wifi
 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -303,19 +304,22 @@ interface BlockedWidgetProps {
 function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  const router = useRouter();
 
   const showStats = isConnected && isEnabled && stats;
   const blockedCount = showStats ? formatNumber(stats.totalBlocked) : '--';
   const iconColor = isConnected && isEnabled ? '#EF4444' : colors.textMuted;
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={() => router.push('/(tabs)/adblock')}
+      style={({ pressed }) => [
         styles.squareWidget,
         styles.blockedWidget,
         {
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+          opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
@@ -329,32 +333,29 @@ function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
         </Text>
       </View>
 
-      {/* Count */}
-      <View style={styles.blockedWidgetContent}>
-        <Text style={[styles.blockedWidgetValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
-          {blockedCount}
-        </Text>
-      </View>
-    </View>
+      {/* Spacer */}
+      <View style={styles.widgetSpacer} />
+
+      {/* Count at bottom */}
+      <Text style={[styles.blockedWidgetValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
+        {blockedCount}
+      </Text>
+    </Pressable>
   );
 }
 
-// Square Devices Widget (1:1 aspect ratio) with device list and status dots
+// Square Devices Widget (1:1 aspect ratio) with count and status dots
 interface DevicesWidgetProps {
   devices: DeviceSession[];
-  currentDeviceId: string | undefined;
   isVpnConnected: boolean;
   isParentalEnabled: boolean;
   isAdBlockEnabled: boolean;
 }
 
-function DevicesWidget({ devices, currentDeviceId, isVpnConnected, isParentalEnabled, isAdBlockEnabled }: DevicesWidgetProps) {
+function DevicesWidget({ devices, isVpnConnected, isParentalEnabled, isAdBlockEnabled }: DevicesWidgetProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
-
-  // Show max 3 devices to leave room for status dots
-  const displayDevices = devices.slice(0, 3);
-  const hasMoreDevices = devices.length > 3;
+  const router = useRouter();
 
   // Collect status dots for current device
   const statusDots: Array<{ color: string; key: string }> = [];
@@ -363,13 +364,15 @@ function DevicesWidget({ devices, currentDeviceId, isVpnConnected, isParentalEna
   if (isAdBlockEnabled) statusDots.push({ color: '#EF4444', key: 'adblock' });
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={() => router.push('/(tabs)/profile')}
+      style={({ pressed }) => [
         styles.squareWidget,
         styles.devicesWidget,
         {
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+          opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
@@ -381,53 +384,29 @@ function DevicesWidget({ devices, currentDeviceId, isVpnConnected, isParentalEna
         <Text style={[styles.devicesWidgetTitle, { color: colors.text }]}>
           {t('vpn.widgets.devices.title')}
         </Text>
-        <Text style={[styles.devicesWidgetCount, { color: colors.textSecondary }]}>
-          {devices.length}
-        </Text>
       </View>
 
-      {/* Device List */}
-      {displayDevices.length > 0 ? (
-        <View style={styles.devicesWidgetList}>
-          {displayDevices.map((device) => {
-            const isCurrentDevice = device.device_id === currentDeviceId;
-            const deviceName = getDeviceBrand(device.device_name, device.device_type);
+      {/* Spacer */}
+      <View style={styles.widgetSpacer} />
 
-            return (
-              <View key={device.id} style={styles.devicesWidgetItem}>
-                <Text
-                  style={[styles.devicesWidgetItemName, { color: colors.text }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {deviceName}
-                </Text>
-                {/* Status dots for current device */}
-                {isCurrentDevice && statusDots.length > 0 && (
-                  <View style={styles.devicesStatusDots}>
-                    {statusDots.map((dot) => (
-                      <View
-                        key={dot.key}
-                        style={[styles.devicesWidgetDot, { backgroundColor: dot.color }]}
-                      />
-                    ))}
-                  </View>
-                )}
-              </View>
-            );
-          })}
-          {hasMoreDevices && (
-            <Text style={[styles.devicesWidgetMore, { color: colors.textMuted }]}>
-              +{devices.length - 3}
-            </Text>
-          )}
-        </View>
-      ) : (
-        <Text style={[styles.devicesWidgetEmpty, { color: colors.textMuted }]}>
-          {t('vpn.widgets.devices.noDevices')}
+      {/* Device count and status at bottom */}
+      <View style={styles.devicesWidgetBottom}>
+        <Text style={[styles.devicesWidgetValue, { color: colors.text }]}>
+          {devices.length}
         </Text>
-      )}
-    </View>
+        {/* Status dots */}
+        {statusDots.length > 0 && (
+          <View style={styles.devicesStatusDots}>
+            {statusDots.map((dot) => (
+              <View
+                key={dot.key}
+                style={[styles.devicesWidgetDot, { backgroundColor: dot.color }]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </Pressable>
   );
 }
 
@@ -938,7 +917,6 @@ export default function HomeScreen() {
             {/* Devices Widget (Right) */}
             <DevicesWidget
               devices={devices}
-              currentDeviceId={deviceSession?.device_id}
               isVpnConnected={isConnected}
               isParentalEnabled={parentalEnabled}
               isAdBlockEnabled={adBlockEnabled}
@@ -1282,13 +1260,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  blockedWidgetContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
   blockedWidgetValue: {
     fontSize: 32,
     fontWeight: '700',
+  },
+  widgetSpacer: {
+    flex: 1,
   },
   // Devices Widget specific styles
   devicesWidget: {
@@ -1314,23 +1291,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  devicesWidgetCount: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  devicesWidgetList: {
-    flex: 1,
-    gap: 4,
-  },
-  devicesWidgetItem: {
+  devicesWidgetBottom: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
   },
-  devicesWidgetItemName: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
+  devicesWidgetValue: {
+    fontSize: 32,
+    fontWeight: '700',
   },
   devicesWidgetDot: {
     width: 6,
