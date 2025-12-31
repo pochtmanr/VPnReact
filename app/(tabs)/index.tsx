@@ -312,22 +312,29 @@ function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
     <View
       style={[
         styles.squareWidget,
-        styles.statCardWidget,
+        styles.blockedWidget,
         {
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
         },
       ]}
     >
-      <View style={[styles.statCardIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
-        <Ban size={20} color={iconColor} />
+      {/* Header */}
+      <View style={styles.blockedWidgetHeader}>
+        <View style={[styles.blockedWidgetIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
+          <Ban size={20} color={iconColor} />
+        </View>
+        <Text style={[styles.blockedWidgetTitle, { color: colors.text }]} numberOfLines={1}>
+          {t('vpn.widgets.adsBlocked.title')}
+        </Text>
       </View>
-      <Text style={[styles.statCardValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
-        {blockedCount}
-      </Text>
-      <Text style={[styles.statCardLabel, { color: colors.textSecondary }]} numberOfLines={1}>
-        {t('vpn.widgets.adsBlocked.blocked')}
-      </Text>
+
+      {/* Count */}
+      <View style={styles.blockedWidgetContent}>
+        <Text style={[styles.blockedWidgetValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
+          {blockedCount}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -1251,26 +1258,37 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#22C55E',
   },
-  // StatCard Widget styles (matches adblock StatCard)
-  statCardWidget: {
-    alignItems: 'flex-start',
+  // Blocked Widget styles (matches devices widget layout)
+  blockedWidget: {
+    alignItems: 'stretch',
     justifyContent: 'flex-start',
     padding: 16,
-    gap: 8,
   },
-  statCardIcon: {
+  blockedWidgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  blockedWidgetIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statCardValue: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  statCardLabel: {
+  blockedWidgetTitle: {
+    flex: 1,
     fontSize: 13,
+    fontWeight: '600',
+  },
+  blockedWidgetContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  blockedWidgetValue: {
+    fontSize: 32,
+    fontWeight: '700',
   },
   // Devices Widget specific styles
   devicesWidget: {
