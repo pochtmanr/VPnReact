@@ -17,6 +17,7 @@
 		EED9603F59F7493994B9C227 /* VPNShieldTunnel.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 60C3BD10F40343C1B0C725FC /* VPNShieldTunnel.entitlements */; };
 		E40F2E642CF842A2BBADF222 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FC12FEF1FC4A66A1053F34 /* PacketTunnelProvider.swift */; };
 		CBDADCE5728C46E6891DDE9E /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD490AF9315A489B8AAA10A4 /* NetworkExtension.framework */; };
+		9ED171C30894459B9C98A351 /* VPNShieldTunnel.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 30B56002671C4A8998D1725C /* VPNShieldTunnel.appex */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		60C3BD10F40343C1B0C725FC /* VPNShieldTunnel.entitlements */ = {isa = PBXFileReference; name = "VPNShieldTunnel.entitlements"; path = "VPNShieldTunnel.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		B1FC12FEF1FC4A66A1053F34 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; name = "PacketTunnelProvider.swift"; path = "VPNShieldTunnel/PacketTunnelProvider.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		DD490AF9315A489B8AAA10A4 /* NetworkExtension.framework */ = {isa = PBXFileReference; name = "NetworkExtension.framework"; path = "System/Library/Frameworks/NetworkExtension.framework"; sourceTree = SDKROOT; fileEncoding = undefined; lastKnownFileType = wrapper.framework; explicitFileType = undefined; includeInIndex = 0; };
+		30B56002671C4A8998D1725C /* VPNShieldTunnel.appex */ = {isa = PBXFileReference; name = "VPNShieldTunnel.appex"; path = "VPNShieldTunnel.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +87,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				6C44993D344340F0BA17E665 /* VPNShieldTunnel */,
+				04CCBC4841D5421290DF362A /* VPNShieldTunnel */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -96,6 +99,7 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* DopplerVPN.app */,
 				174D8A9F767D4517AD4A669C /* VPNShieldTunnel.appex */,
+				30B56002671C4A8998D1725C /* VPNShieldTunnel.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,6 +125,17 @@
 			path = VPNShieldTunnel;
 			sourceTree = "<group>";
 		};
+		04CCBC4841D5421290DF362A /* VPNShieldTunnel */ = {
+			isa = PBXGroup;
+			children = (
+				7B5A39347B0F44E9B6B0037E /* PacketTunnelProvider.swift */,
+				AEB71DB0924C4ED88225DDF7 /* Info.plist */,
+				60C3BD10F40343C1B0C725FC /* VPNShieldTunnel.entitlements */,
+			);
+			name = VPNShieldTunnel;
+			path = VPNShieldTunnel;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -136,6 +151,7 @@
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				2F4A872D763448B79F56535D /* Copy Files */,
 				9032EFEA87904B9A8092CCE8 /* Embed App Extensions */,
+				B61C601A17504E70B3DA1D17 /* Copy Files */,
 			);
 			buildRules = (
 			);
@@ -160,6 +176,20 @@
 			dependencies = (
 			);
 		};
+		1AF6E8BEBE0149B0ACBFCC4C /* "VPNShieldTunnel" */ = {
+			isa = PBXNativeTarget;
+			name = "VPNShieldTunnel";
+			productName = "VPNShieldTunnel";
+			productReference = 30B56002671C4A8998D1725C;
+			productType = "com.apple.product-type.app-extension";
+			buildConfigurationList = 906F6FB7E66F4DE68BFC6F3A;
+			buildPhases = (
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -170,6 +200,16 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+						DevelopmentTeam = "F7YY9U667A";
+						ProvisioningStyle = Automatic;
+					};
+					96DB839932EF4D1AB75D1806 = {
+						DevelopmentTeam = "F7YY9U667A";
+						ProvisioningStyle = Automatic;
+					};
+					1AF6E8BEBE0149B0ACBFCC4C = {
+						DevelopmentTeam = "F7YY9U667A";
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -188,6 +228,7 @@
 			targets = (
 				13B07F861A680F5B00A75B9A /* DopplerVPN */,
 				96DB839932EF4D1AB75D1806 /* "VPNShieldTunnel" */,
+				1AF6E8BEBE0149B0ACBFCC4C /* "VPNShieldTunnel" */,
 			);
 		};
 /* End PBXProject section */
@@ -313,6 +354,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				CODE_SIGN_ENTITLEMENTS = DopplerVPN/DopplerVPN.entitlements;
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
@@ -341,6 +385,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				CODE_SIGN_ENTITLEMENTS = DopplerVPN/DopplerVPN.entitlements;
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};
@@ -468,6 +515,10 @@
 				PRODUCT_NAME = "VPNShieldTunnel";
 				SKIP_INSTALL = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.simnetiq.vpnreact.VPNShieldTunnel";
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 		};
 		4FF2ECB8447D4A21BFF8879F /* Release */ = {
@@ -479,6 +530,42 @@
 				PRODUCT_NAME = "VPNShieldTunnel";
 				SKIP_INSTALL = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.simnetiq.vpnreact.VPNShieldTunnel";
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+		};
+		6E34CFBA48554FF8AF75A7B3 /* Debug */ = {
+			name = Debug;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "VPNShieldTunnel/VPNShieldTunnel-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "VPNShieldTunnel";
+				SKIP_INSTALL = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.simnetiq.vpnreact.VPNShieldTunnel";
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+			};
+		};
+		0B4ECEBD94A24BEAAEA2C2C1 /* Release */ = {
+			name = Release;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = "VPNShieldTunnel/VPNShieldTunnel-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "VPNShieldTunnel";
+				SKIP_INSTALL = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.simnetiq.vpnreact.VPNShieldTunnel";
+				DEVELOPMENT_TEAM = "F7YY9U667A";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 		};
 /* End XCBuildConfiguration section */
@@ -511,6 +598,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		906F6FB7E66F4DE68BFC6F3A /* Build configuration list for PBXNativeTarget "VPNShieldTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E34CFBA48554FF8AF75A7B3 /* Debug */,
+				0B4ECEBD94A24BEAAEA2C2C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -519,6 +615,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				385105D1F5984D0D8E740381 /* VPNShieldTunnel.appex in Copy Files */,
+				9ED171C30894459B9C98A351 /* VPNShieldTunnel.appex in Copy Files */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			name = "Copy Files";
@@ -533,6 +630,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			name = "Embed App Extensions";
+			dstPath = "";
+			dstSubfolderSpec = 13;
+		};
+		B61C601A17504E70B3DA1D17 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Copy Files";
 			dstPath = "";
 			dstSubfolderSpec = 13;
 		};

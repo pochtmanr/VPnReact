@@ -6,6 +6,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
+import { InteractionManager, Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 // Import i18n configuration (must be before any components that use translations)
@@ -123,13 +125,27 @@ function RootLayoutNav() {
 
     // If user logs out while in main app, redirect to account
     if (onboardingComplete && !isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/account');
+      // On Android, wait for interactions to complete before navigating
+      // This fixes a race condition where navigation happens before state is fully updated
+      if (Platform.OS === 'android') {
+        InteractionManager.runAfterInteractions(() => {
+          router.replace('/(auth)/account');
+        });
+      } else {
+        router.replace('/(auth)/account');
+      }
     }
     // If user authenticates while in auth flow, go to main app
     else if (onboardingComplete && isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+      if (Platform.OS === 'android') {
+        InteractionManager.runAfterInteractions(() => {
+          router.replace('/(tabs)');
+        });
+      } else {
+        router.replace('/(tabs)');
+      }
     }
-  }, [isAuthenticated, onboardingComplete, segments]);
+  }, [isAuthenticated, onboardingComplete, segments, router]);
 
   // Show loading screen until ready
   if (!isReady || !isNavigationReady) {
@@ -165,20 +181,22 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <RevenueCatProvider>
-            <TierProvider>
-              <VPNProvider>
-                <ParentalControlsProvider>
-                  <RootLayoutNav />
-                </ParentalControlsProvider>
-              </VPNProvider>
-            </TierProvider>
-          </RevenueCatProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <RevenueCatProvider>
+              <TierProvider>
+                <VPNProvider>
+                  <ParentalControlsProvider>
+                    <RootLayoutNav />
+                  </ParentalControlsProvider>
+                </VPNProvider>
+              </TierProvider>
+            </RevenueCatProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

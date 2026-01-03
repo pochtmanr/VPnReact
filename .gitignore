@@ -48,3 +48,7 @@ ios/DerivedData/
 *.xcuserstate
 xcuserdata/
 *.ovpn
+
+# Keystore files
+*.keystore
+keystore.properties

@@ -1,15 +1,13 @@
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
 import { ChevronDown, Monitor, Smartphone, Tablet, X } from 'lucide-react-native';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  LayoutAnimation,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } from 'react-native';
 import Animated, {
@@ -19,11 +17,6 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 import { SkeletonDeviceItem } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
@@ -125,7 +118,6 @@ const DeviceAccordionItem = memo(function DeviceAccordionItem({
   const rotation = useSharedValue(0);
 
   const toggleExpanded = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsExpanded(prev => !prev);
     rotation.value = withTiming(isExpanded ? 0 : 180, { duration: 200 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -155,15 +147,26 @@ const DeviceAccordionItem = memo(function DeviceAccordionItem({
     [isDark]
   );
 
-  // Collect status dots for collapsed view (only for current device)
+  // Collect status dots for collapsed view
+  // For current device: use local state (real-time)
+  // For other devices: use database status (polled)
   const statusDots = useMemo(() => {
-    if (!isCurrentDevice) return [];
     const dots: Array<{ color: string; key: string }> = [];
-    if (isVpnConnected) dots.push({ color: '#22C55E', key: 'vpn' });
-    if (isParentalEnabled) dots.push({ color: '#3B82F6', key: 'parental' });
-    if (isAdBlockEnabled) dots.push({ color: '#EF4444', key: 'adblock' });
+
+    if (isCurrentDevice) {
+      // Current device uses local state for real-time accuracy
+      if (isVpnConnected) dots.push({ color: '#22C55E', key: 'vpn' });
+      if (isParentalEnabled) dots.push({ color: '#3B82F6', key: 'parental' });
+      if (isAdBlockEnabled) dots.push({ color: '#EF4444', key: 'adblock' });
+    } else {
+      // Other devices use database status (synced via polling)
+      if (device.vpn_connected) dots.push({ color: '#22C55E', key: 'vpn' });
+      if (device.filter_enabled) dots.push({ color: '#3B82F6', key: 'parental' });
+      if (device.adblock_enabled) dots.push({ color: '#EF4444', key: 'adblock' });
+    }
+
     return dots;
-  }, [isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled]);
+  }, [isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled, device.vpn_connected, device.filter_enabled, device.adblock_enabled]);
 
   // Collect tags to display (only in expanded view)
   const tags = useMemo(() => {
@@ -185,33 +188,37 @@ const DeviceAccordionItem = memo(function DeviceAccordionItem({
       });
     }
 
-    // Status badges only for current device
-    if (isCurrentDevice) {
-      if (isVpnConnected) {
-        result.push({
-          label: translations.vpn,
-          color: '#22C55E',
-          bgColor: 'rgba(34, 197, 94, 0.15)',
-        });
-      }
-      if (isParentalEnabled) {
-        result.push({
-          label: translations.filter,
-          color: '#3B82F6',
-          bgColor: 'rgba(59, 130, 246, 0.15)',
-        });
-      }
-      if (isAdBlockEnabled) {
-        result.push({
-          label: translations.adBlock,
-          color: '#EF4444',
-          bgColor: 'rgba(239, 68, 68, 0.15)',
-        });
-      }
+    // Status badges - show for all devices
+    // For current device: use local state (real-time)
+    // For other devices: use database status (polled)
+    const vpnActive = isCurrentDevice ? isVpnConnected : device.vpn_connected;
+    const filterActive = isCurrentDevice ? isParentalEnabled : device.filter_enabled;
+    const adblockActive = isCurrentDevice ? isAdBlockEnabled : device.adblock_enabled;
+
+    if (vpnActive) {
+      result.push({
+        label: translations.vpn,
+        color: '#22C55E',
+        bgColor: 'rgba(34, 197, 94, 0.15)',
+      });
+    }
+    if (filterActive) {
+      result.push({
+        label: translations.filter,
+        color: '#3B82F6',
+        bgColor: 'rgba(59, 130, 246, 0.15)',
+      });
+    }
+    if (adblockActive) {
+      result.push({
+        label: translations.adBlock,
+        color: '#EF4444',
+        bgColor: 'rgba(239, 68, 68, 0.15)',
+      });
     }
 
     return result;
-  }, [isMainDevice, isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled, colors, isDark, translations]);
+  }, [isMainDevice, isCurrentDevice, isVpnConnected, isParentalEnabled, isAdBlockEnabled, device.vpn_connected, device.filter_enabled, device.adblock_enabled, colors, isDark, translations]);
 
   // Determine if remove button should be shown (only in expanded view)
   const showRemoveButton = isExpanded && !isMainDevice && canRemove;
@@ -323,21 +330,41 @@ export const DevicesWidget = memo(function DevicesWidget({
     deviceCount,
     maxDevices,
     removeDevice,
+    refreshDevices,
     mainDevice,
     canManageDevices,
   } = useAuth();
   const { connectionStatus, adBlockEnabled } = useVPN();
   const { isEnabled: isParentalEnabled } = useParentalControls();
 
-  const [isLoading, setIsLoading] = useState(true);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isVpnConnected = connectionStatus === 'connected';
 
-  // Simulate loading state (devices come from context, so just brief delay)
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timer);
-  }, []);
+  // Show loading only if devices haven't loaded yet from context
+  const isLoading = devices.length === 0 && deviceCount === 0;
+
+  // Poll for device status updates when screen is focused
+  // This enables showing status of other devices (VPN, Filter, AdBlock)
+  useFocusEffect(
+    useCallback(() => {
+      // Initial refresh when screen comes into focus
+      refreshDevices();
+
+      // Set up polling interval (every 30 seconds)
+      pollingIntervalRef.current = setInterval(() => {
+        refreshDevices();
+      }, 30000);
+
+      // Cleanup on blur
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
+    }, [refreshDevices])
+  );
 
   // Sort devices: main device first, then current device, then by created_at
   const sortedDevices = useMemo(() => {

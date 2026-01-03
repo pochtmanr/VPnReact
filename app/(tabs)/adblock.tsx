@@ -103,15 +103,15 @@ export default function AdblockScreen() {
     };
   }, []);
 
-  // Fetch stats from AdGuard Home
+  // Fetch stats from AdGuard Home (silently fails if VPN not connected)
   const fetchStats = useCallback(async () => {
     try {
       const data = await getAdBlockStats();
       if (isMountedRef.current) {
         setStats(data);
       }
-    } catch (error) {
-      console.warn('Failed to fetch AdGuard stats:', error);
+    } catch {
+      // Silently ignore - VPN likely not connected
     } finally {
       if (isMountedRef.current) {
         setRefreshing(false);

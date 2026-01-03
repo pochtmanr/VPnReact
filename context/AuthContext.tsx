@@ -110,16 +110,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function initializeAuth() {
+    console.log('[Auth] initializeAuth called');
     try {
       const storedAccountId = await AsyncStorage.getItem(ACCOUNT_STORAGE_KEY);
+      console.log('[Auth] Stored account ID:', storedAccountId);
 
       if (storedAccountId && isSupabaseConfigured) {
         // Try to login with stored account
+        console.log('[Auth] Auto-logging in with stored account');
         const result = await loginWithAccountId(storedAccountId);
         if (!result.success) {
           // Clear invalid account
           await AsyncStorage.removeItem(ACCOUNT_STORAGE_KEY);
         }
+      } else {
+        console.log('[Auth] No stored account, skipping auto-login');
       }
     } catch (error) {
       console.error('Error initializing auth:', error);
@@ -188,6 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Login with existing account ID
   const loginWithAccountId = useCallback(async (accountId: string): Promise<{ success: boolean; error?: string }> => {
+    console.log('[Auth] loginWithAccountId called with:', accountId);
+
     if (!isSupabaseConfigured) {
       return { success: false, error: 'Server not configured' };
     }
@@ -244,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Internal refresh devices (doesn't depend on account state)
+  // Silently handles errors - this is called frequently and errors are non-critical
   async function refreshDevicesInternal(accountId: string) {
     if (!isSupabaseConfigured) return;
 
@@ -252,8 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         p_account_id: accountId,
       });
 
+      // Silently ignore errors - could be network issue, account not found, etc.
       if (error) {
-        console.error('Error fetching devices:', error);
         return;
       }
 
@@ -261,12 +269,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (result.success && result.devices) {
         setDevices(result.devices);
-        if (result.account) {
-          setAccount(result.account);
-        }
+        // NOTE: Do NOT set account here - this causes re-authentication after logout
+        // Account should only be set during explicit login operations
+      } else {
+        // No devices or unsuccessful - just set empty array
+        setDevices([]);
       }
-    } catch (error) {
-      console.error('Error refreshing devices:', error);
+    } catch {
+      // Silently ignore - network issues, etc.
     }
   }
 
@@ -312,12 +322,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [account, deviceSession]);
 
-  // Logout
+  // Logout - fully clears session state to prevent auto re-authentication
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    console.log('[Auth] Logout started');
+
+    // Clear local auth state first
     setAccount(null);
     setDeviceSession(null);
     setDevices([]);
+    console.log('[Auth] State cleared');
+
+    // Remove account ID from storage
+    await AsyncStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    console.log('[Auth] Storage cleared');
+
+    // Clear Supabase session data (prevents any cached session from auto-restoring)
+    // Note: We use anonymous key, but Supabase still persists session data with persistSession: true
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        // Non-critical - session might not exist
+        console.warn('Supabase signOut warning:', error);
+      }
+    }
+
+    // Clear any Supabase-specific storage keys that might persist
+    // Supabase stores under 'sb-<project-ref>-auth-token' pattern
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const supabaseKeys = allKeys.filter(key => key.startsWith('sb-') || key.includes('supabase'));
+      if (supabaseKeys.length > 0) {
+        await AsyncStorage.multiRemove(supabaseKeys);
+      }
+    } catch (error) {
+      console.warn('Error clearing Supabase storage:', error);
+    }
   }, []);
 
   // Delete account permanently

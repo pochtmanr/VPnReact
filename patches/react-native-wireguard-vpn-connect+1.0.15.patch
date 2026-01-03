@@ -1,0 +1,22 @@
+diff --git a/android/src/main/java/com/wireguardvpn/WireGuardVpnModule.kt b/android/src/main/java/com/wireguardvpn/WireGuardVpnModule.kt
+index 1234567..abcdefg 100644
+--- a/android/src/main/java/com/wireguardvpn/WireGuardVpnModule.kt
++++ b/android/src/main/java/com/wireguardvpn/WireGuardVpnModule.kt
+@@ -33,7 +33,7 @@ class WireGuardVpnModule(reactContext: ReactApplicationContext) : ReactContextBa
+             val intent = VpnService.prepare(reactApplicationContext)
+             if (intent != null) {
+                 // VPN permission not granted, need to request it
+-                val activity = currentActivity
++                val activity = getCurrentActivity()
+                 if (activity != null) {
+                     activity.startActivityForResult(intent, VPN_REQUEST_CODE)
+                     // We'll handle the result in onActivityResult
+@@ -59,7 +59,7 @@ class WireGuardVpnModule(reactContext: ReactApplicationContext) : ReactContextBa
+         try {
+             val intent = VpnService.prepare(reactApplicationContext)
+             if (intent != null) {
+-                val activity = currentActivity
++                val activity = getCurrentActivity()
+                 if (activity != null) {
+                     activity.startActivityForResult(intent, VPN_REQUEST_CODE)
+                     promise.resolve("PERMISSION_REQUESTED")

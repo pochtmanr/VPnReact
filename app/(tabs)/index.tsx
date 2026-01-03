@@ -1,78 +1,184 @@
-import { useIsFocused } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Ban,
-  ChevronRight,
-  Clock,
-  Download,
-  Eye,
-  Gauge,
-  Globe,
-  Lock,
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  ShieldOff,
-  Smartphone,
-  Users,
-  Wifi
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Switch,
-  Text,
   View,
+  Text,
+  Pressable,
+  StyleSheet,
+  RefreshControl,
+  Modal,
+  FlatList,
+  Switch,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  cancelAnimation,
-  Easing,
   FadeInDown,
-  useAnimatedStyle,
+  Easing,
   useSharedValue,
+  useAnimatedStyle,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
+  withSpring,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import ServerBottomSheet, { ServerBottomSheetRef } from '@/components/ServerBottomSheet';
-import { QuickStatsRow, ScrollShadow } from '@/components/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import {
+  ShieldCheck,
+  Wifi,
+  ShieldAlert,
+  ShieldOff,
+  Globe,
+  ChevronRight,
+  Lock,
+  Gauge,
+  Clock,
+  X,
+  Users,
+  Eye,
+  Ban,
+  Smartphone,
+  Shield,
+} from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { useVPN } from '@/context/VPNContext';
 import { useAuth } from '@/context/AuthContext';
 import { useParentalControls } from '@/context/ParentalControlsContext';
-import { useTheme } from '@/context/ThemeContext';
 import { useTier } from '@/context/TierContext';
-import { useVPN } from '@/context/VPNContext';
-import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { ScrollShadow, QuickStatsRow } from '@/components/ui';
 import { useServerTranslation } from '@/hooks/useServerTranslation';
-import { AdBlockStats, getAdBlockStats } from '@/lib/adguard';
-import { DeviceSession } from '@/types/database';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { VPNServer } from '@/types/database';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const BUTTON_SIZE = 160;
 
-// Connection Button Component with integrated shield icon
+// Helper to get country flag emoji
+function getCountryFlag(countryCode: string): string {
+  if (!countryCode || countryCode.length !== 2) return '🌍';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
+function getGreeting(t: (key: string) => string) {
+  const hour = new Date().getHours();
+  if (hour < 12) return t('common.time.morning');
+  if (hour < 18) return t('common.time.afternoon');
+  return t('common.time.evening');
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toLocaleString();
+}
+
+// Simple Server Modal (replaces @gorhom/bottom-sheet which caused Android freeze)
+function ServerModal({
+  visible,
+  onClose,
+  servers,
+  selectedServer,
+  onServerSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  servers: VPNServer[];
+  selectedServer: VPNServer | null;
+  onServerSelect: (server: VPNServer) => void;
+}) {
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { getServerCity, getServerCountry } = useServerTranslation();
+
+  const renderServer = ({ item }: { item: VPNServer }) => {
+    const isSelected = selectedServer?.id === item.id;
+    return (
+      <Pressable
+        onPress={() => {
+          onServerSelect(item);
+          onClose();
+        }}
+        style={[
+          styles.serverItem,
+          {
+            backgroundColor: isSelected
+              ? isDark ? `${colors.success}15` : `${colors.success}08`
+              : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            borderColor: isSelected ? colors.success : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+          },
+        ]}
+      >
+        <Text style={styles.serverFlag}>{getCountryFlag(item.country_code)}</Text>
+        <View style={styles.serverTextContainer}>
+          <Text style={[styles.serverName, { color: colors.text }]}>{getServerCity(item)}</Text>
+          <Text style={[styles.serverCountry, { color: colors.textSecondary }]}>{getServerCountry(item)}</Text>
+        </View>
+        {isSelected && (
+          <View style={[styles.selectedBadge, { backgroundColor: colors.success }]}>
+            <Text style={styles.selectedText}>Selected</Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalBackdrop} onPress={onClose} />
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
+              paddingBottom: insets.bottom + 20,
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Server</Text>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <X size={24} color={colors.text} />
+            </Pressable>
+          </View>
+          <FlatList
+            data={servers}
+            renderItem={renderServer}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.serverList}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// Connection Button Component
 interface ConnectionButtonProps {
   isConnected: boolean;
   isConnecting: boolean;
   isError: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
-  onRetry: () => void;
   serverLocation?: string;
-  errorMessage?: string | null;
   t: (key: string) => string;
 }
 
-function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDisconnect, onRetry, serverLocation, errorMessage, t }: ConnectionButtonProps) {
+function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDisconnect, serverLocation, t }: ConnectionButtonProps) {
   const { colors, isDark } = useTheme();
   const isFocused = useIsFocused();
 
@@ -80,7 +186,6 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
 
-  // Stop animations when tab is not focused to prevent performance issues
   useEffect(() => {
     if (!isFocused) {
       cancelAnimation(pulseScale);
@@ -91,7 +196,6 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
     }
 
     if (isConnected) {
-      // Subtle pulsing glow when connected
       pulseScale.value = withRepeat(
         withSequence(
           withTiming(1.12, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
@@ -119,7 +223,6 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
       );
       glowOpacity.value = withTiming(0.35, { duration: 300 });
     } else if (isError) {
-      // Error state - subtle red glow
       pulseScale.value = withTiming(1, { duration: 300 });
       glowOpacity.value = withTiming(0.4, { duration: 300 });
     } else {
@@ -136,15 +239,12 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
   const handlePress = () => {
     if (isConnecting) return;
 
-    // Press feedback animation
     scale.value = withSequence(
       withSpring(0.94, { damping: 12, stiffness: 400 }),
       withSpring(1, { damping: 12, stiffness: 400 })
     );
 
-    if (isError) {
-      onRetry();
-    } else if (isConnected) {
+    if (isConnected) {
       onDisconnect();
     } else {
       onConnect();
@@ -160,30 +260,9 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
     opacity: glowOpacity.value,
   }));
 
-  const iconColor = isConnected
-    ? '#FFFFFF'
-    : isConnecting
-      ? '#FFFFFF'
-      : isError
-        ? '#FFFFFF'
-        : colors.textMuted;
-
-  const StatusIcon = isConnected
-    ? ShieldCheck
-    : isConnecting
-      ? Wifi
-      : isError
-        ? ShieldAlert
-        : ShieldOff;
-
-  // Determine colors based on state
-  const glowColor = isConnected
-    ? colors.success
-    : isConnecting
-      ? '#3B82F6'
-      : isError
-        ? '#EF4444'
-        : 'transparent';
+  const iconColor = isConnected ? '#FFFFFF' : isConnecting ? '#FFFFFF' : isError ? '#FFFFFF' : colors.textMuted;
+  const StatusIcon = isConnected ? ShieldCheck : isConnecting ? Wifi : isError ? ShieldAlert : ShieldOff;
+  const glowColor = isConnected ? colors.success : isConnecting ? '#3B82F6' : isError ? '#EF4444' : 'transparent';
 
   const gradientColors: [string, string] = isConnected
     ? [colors.success, '#16A34A']
@@ -195,119 +274,29 @@ function ConnectionButton({ isConnected, isConnecting, isError, onConnect, onDis
           ? ['#3A3A3E', '#2A2A2E']
           : ['#F5F5F7', '#E8E8ED'];
 
-  const statusTitleColor = isConnected
-    ? colors.success
-    : isConnecting
-      ? '#3B82F6'
-      : isError
-        ? '#EF4444'
-        : colors.text;
-
-  const statusTitle = isConnecting
-    ? t('vpn.connection.connecting')
-    : isConnected
-      ? t('vpn.connection.protected')
-      : isError
-        ? t('vpn.connection.failed')
-        : t('vpn.connection.notConnected');
-
-  const statusSubtitle = isConnecting
-    ? t('vpn.connection.establishing')
-    : isConnected
-      ? serverLocation || t('vpn.connection.tapDisconnect')
-      : isError
-        ? t('vpn.connection.tapRetry')
-        : t('vpn.connection.tapConnect');
+  const statusTitleColor = isConnected ? colors.success : isConnecting ? '#3B82F6' : isError ? '#EF4444' : colors.text;
+  const statusTitle = isConnecting ? t('vpn.connection.connecting') : isConnected ? t('vpn.connection.protected') : isError ? t('vpn.connection.failed') : t('vpn.connection.notConnected');
+  const statusSubtitle = isConnecting ? t('vpn.connection.establishing') : isConnected ? serverLocation || t('vpn.connection.tapDisconnect') : isError ? t('vpn.connection.tapRetry') : t('vpn.connection.tapConnect');
 
   return (
     <View style={styles.buttonContainer}>
-      {/* Outer glow ring */}
-      <Animated.View
-        style={[
-          styles.buttonGlow,
-          glowStyle,
-          { backgroundColor: glowColor },
-        ]}
-      />
-
-      {/* Main button */}
-      <AnimatedPressable
-        onPress={handlePress}
-        disabled={isConnecting}
-        style={[styles.connectionButton, buttonStyle]}
-      >
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.buttonGradient}
-        >
-          <StatusIcon
-            size={56}
-            color={iconColor}
-            strokeWidth={1.8}
-          />
+      <Animated.View style={[styles.buttonGlow, glowStyle, { backgroundColor: glowColor }]} />
+      <AnimatedPressable onPress={handlePress} disabled={isConnecting} style={[styles.connectionButton, buttonStyle]}>
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.buttonGradient}>
+          <StatusIcon size={56} color={iconColor} strokeWidth={1.8} />
         </LinearGradient>
       </AnimatedPressable>
-
-      {/* Status label */}
-      <Text style={[styles.buttonStatusTitle, { color: statusTitleColor }]}>
-        {statusTitle}
-      </Text>
-
-      {/* Server location or action hint */}
-      <Text
-        style={[styles.buttonStatusSubtitle, { color: colors.textSecondary }]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-      >
-        {statusSubtitle}
-      </Text>
+      <Text style={[styles.buttonStatusTitle, { color: statusTitleColor }]}>{statusTitle}</Text>
+      <Text style={[styles.buttonStatusSubtitle, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{statusSubtitle}</Text>
     </View>
   );
 }
 
-function getGreeting(t: (key: string) => string) {
-  const hour = new Date().getHours();
-  if (hour < 12) return t('common.time.morning');
-  if (hour < 18) return t('common.time.afternoon');
-  return t('common.time.evening');
-}
-
-// Format numbers for display
-function formatNumber(num: number): string {
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toLocaleString();
-}
-
-// Get device brand from device name
-function getDeviceBrand(deviceName: string, deviceType: string): string {
-  const name = deviceName.toLowerCase();
-  if (name.includes('iphone')) return 'iPhone';
-  if (name.includes('ipad')) return 'iPad';
-  if (name.includes('samsung')) return 'Samsung';
-  if (name.includes('pixel')) return 'Pixel';
-  if (deviceType === 'ios') return 'iPhone';
-  if (deviceType === 'android') return 'Android';
-  if (deviceName.length <= 15) return deviceName;
-  return 'Device';
-}
-
-// Square Blocked Count Widget (1:1 aspect ratio) - matches adblock StatCard style
-interface BlockedWidgetProps {
-  stats: AdBlockStats | null;
-  isConnected: boolean;
-  isEnabled: boolean;
-}
-
-function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
+// Blocked Widget
+const BlockedWidget = React.memo(function BlockedWidget({ isConnected, isEnabled }: { isConnected: boolean; isEnabled: boolean }) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
-
-  const showStats = isConnected && isEnabled && stats;
-  const blockedCount = showStats ? formatNumber(stats.totalBlocked) : '--';
   const iconColor = isConnected && isEnabled ? '#EF4444' : colors.textMuted;
 
   return (
@@ -315,7 +304,6 @@ function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
       onPress={() => router.push('/(tabs)/adblock')}
       style={({ pressed }) => [
         styles.squareWidget,
-        styles.blockedWidget,
         {
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
@@ -323,41 +311,24 @@ function BlockedWidget({ stats, isConnected, isEnabled }: BlockedWidgetProps) {
         },
       ]}
     >
-      {/* Header */}
-      <View style={styles.blockedWidgetHeader}>
-        <View style={[styles.blockedWidgetIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
+      <View style={styles.widgetHeader}>
+        <View style={[styles.widgetIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)' }]}>
           <Ban size={20} color={iconColor} />
         </View>
-        <Text style={[styles.blockedWidgetTitle, { color: colors.text }]} numberOfLines={1}>
-          {t('vpn.widgets.adsBlocked.title')}
-        </Text>
+        <Text style={[styles.widgetTitle, { color: colors.text }]} numberOfLines={1}>{t('vpn.widgets.adsBlocked.title')}</Text>
       </View>
-
-      {/* Spacer */}
       <View style={styles.widgetSpacer} />
-
-      {/* Count at bottom */}
-      <Text style={[styles.blockedWidgetValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>
-        {blockedCount}
-      </Text>
+      <Text style={[styles.widgetValue, { color: isConnected && isEnabled ? colors.text : colors.textMuted }]}>--</Text>
     </Pressable>
   );
-}
+});
 
-// Square Devices Widget (1:1 aspect ratio) with count and status dots
-interface DevicesWidgetProps {
-  devices: DeviceSession[];
-  isVpnConnected: boolean;
-  isParentalEnabled: boolean;
-  isAdBlockEnabled: boolean;
-}
-
-function DevicesWidget({ devices, isVpnConnected, isParentalEnabled, isAdBlockEnabled }: DevicesWidgetProps) {
+// Devices Widget
+const DevicesWidget = React.memo(function DevicesWidget({ deviceCount, isVpnConnected, isParentalEnabled, isAdBlockEnabled }: { deviceCount: number; isVpnConnected: boolean; isParentalEnabled: boolean; isAdBlockEnabled: boolean }) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
 
-  // Collect status dots for current device
   const statusDots: Array<{ color: string; key: string }> = [];
   if (isVpnConnected) statusDots.push({ color: '#22C55E', key: 'vpn' });
   if (isParentalEnabled) statusDots.push({ color: '#3B82F6', key: 'parental' });
@@ -368,7 +339,6 @@ function DevicesWidget({ devices, isVpnConnected, isParentalEnabled, isAdBlockEn
       onPress={() => router.push('/(tabs)/profile')}
       style={({ pressed }) => [
         styles.squareWidget,
-        styles.devicesWidget,
         {
           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
@@ -376,948 +346,292 @@ function DevicesWidget({ devices, isVpnConnected, isParentalEnabled, isAdBlockEn
         },
       ]}
     >
-      {/* Header */}
-      <View style={styles.devicesWidgetHeader}>
-        <View style={[styles.devicesWidgetIconSmall, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
+      <View style={styles.widgetHeader}>
+        <View style={[styles.widgetIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
           <Smartphone size={20} color="#3B82F6" />
         </View>
-        <Text style={[styles.devicesWidgetTitle, { color: colors.text }]}>
-          {t('vpn.widgets.devices.title')}
-        </Text>
+        <Text style={[styles.widgetTitle, { color: colors.text }]}>{t('vpn.widgets.devices.title')}</Text>
       </View>
-
-      {/* Spacer */}
       <View style={styles.widgetSpacer} />
-
-      {/* Device count and status at bottom */}
-      <View style={styles.devicesWidgetBottom}>
-        <Text style={[styles.devicesWidgetValue, { color: colors.text }]}>
-          {devices.length}
-        </Text>
-        {/* Status dots */}
+      <View style={styles.widgetBottom}>
+        <Text style={[styles.widgetValue, { color: colors.text }]}>{deviceCount}</Text>
         {statusDots.length > 0 && (
-          <View style={styles.devicesStatusDots}>
+          <View style={styles.statusDots}>
             {statusDots.map((dot) => (
-              <View
-                key={dot.key}
-                style={[styles.devicesWidgetDot, { backgroundColor: dot.color }]}
-              />
+              <View key={dot.key} style={[styles.statusDot, { backgroundColor: dot.color }]} />
             ))}
           </View>
         )}
       </View>
     </Pressable>
   );
-}
+});
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, devices, deviceSession } = useAuth();
   const { t } = useTranslation();
+  const { isAuthenticated, devices } = useAuth();
   const { getServerCity, getServerCountry } = useServerTranslation();
   const {
     servers,
     selectedServer,
     connectionStatus,
-    favorites,
-    isProfileInstalled,
-    isCheckingProfile,
+    measuredLatency,
     adBlockEnabled,
     setAdBlockEnabled,
-    measuredLatency,
-    connectionError,
     connect,
     disconnect,
     selectServer,
-    toggleFavorite,
     refreshServers,
-    installVPNProfile,
-    retryConnection,
     loadServersIfNeeded,
+    retryConnection,
   } = useVPN();
-  const {
-    isEnabled: parentalEnabled,
-    toggleParentalControls,
-    isToggling: isParentalToggling,
-  } = useParentalControls();
+  const { isEnabled: parentalEnabled, toggleParentalControls, isToggling: isParentalToggling } = useParentalControls();
   const { isPro } = useTier();
 
-  // Feature gating with automatic paywall for Quick Settings
-  const {
-    hasAccess: hasFilterAccess,
-    requestAccess: requestFilterAccess,
-    isGating: isFilterGating,
-    getDisabledReason: getFilterDisabledReason,
-  } = useFeatureGate('content_filter', {
-    requiresVPN: true,
-    isVPNConnected: connectionStatus === 'connected',
-  });
-
-  const {
-    hasAccess: hasAdBlockAccess,
-    requestAccess: requestAdBlockAccess,
-    isGating: isAdBlockGating,
-    getDisabledReason: getAdBlockDisabledReason,
-  } = useFeatureGate('ad_blocking', {
-    requiresVPN: true,
-    isVPNConnected: connectionStatus === 'connected',
-  });
+  const { hasAccess: hasFilterAccess, requestAccess: requestFilterAccess, isGating: isFilterGating, getDisabledReason: getFilterDisabledReason } = useFeatureGate('content_filter', { requiresVPN: true, isVPNConnected: connectionStatus === 'connected' });
+  const { hasAccess: hasAdBlockAccess, requestAccess: requestAdBlockAccess, isGating: isAdBlockGating, getDisabledReason: getAdBlockDisabledReason } = useFeatureGate('ad_blocking', { requiresVPN: true, isVPNConnected: connectionStatus === 'connected' });
 
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [adBlockStats, setAdBlockStats] = useState<AdBlockStats | null>(null);
-
-  const bottomSheetRef = useRef<ServerBottomSheetRef>(null);
+  const [serverModalVisible, setServerModalVisible] = useState(false);
 
   const isLoggedIn = isAuthenticated;
   const isConnected = connectionStatus === 'connected';
   const isConnecting = connectionStatus === 'connecting';
   const isError = connectionStatus === 'error';
-  const [isInstallingProfile, setIsInstallingProfile] = useState(false);
 
-  // Fetch AdBlock stats when connected and ad blocking is enabled
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    const fetchStats = async () => {
-      if (isConnected && adBlockEnabled) {
-        try {
-          const stats = await getAdBlockStats();
-          setAdBlockStats(stats);
-        } catch (error) {
-          console.warn('Failed to fetch AdBlock stats:', error);
-        }
-      }
-    };
-
-    fetchStats();
-
-    // Refresh stats every 30 seconds when connected
-    if (isConnected && adBlockEnabled) {
-      interval = setInterval(fetchStats, 30000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isConnected, adBlockEnabled]);
-
-  // Handle VPN profile installation
-  const handleInstallProfile = async () => {
-    setIsInstallingProfile(true);
-    try {
-      await installVPNProfile();
-    } finally {
-      setIsInstallingProfile(false);
-    }
-  };
-
-  async function handleRefresh() {
+  const handleRefresh = async () => {
     setRefreshing(true);
     await refreshServers();
     setRefreshing(false);
-  }
+  };
 
   const handleServerSelect = useCallback((server: typeof servers[0]) => {
     if (connectionStatus === 'disconnected') {
       selectServer(server);
-      bottomSheetRef.current?.close();
     }
   }, [connectionStatus, selectServer]);
 
-  const handleToggleFavorite = useCallback((serverId: string) => {
-    toggleFavorite(serverId);
-  }, [toggleFavorite]);
-
-  const isPremiumLocked = useCallback((server: typeof servers[0]) =>
-    server.is_premium && !isPro,
-    [isPro]
-  );
-
-  // Helper to get country flag emoji from country code
-  const getCountryFlag = (countryCode: string): string => {
-    if (!countryCode || countryCode.length !== 2) return '🌍';
-    const codePoints = countryCode
-      .toUpperCase()
-      .split('')
-      .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
+  const openServerModal = () => {
+    loadServersIfNeeded();
+    setServerModalVisible(true);
   };
 
-  const openServerSheet = () => {
-    bottomSheetRef.current?.open();
-  };
-
-  // Content filter toggle with paywall gating
   const handleFilterToggle = useCallback(async (newValue: boolean) => {
     if (isParentalToggling || isFilterGating) return;
-
-    // If turning off, always allow
     if (!newValue) {
-      try {
-        await toggleParentalControls(false);
-      } catch (err) {
-        console.log('Toggle error handled by context');
-      }
+      try { await toggleParentalControls(false); } catch {}
       return;
     }
-
-    // If turning on, check access (shows paywall if needed)
     const granted = await requestFilterAccess();
     if (!granted) return;
-
-    try {
-      await toggleParentalControls(true);
-    } catch (err) {
-      console.log('Toggle error handled by context');
-    }
+    try { await toggleParentalControls(true); } catch {}
   }, [isParentalToggling, isFilterGating, toggleParentalControls, requestFilterAccess]);
 
-  // Ad block toggle with paywall gating
   const handleAdBlockToggle = useCallback(async (newValue: boolean) => {
     if (isAdBlockGating) return;
-
-    // If turning off, always allow
-    if (!newValue) {
-      setAdBlockEnabled(false);
-      return;
-    }
-
-    // If turning on, check access (shows paywall if needed)
+    if (!newValue) { setAdBlockEnabled(false); return; }
     const granted = await requestAdBlockAccess();
-    if (granted) {
-      setAdBlockEnabled(true);
-    }
+    if (granted) setAdBlockEnabled(true);
   }, [isAdBlockGating, setAdBlockEnabled, requestAdBlockAccess]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <LinearGradient colors={isDark ? ['#000000', '#0a0a0a', '#000000'] : ['#ffffff', '#fafafa', '#f5f5f5']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
 
-        <LinearGradient
-          colors={isDark
-            ? ['#000000', '#0a0a0a', '#000000']
-            : ['#ffffff', '#fafafa', '#f5f5f5']
-          }
-          locations={[0, 0.5, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-
-        <ScrollShadow size={60}>
-          <Animated.ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={{
-              paddingTop: insets.top + 12,
-              paddingBottom: insets.bottom + 100,
-              paddingHorizontal: 20,
-            }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.primary}
-              />
-            }
-          >
+      <ScrollShadow size={60}>
+        <Animated.ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 100, paddingHorizontal: 20 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        >
           {/* Header */}
-          <AnimatedView
-            entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))}
-            style={styles.header}
-          >
-            <Text style={[styles.title, { color: colors.text }]}>
-              {getGreeting(t)}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {isConnected
-                ? t('vpn.connection.secure')
-                : t('vpn.connection.connectPrompt')}
-            </Text>
+          <AnimatedView entering={FadeInDown.delay(0).duration(300).easing(Easing.out(Easing.ease))} style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>{getGreeting(t)}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{isConnected ? t('vpn.connection.secure') : t('vpn.connection.connectPrompt')}</Text>
           </AnimatedView>
-
-          {/* VPN Profile Installation Banner */}
-          {!isCheckingProfile && !isProfileInstalled && (
-            <AnimatedView
-              entering={FadeInDown.delay(25).duration(300).easing(Easing.out(Easing.ease))}
-              style={[
-                styles.profileBanner,
-                {
-                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                  borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
-                },
-              ]}
-            >
-              <View style={styles.profileBannerContent}>
-                <View
-                  style={[
-                    styles.profileBannerIcon,
-                    { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' },
-                  ]}
-                >
-                  <Download size={20} color="#3B82F6" />
-                </View>
-                <View style={styles.profileBannerText}>
-                  <Text style={[styles.profileBannerTitle, { color: colors.text }]}>
-                    {t('vpn.setup.title')}
-                  </Text>
-                  <Text style={[styles.profileBannerSubtitle, { color: colors.textSecondary }]}>
-                    {t('vpn.setup.description')}
-                  </Text>
-                </View>
-              </View>
-              <Pressable
-                onPress={handleInstallProfile}
-                disabled={isInstallingProfile}
-                style={({ pressed }) => [
-                  styles.profileBannerButton,
-                  {
-                    backgroundColor: pressed ? '#2563EB' : '#3B82F6',
-                    opacity: isInstallingProfile ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <Text style={styles.profileBannerButtonText}>
-                  {isInstallingProfile ? t('common.buttons.installing') : t('common.buttons.install')}
-                </Text>
-              </Pressable>
-            </AnimatedView>
-          )}
 
           {/* Connection Card */}
           <AnimatedView
             entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.connectionCard,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              },
-            ]}
+            style={[styles.connectionCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
           >
-            {/* Connection Button with integrated status */}
             <ConnectionButton
               isConnected={isConnected}
               isConnecting={isConnecting}
               isError={isError}
               onConnect={connect}
               onDisconnect={disconnect}
-              onRetry={retryConnection}
               serverLocation={selectedServer ? `${getServerCity(selectedServer)}, ${getServerCountry(selectedServer)}` : undefined}
-              errorMessage={connectionError}
               t={t}
             />
-
-            {/* Connection Stats - Protocol, Latency, Status */}
             <QuickStatsRow
               stats={[
-                {
-                  icon: Lock,
-                  iconColor: isConnected ? colors.primary : selectedServer ? colors.textSecondary : colors.textMuted,
-                  // Show protocol (WireGuard, etc.)
-                  value: selectedServer?.protocol
-                    ? selectedServer.protocol === 'wireguard' ? 'WireGuard'
-                      : selectedServer.protocol === 'udp' ? 'UDP'
-                      : selectedServer.protocol === 'tcp' ? 'TCP'
-                      : selectedServer.protocol
-                    : '--',
-                  label: t('server.protocol'),
-                },
-                {
-                  icon: Gauge,
-                  iconColor: isConnected ? colors.info : selectedServer?.latency_ms ? colors.textSecondary : colors.textMuted,
-                  // Show measured latency when connected, or server's stored latency when disconnected
-                  value: isConnected && measuredLatency !== null
-                    ? `${measuredLatency}ms`
-                    : selectedServer?.latency_ms
-                      ? `${selectedServer.latency_ms}ms`
-                      : '--',
-                  label: t('vpn.stats.latency'),
-                },
-                {
-                  icon: Clock,
-                  iconColor: isConnected ? colors.success : isError ? colors.error : colors.textMuted,
-                  value: isConnected ? t('vpn.stats.active') : isConnecting ? t('vpn.stats.connecting') : isError ? t('vpn.stats.error') : t('vpn.stats.idle'),
-                  label: t('vpn.stats.status'),
-                },
+                { icon: Lock, iconColor: isConnected ? colors.primary : colors.textMuted, value: selectedServer?.protocol === 'wireguard' ? 'WireGuard' : '--', label: t('server.protocol') },
+                { icon: Gauge, iconColor: isConnected ? colors.info : colors.textMuted, value: isConnected && measuredLatency ? `${measuredLatency}ms` : selectedServer?.latency_ms ? `${selectedServer.latency_ms}ms` : '--', label: t('vpn.stats.latency') },
+                { icon: Clock, iconColor: isConnected ? colors.success : colors.textMuted, value: isConnected ? t('vpn.stats.active') : isConnecting ? t('vpn.stats.connecting') : t('vpn.stats.idle'), label: t('vpn.stats.status') },
               ]}
             />
           </AnimatedView>
 
-          {/* Server Selection Button - Disabled during connection */}
-          <AnimatedView
-            entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
-          >
+          {/* Server Selection Button */}
+          <AnimatedView entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}>
             <Pressable
-              onPress={openServerSheet}
+              onPress={openServerModal}
               disabled={isConnecting || isConnected}
               style={({ pressed }) => [
                 styles.serverSelectButton,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  opacity: (isConnecting || isConnected) ? 0.6 : pressed ? 0.8 : 1,
-                },
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', opacity: (isConnecting || isConnected) ? 0.6 : pressed ? 0.8 : 1 },
               ]}
             >
               <View style={styles.serverSelectLeft}>
-                {/* Show country flag as primary icon when server selected, otherwise globe */}
-                <View
-                  style={[
-                    styles.serverSelectIcon,
-                    { backgroundColor: isDark ? `${colors.primary}20` : `${colors.primary}15` },
-                  ]}
-                >
-                  {selectedServer ? (
-                    <Text style={styles.serverIconFlag}>{getCountryFlag(selectedServer.country_code)}</Text>
-                  ) : (
-                    <Globe size={22} color={colors.primary} />
-                  )}
+                <View style={[styles.serverSelectIcon, { backgroundColor: isDark ? `${colors.primary}20` : `${colors.primary}15` }]}>
+                  {selectedServer ? <Text style={styles.serverIconFlag}>{getCountryFlag(selectedServer.country_code)}</Text> : <Globe size={22} color={colors.primary} />}
                 </View>
                 <View style={styles.serverSelectTextContainer}>
-                  <Text
-                    style={[
-                      styles.serverSelectLabel,
-                      { color: (isConnecting || isConnected) ? colors.textMuted : colors.text }
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {selectedServer ? getServerCity(selectedServer) : t('vpn.serverSelect.title')}
-                  </Text>
-                  <Text
-                    style={[styles.serverSelectSubLabel, { color: colors.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {(isConnecting || isConnected)
-                      ? t('vpn.serverSelect.disconnectToChange')
-                      : selectedServer
-                        ? getServerCountry(selectedServer)
-                        : t('vpn.serverSelect.serversAvailable', { count: servers.length })}
-                  </Text>
+                  <Text style={[styles.serverSelectLabel, { color: (isConnecting || isConnected) ? colors.textMuted : colors.text }]} numberOfLines={1}>{selectedServer ? getServerCity(selectedServer) : t('vpn.serverSelect.title')}</Text>
+                  <Text style={[styles.serverSelectSubLabel, { color: colors.textSecondary }]} numberOfLines={1}>{(isConnecting || isConnected) ? t('vpn.serverSelect.disconnectToChange') : selectedServer ? getServerCountry(selectedServer) : t('vpn.serverSelect.serversAvailable', { count: servers.length })}</Text>
                 </View>
               </View>
-              <View style={styles.serverSelectRight}>
-                {(isConnecting || isConnected) ? (
-                  <Lock size={18} color={colors.textMuted} />
-                ) : (
-                  <ChevronRight size={20} color={colors.textMuted} />
-                )}
-              </View>
+              <View style={styles.serverSelectRight}>{(isConnecting || isConnected) ? <Lock size={18} color={colors.textMuted} /> : <ChevronRight size={20} color={colors.textMuted} />}</View>
             </Pressable>
           </AnimatedView>
 
           {/* Quick Settings */}
           <AnimatedView
-            entering={FadeInDown.delay(isPro ? 125 : 150).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.togglesCard,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              },
-            ]}
+            entering={FadeInDown.delay(150).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.togglesCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
           >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('vpn.quickSettings.title')}</Text>
 
-            {/* Content Filter - Tappable to show paywall when locked */}
+            {/* Content Filter */}
             <View style={[styles.settingRow, (!isConnected || !hasFilterAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
-                <View style={[
-                  styles.settingIcon,
-                  {
-                    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                    opacity: (isConnected && hasFilterAccess) ? 1 : 0.5,
-                  }
-                ]}>
+                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)', opacity: (isConnected && hasFilterAccess) ? 1 : 0.5 }]}>
                   <Users size={20} color={(isConnected && hasFilterAccess) ? '#3B82F6' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: (isConnected && hasFilterAccess) ? colors.text : colors.textMuted }]}>
-                    {t('vpn.quickSettings.contentFilter.title')}
-                  </Text>
-                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {getFilterDisabledReason() ||
-                      (parentalEnabled ? t('vpn.quickSettings.contentFilter.active') : t('vpn.quickSettings.contentFilter.description'))}
-                  </Text>
+                  <Text style={[styles.settingLabel, { color: (isConnected && hasFilterAccess) ? colors.text : colors.textMuted }]}>{t('vpn.quickSettings.contentFilter.title')}</Text>
+                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{getFilterDisabledReason() || (parentalEnabled ? t('vpn.quickSettings.contentFilter.active') : t('vpn.quickSettings.contentFilter.description'))}</Text>
                 </View>
               </View>
-              <Switch
-                value={parentalEnabled}
-                onValueChange={handleFilterToggle}
-                disabled={isFilterGating || isParentalToggling}
-                trackColor={{ false: colors.border, true: '#3B82F6' }}
-                thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-                ios_backgroundColor={colors.border}
-                style={{ opacity: (isFilterGating || isParentalToggling) ? 0.5 : 1 }}
-              />
+              <Switch value={parentalEnabled} onValueChange={handleFilterToggle} disabled={isFilterGating || isParentalToggling} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} style={{ opacity: (isFilterGating || isParentalToggling) ? 0.5 : 1 }} />
             </View>
 
             <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
 
-            {/* Ad Blocker - Tappable to show paywall when locked */}
+            {/* Ad Blocker */}
             <View style={[styles.settingRow, (!isConnected || !hasAdBlockAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
-                <View style={[
-                  styles.settingIcon,
-                  {
-                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-                    opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5,
-                  }
-                ]}>
+                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)', opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5 }]}>
                   <Eye size={20} color={(isConnected && hasAdBlockAccess) ? '#EF4444' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
-                  <Text style={[styles.settingLabel, { color: (isConnected && hasAdBlockAccess) ? colors.text : colors.textMuted }]}>
-                    {t('vpn.quickSettings.adBlocker.title')}
-                  </Text>
-                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {getAdBlockDisabledReason() || t('vpn.quickSettings.adBlocker.description')}
-                  </Text>
+                  <Text style={[styles.settingLabel, { color: (isConnected && hasAdBlockAccess) ? colors.text : colors.textMuted }]}>{t('vpn.quickSettings.adBlocker.title')}</Text>
+                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{getAdBlockDisabledReason() || t('vpn.quickSettings.adBlocker.description')}</Text>
                 </View>
               </View>
-              <Switch
-                value={adBlockEnabled}
-                onValueChange={handleAdBlockToggle}
-                disabled={isAdBlockGating}
-                trackColor={{ false: colors.border, true: '#3B82F6' }}
-                thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'}
-                ios_backgroundColor={colors.border}
-                style={{ opacity: isAdBlockGating ? 0.5 : 1 }}
-              />
+              <Switch value={adBlockEnabled} onValueChange={handleAdBlockToggle} disabled={isAdBlockGating} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} style={{ opacity: isAdBlockGating ? 0.5 : 1 }} />
             </View>
 
             {!isLoggedIn && (
-              <View
-                style={[
-                  styles.loginPrompt,
-                  { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)' },
-                ]}
-              >
+              <View style={[styles.loginPrompt, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)' }]}>
                 <Lock size={14} color={colors.primary} />
-                <Text style={[styles.loginPromptText, { color: colors.primary }]}>
-                  {t('vpn.signInPrompt')}
-                </Text>
+                <Text style={[styles.loginPromptText, { color: colors.primary }]}>{t('vpn.signInPrompt')}</Text>
               </View>
             )}
           </AnimatedView>
 
-          {/* Square Widgets Row */}
-          <AnimatedView
-            entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))}
-            style={styles.widgetsRow}
-          >
-            {/* Blocked Count Widget (Left) */}
-            <BlockedWidget
-              stats={adBlockStats}
-              isConnected={isConnected}
-              isEnabled={adBlockEnabled}
-            />
-
-            {/* Devices Widget (Right) */}
-            <DevicesWidget
-              devices={devices}
-              isVpnConnected={isConnected}
-              isParentalEnabled={parentalEnabled}
-              isAdBlockEnabled={adBlockEnabled}
-            />
+          {/* Widgets Row */}
+          <AnimatedView entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))} style={styles.widgetsRow}>
+            <BlockedWidget isConnected={isConnected} isEnabled={adBlockEnabled} />
+            <DevicesWidget deviceCount={devices.length} isVpnConnected={isConnected} isParentalEnabled={parentalEnabled} isAdBlockEnabled={adBlockEnabled} />
           </AnimatedView>
 
           {/* Info Card */}
           <AnimatedView
-            entering={FadeInDown.delay(150).duration(300).easing(Easing.out(Easing.ease))}
-            style={[
-              styles.infoCard,
-              {
-                backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
-                borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
-              },
-            ]}
+            entering={FadeInDown.delay(200).duration(300).easing(Easing.out(Easing.ease))}
+            style={[styles.infoCard, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)', borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' }]}
           >
             <Shield size={18} color="#3B82F6" />
-            <Text style={[styles.infoText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>
-              {t('vpn.serverInfo')}
-            </Text>
+            <Text style={[styles.infoText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>{t('vpn.serverInfo')}</Text>
           </AnimatedView>
         </Animated.ScrollView>
-        </ScrollShadow>
+      </ScrollShadow>
 
-        {/* Server Bottom Sheet */}
-        <ServerBottomSheet
-          ref={bottomSheetRef}
-          servers={servers}
-          favorites={favorites}
-          selectedServer={selectedServer}
-          isConnected={isConnected}
-          onServerSelect={handleServerSelect}
-          onToggleFavorite={handleToggleFavorite}
-          isPremiumLocked={isPremiumLocked}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onOpen={loadServersIfNeeded}
-        />
-      </View>
-    </GestureHandlerRootView>
+      {/* Server Modal */}
+      <ServerModal
+        visible={serverModalVisible}
+        onClose={() => setServerModalVisible(false)}
+        servers={servers}
+        selectedServer={selectedServer}
+        onServerSelect={handleServerSelect}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 16,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Profile Banner
-  profileBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 16,
-  },
-  profileBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  profileBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileBannerText: {
-    flex: 1,
-  },
-  profileBannerTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  profileBannerSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  profileBannerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  profileBannerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  // Connection Card
-  connectionCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  // Connection Button
-  buttonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonGlow: {
-    position: 'absolute',
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
-  },
-  connectionButton: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  buttonGradient: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonStatusTitle: {
-    marginTop: 20,
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  buttonStatusSubtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    fontWeight: '400',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  // Server Select Button
-  serverSelectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
-  serverSelectLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  serverSelectTextContainer: {
-    flex: 1,
-  },
-  serverSelectIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  serverSelectLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  serverSelectSubLabel: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  serverSelectRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  serverSelectFlag: {
-    fontSize: 24,
-  },
-  serverIconFlag: {
-    fontSize: 28,
-  },
-  // Quick Settings Card
-  togglesCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  settingRowDisabled: {
-    opacity: 0.7,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  settingDescription: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  settingDivider: {
-    height: 1,
-    marginStart: 52,
-  },
-  loginPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    padding: 10,
-    borderRadius: 10,
-    gap: 6,
-  },
-  loginPromptText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  // Info Card
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  // Square Widgets Row
-  widgetsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  // Square Widget Styles (1:1 aspect ratio)
-  squareWidget: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  squareWidgetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  squareWidgetValue: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  squareWidgetLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'center',
-    maxWidth: '90%',
-  },
-  squareWidgetDot: {
-    position: 'absolute',
-    top: 12,
-    end: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22C55E',
-  },
-  // Blocked Widget styles (matches devices widget layout)
-  blockedWidget: {
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
-    padding: 16,
-  },
-  blockedWidgetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  blockedWidgetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  blockedWidgetTitle: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  blockedWidgetValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  widgetSpacer: {
-    flex: 1,
-  },
-  // Devices Widget specific styles
-  devicesWidget: {
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
-    padding: 16,
-  },
-  devicesWidgetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  devicesWidgetIconSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  devicesWidgetTitle: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  devicesWidgetBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  devicesWidgetValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  devicesWidgetDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  devicesStatusDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  devicesWidgetMore: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  devicesWidgetEmpty: {
-    flex: 1,
-    fontSize: 11,
-    textAlign: 'center',
-  },
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  header: { marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: '700' },
+  subtitle: { fontSize: 16, marginTop: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: '600' },
+  connectionCard: { borderRadius: 24, borderWidth: 1, paddingVertical: 32, paddingHorizontal: 20, marginBottom: 16 },
+  buttonContainer: { alignItems: 'center', marginBottom: 20 },
+  buttonGlow: { position: 'absolute', width: BUTTON_SIZE, height: BUTTON_SIZE, borderRadius: BUTTON_SIZE / 2 },
+  connectionButton: { width: BUTTON_SIZE, height: BUTTON_SIZE, borderRadius: BUTTON_SIZE / 2, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 12 },
+  buttonGradient: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  buttonStatusTitle: { marginTop: 20, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  buttonStatusSubtitle: { marginTop: 6, fontSize: 14, fontWeight: '400', textAlign: 'center', paddingHorizontal: 20 },
+  serverSelectButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 16 },
+  serverSelectLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  serverSelectTextContainer: { flex: 1 },
+  serverSelectIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  serverSelectLabel: { fontSize: 16, fontWeight: '600' },
+  serverSelectSubLabel: { fontSize: 13, marginTop: 2 },
+  serverSelectRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  serverIconFlag: { fontSize: 28 },
+  togglesCard: { borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 16 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  settingRowDisabled: { opacity: 0.7 },
+  settingLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  settingIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  settingText: { flex: 1 },
+  settingLabel: { fontSize: 15, fontWeight: '600' },
+  settingDescription: { fontSize: 13, marginTop: 2 },
+  settingDivider: { height: 1, marginStart: 52 },
+  loginPrompt: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, padding: 10, borderRadius: 10, gap: 6 },
+  loginPromptText: { fontSize: 12, fontWeight: '500' },
+  widgetsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  squareWidget: { flex: 1, aspectRatio: 1, borderRadius: 20, borderWidth: 1, padding: 16, justifyContent: 'space-between' },
+  widgetHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  widgetIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  widgetTitle: { fontSize: 14, fontWeight: '600', flex: 1 },
+  widgetSpacer: { flex: 1 },
+  widgetValue: { fontSize: 32, fontWeight: '700' },
+  widgetBottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  statusDots: { flexDirection: 'row', gap: 4, marginBottom: 8 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  infoCard: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, borderRadius: 16, borderWidth: 1, gap: 12 },
+  infoText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  // Modal styles - transparent backdrop
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', paddingTop: 16 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(128, 128, 128, 0.2)' },
+  modalTitle: { fontSize: 20, fontWeight: '700' },
+  closeButton: { padding: 8 },
+  serverList: { paddingHorizontal: 20, paddingTop: 16 },
+  serverItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
+  serverFlag: { fontSize: 32, marginRight: 14 },
+  serverTextContainer: { flex: 1 },
+  serverName: { fontSize: 16, fontWeight: '600' },
+  serverCountry: { fontSize: 13, marginTop: 2 },
+  selectedBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  selectedText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });

@@ -11,7 +11,7 @@ import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
-import { useAuth } from '@/context/AuthContext';
+import { useTier } from '@/context/TierContext';
 import { SkeletonSubscription } from '@/components/ui/Skeleton';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -26,9 +26,12 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
   animationDelay = 100,
 }: SubscriptionWidgetProps) {
   const { colors, isDark } = useTheme();
-  const { account } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
+
+  // Use useTier() for the merged tier (RevenueCat + database fallback)
+  // This ensures cross-platform subscription sync works correctly
+  const { tier: currentTier } = useTier();
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,15 +40,14 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
     return () => clearTimeout(timer);
   }, []);
 
-  const { currentTier, tierData } = useMemo(() => {
+  const tierData = useMemo(() => {
     const tierInfo = {
       free: { nameKey: 'tier.free', color: colors.textMuted },
       pro: { nameKey: 'profile.subscription.plans.pro', color: colors.primary },
       premium: { nameKey: 'tier.premium', color: colors.info },
     };
-    const tier = (account?.subscription_tier || 'free') as keyof typeof tierInfo;
-    return { currentTier: tier, tierData: tierInfo[tier] };
-  }, [account?.subscription_tier, colors.textMuted, colors.primary, colors.info]);
+    return tierInfo[currentTier];
+  }, [currentTier, colors.textMuted, colors.primary, colors.info]);
 
   return (
     <AnimatedView

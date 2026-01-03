@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -22,9 +23,12 @@ import {
   SettingsWidget,
   SubscriptionCard,
 } from '@/components/profile';
+import { FreeSubscriptionCard } from '@/components/profile/FreeSubscriptionCard';
 import { Button, ScrollShadow } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
+import { useRevenueCat } from '@/context/RevenueCatContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useTier } from '@/context/TierContext';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -32,12 +36,31 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  const { isPro } = useTier();
   const {
     logout,
     deleteAccount,
     isAuthenticated,
+    refreshDevices,
   } = useAuth();
   const router = useRouter();
+  const { refreshCustomerInfo, isMockMode, isInitialized } = useRevenueCat();
+
+  // Refresh subscription info when Profile tab comes into focus
+  // This ensures the subscription state is always up-to-date after purchases
+  // We refresh both RevenueCat AND the database account for cross-platform sync
+  useFocusEffect(
+    useCallback(() => {
+      // Always refresh devices/account from database (also updates subscription_tier)
+      // This ensures cross-device subscription sync works (e.g., purchased on iOS, viewing on Android)
+      refreshDevices();
+
+      // Also refresh RevenueCat if available
+      if (!isMockMode && isInitialized) {
+        refreshCustomerInfo();
+      }
+    }, [refreshDevices, refreshCustomerInfo, isMockMode, isInitialized])
+  );
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -49,13 +72,14 @@ export default function ProfileScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
+            // Just logout - the _layout.tsx effect will handle navigation
+            // when isAuthenticated becomes false
             await logout();
-            router.replace('/(auth)/account');
           },
         },
       ]
     );
-  }, [logout, router]);
+  }, [logout]);
 
   // Open subscription settings in App Store / Play Store
   const openSubscriptionSettings = useCallback(async () => {
@@ -190,8 +214,9 @@ export default function ProfileScreen() {
           {/* Account ID Card - No tier badge */}
           <AccountCard cardStyle={cardStyle} animationDelay={50} />
 
-          {/* Subscription Section */}
-          <SubscriptionCard cardStyle={cardStyle} animationDelay={100} />
+          {/* Subscription Section - Show promo card for free users */}
+          {!isPro && <FreeSubscriptionCard cardStyle={cardStyle} animationDelay={100} />}
+          {isPro && <SubscriptionCard cardStyle={cardStyle} animationDelay={100} />}
 
           {/* Devices Section */}
           <DevicesWidget cardStyle={cardStyle} animationDelay={150} />

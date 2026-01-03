@@ -392,12 +392,23 @@
         "ios": "Subscriptions are managed through the App Store. You can cancel anytime in your Apple ID settings.",
         "android": "Subscriptions are managed through Google Play. You can cancel anytime in your Play Store settings."
       },
+      "renewsOn": "Renews on",
+      "expiresOn": "Expires on",
       "freeTrial": "Free Trial",
       "loadError": "Couldn't load subscription",
       "unableToOpen": "Unable to Open",
       "manageInSettings": "Please manage your subscription in Settings > Apple ID > Subscriptions",
       "noPurchasesFound": "No previous purchases were found for this account.",
-      "restoreError": "Failed to restore purchases. Please try again."
+      "restoreError": "Failed to restore purchases. Please try again.",
+      "upgradeToPremium": "Unlock Premium",
+      "premiumFeatures": "Ad blocking, unlimited devices & more",
+      "trialAvailable": "{{days}}-day free trial",
+      "accessibility": {
+        "upgradeLabel": "Upgrade to Premium",
+        "upgradeHint": "Opens subscription options",
+        "viewSubscription": "View subscription details",
+        "viewSubscriptionHint": "Opens subscription management screen"
+      }
     },
 
     "devices": {

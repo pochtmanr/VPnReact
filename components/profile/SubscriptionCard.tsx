@@ -1,14 +1,12 @@
-import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { memo, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  Linking,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Crown, Shield, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Crown, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -60,15 +58,11 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     isMockMode,
   } = useRevenueCat();
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Brief delay for visual polish, then show content
-    const timer = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timer);
-  }, []);
+  // Show loading only when RevenueCat hasn't initialized yet
+  const isLoading = rcLoading && !isInitialized;
 
   // Determine subscription status
   const subscriptionStatus = useMemo((): SubscriptionStatus => {
@@ -161,46 +155,7 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     }
   }, [subscriptionStatus, activeSubscription?.expirationDate, t]);
 
-  // CTA button configuration
-  const ctaConfig = useMemo(() => {
-    switch (subscriptionStatus) {
-      case 'free':
-        return { label: t('profile.subscription.cta.upgrade'), action: 'upgrade' as const };
-      case 'active':
-        return { label: t('profile.subscription.cta.manage'), action: 'manage' as const };
-      case 'canceled':
-      case 'expired':
-        return { label: t('profile.subscription.cta.resubscribe'), action: 'upgrade' as const };
-      case 'grace_period':
-        return { label: t('profile.subscription.cta.fixPayment'), action: 'manage' as const };
-      default:
-        return { label: t('profile.subscription.cta.upgrade'), action: 'upgrade' as const };
-    }
-  }, [subscriptionStatus, t]);
-
-  // Open store subscription management
-  const openManageSubscription = useCallback(async () => {
-    const url = Platform.select({
-      ios: 'https://apps.apple.com/account/subscriptions',
-      android: 'https://play.google.com/store/account/subscriptions',
-      default: '',
-    });
-    if (url) {
-      await Linking.openURL(url);
-    }
-  }, []);
-
-  // Handle CTA press
-  const handleCtaPress = useCallback(async () => {
-    if (ctaConfig.action === 'manage') {
-      await openManageSubscription();
-    } else {
-      // Navigate to subscription screen or present paywall
-      router.push('/(tabs)/profile/subscription');
-    }
-  }, [ctaConfig.action, openManageSubscription, router]);
-
-  // Handle card press - always go to subscription details
+  // Handle card press - go to subscription details
   const handleCardPress = useCallback(() => {
     router.push('/(tabs)/profile/subscription');
   }, [router]);
@@ -217,10 +172,10 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     } finally {
       setIsRefreshing(false);
     }
-  }, [refreshCustomerInfo, isMockMode]);
+  }, [refreshCustomerInfo, isMockMode, t]);
 
   // Show loading state
-  if (isLoading || (rcLoading && !isInitialized)) {
+  if (isLoading) {
     return (
       <AnimatedView
         entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
@@ -255,8 +210,6 @@ export const SubscriptionCard = memo(function SubscriptionCard({
     );
   }
 
-  const isPaid = currentTier !== 'free';
-
   return (
     <AnimatedView
       entering={FadeInDown.delay(animationDelay).duration(300).easing(Easing.out(Easing.ease))}
@@ -267,19 +220,13 @@ export const SubscriptionCard = memo(function SubscriptionCard({
       <Pressable
         onPress={handleCardPress}
         style={({ pressed }) => [
-          styles.subscriptionRow,
+          styles.row,
           pressed && { opacity: 0.7 },
         ]}
       >
         {/* Icon */}
-        <View style={[styles.iconContainer, {
-          backgroundColor: isPaid ? '#FFD70020' : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)')
-        }]}>
-          {isPaid ? (
-            <Crown size={22} color="#FFD700" />
-          ) : (
-            <Shield size={22} color={colors.textMuted} />
-          )}
+        <View style={[styles.iconContainer, { backgroundColor: '#FFD70020' }]}>
+          <Crown size={22} color="#FFD700" />
         </View>
 
         {/* Info */}
@@ -303,29 +250,6 @@ export const SubscriptionCard = memo(function SubscriptionCard({
 
         <ChevronRight size={20} color={colors.textMuted} />
       </Pressable>
-
-      {/* CTA Button */}
-      <Pressable
-        onPress={handleCtaPress}
-        style={({ pressed }) => [
-          styles.ctaButton,
-          {
-            backgroundColor: subscriptionStatus === 'free'
-              ? colors.primary
-              : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-          },
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <Text style={[
-          styles.ctaText,
-          {
-            color: subscriptionStatus === 'free' ? '#fff' : colors.text,
-          }
-        ]}>
-          {ctaConfig.label}
-        </Text>
-      </Pressable>
     </AnimatedView>
   );
 });
@@ -342,7 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  subscriptionRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
@@ -380,17 +304,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 13,
     marginTop: 2,
-  },
-  ctaButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    fontSize: 15,
-    fontWeight: '600',
   },
   errorContainer: {
     flexDirection: 'row',

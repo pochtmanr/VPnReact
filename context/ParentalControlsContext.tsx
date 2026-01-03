@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -136,13 +137,23 @@ const ParentalControlsContext = createContext<ParentalControlsContextType | unde
 // AdGuard Home API configuration
 // Use internal VPN IP when connected, public IP otherwise
 const ADGUARD_API = {
-  // Try internal VPN IP first (works when VPN connected), fallback to public IP
-  baseUrls: ['http://10.0.0.1:3000', 'http://72.61.87.54:3000'],
+  // AdGuard is only reachable via VPN tunnel (internal IP)
+  baseUrl: 'http://10.0.0.1:3000',
   username: 'admin',
   password: 'VpnAdmin123',
 };
 
-// Helper to make API request with fallback URLs and proper abort support
+// Helper to check if error is an abort/timeout error
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { name?: string; code?: number; message?: string };
+  return err.name === 'AbortError' ||
+         err.code === 20 || // DOMException abort code
+         (err.message?.includes('aborted') ?? false) ||
+         (err.message?.includes('Aborted') ?? false);
+}
+
+// Helper to make API request with timeout - fails silently when VPN disconnected
 async function adguardFetch(
   path: string,
   options: RequestInit = {},
@@ -154,57 +165,45 @@ async function adguardFetch(
     ...options.headers,
   };
 
-  let lastError: Error | null = null;
-
-  for (const baseUrl of ADGUARD_API.baseUrls) {
-    // Check if externally aborted before trying
-    if (externalSignal?.aborted) {
-      throw new DOMException('Request aborted', 'AbortError');
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      // Link external signal to our controller
-      const abortHandler = () => controller.abort();
-      externalSignal?.addEventListener('abort', abortHandler);
-
-      try {
-        const response = await fetch(`${baseUrl}${path}`, {
-          ...options,
-          headers,
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok || response.status === 401) {
-          // Success or auth issue (not network issue)
-          return response;
-        }
-      } finally {
-        clearTimeout(timeoutId);
-        externalSignal?.removeEventListener('abort', abortHandler);
-      }
-    } catch (error) {
-      // Don't log abort errors as they're intentional
-      if ((error as Error).name !== 'AbortError') {
-        console.log(`AdGuard API request to ${baseUrl} failed:`, error);
-      }
-      lastError = error as Error;
-      // Try next URL unless aborted
-      if ((error as Error).name === 'AbortError') {
-        throw error;
-      }
-    }
+  // Check if externally aborted before trying
+  if (externalSignal?.aborted) {
+    throw new DOMException('Request aborted', 'AbortError');
   }
 
-  throw lastError || new Error('All AdGuard API endpoints failed');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout (VPN should be fast)
+
+  // Link external signal to our controller
+  const abortHandler = () => controller.abort();
+  externalSignal?.addEventListener('abort', abortHandler);
+
+  try {
+    const response = await fetch(`${ADGUARD_API.baseUrl}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (response.ok || response.status === 401) {
+      return response;
+    }
+
+    throw new Error(`AdGuard API returned ${response.status}`);
+  } catch (error) {
+    // Silently handle timeout/abort errors - VPN is likely disconnected
+    if (isAbortError(error)) {
+      // Return a fake "not connected" response instead of throwing
+      throw new Error('VPN_NOT_CONNECTED');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', abortHandler);
+  }
 }
 
 export function ParentalControlsProvider({ children }: { children: React.ReactNode }) {
-  const { account } = useAuth();
+  const { account, deviceSession } = useAuth();
 
   // State
   const [isEnabled, setIsEnabled] = useState(false);
@@ -229,6 +228,30 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
 
   // Clear error helper
   const clearError = useCallback(() => setError(null), []);
+
+  // Sync parental controls status to database for cross-device visibility
+  const syncDeviceFilterStatus = useCallback(async (filterEnabled: boolean) => {
+    if (!isSupabaseConfigured || !account?.account_id || !deviceSession?.device_id) {
+      return;
+    }
+
+    try {
+      await supabase.rpc('update_device_status', {
+        p_account_id: account.account_id,
+        p_device_id: deviceSession.device_id,
+        p_filter_enabled: filterEnabled,
+      });
+      console.log('[ParentalControls] Synced filter status to database:', filterEnabled);
+    } catch (error) {
+      // Non-critical - log but don't throw
+      console.warn('[ParentalControls] Failed to sync device status:', error);
+    }
+  }, [account?.account_id, deviceSession?.device_id]);
+
+  // Sync filter status when isEnabled changes
+  useEffect(() => {
+    syncDeviceFilterStatus(isEnabled);
+  }, [isEnabled, syncDeviceFilterStatus]);
 
   // Load settings on mount
   useEffect(() => {
@@ -386,88 +409,111 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
   }, [blockedCategories, customBlockedDomains, isEnabled, isToggling]);
 
   // Clear all AdGuard rules when parental controls are disabled
+  // Silently fails if VPN is not connected (rules will be cleared when reconnected)
   const clearAdGuardRules = async (signal?: AbortSignal) => {
-    // Clear all custom filtering rules
-    const response = await adguardFetch(
-      '/control/filtering/set_rules',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rules: [] }),
-      },
-      signal
-    );
+    try {
+      // Clear all custom filtering rules
+      const response = await adguardFetch(
+        '/control/filtering/set_rules',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rules: [] }),
+        },
+        signal
+      );
 
-    // Disable safe browsing and parental features (parallel for speed)
-    await Promise.all([
-      adguardFetch('/control/safebrowsing/disable', { method: 'POST' }, signal),
-      adguardFetch('/control/parental/disable', { method: 'POST' }, signal),
-    ]);
+      // Disable safe browsing and parental features (parallel for speed)
+      await Promise.all([
+        adguardFetch('/control/safebrowsing/disable', { method: 'POST' }, signal).catch(() => {}),
+        adguardFetch('/control/parental/disable', { method: 'POST' }, signal).catch(() => {}),
+      ]);
 
-    if (!response.ok) {
-      throw new Error(`Failed to clear rules: ${response.status}`);
+      if (!response.ok) {
+        console.log('AdGuard rules clear returned non-OK status');
+      } else {
+        console.log('AdGuard rules cleared');
+      }
+    } catch (error) {
+      // Silently handle - VPN likely not connected
+      if ((error as Error).message === 'VPN_NOT_CONNECTED') {
+        console.log('Skipping AdGuard clear - VPN not connected');
+      } else {
+        console.log('AdGuard clear failed:', error);
+      }
+      // Don't throw - this is non-critical
     }
-
-    console.log('AdGuard rules cleared');
   };
 
   // Sync blocking rules with AdGuard Home
+  // Returns true if sync succeeded, false if VPN not connected
   const syncWithAdGuard = async (
     categories: ContentCategory[],
     domains: string[],
     signal?: AbortSignal
-  ) => {
-    // Build filtering rules based on categories
-    const rules: string[] = [];
+  ): Promise<boolean> => {
+    try {
+      // Build filtering rules based on categories
+      const rules: string[] = [];
 
-    // Add category-based blocking (AdGuard uses special syntax)
-    if (categories.includes('adult')) {
-      // AdGuard has built-in safe browsing for adult content (parallel for speed)
-      await Promise.all([
-        adguardFetch('/control/safebrowsing/enable', { method: 'POST' }, signal),
-        adguardFetch('/control/parental/enable', { method: 'POST' }, signal),
-      ]);
-    }
+      // Add category-based blocking (AdGuard uses special syntax)
+      if (categories.includes('adult')) {
+        // AdGuard has built-in safe browsing for adult content (parallel for speed)
+        await Promise.all([
+          adguardFetch('/control/safebrowsing/enable', { method: 'POST' }, signal).catch(() => {}),
+          adguardFetch('/control/parental/enable', { method: 'POST' }, signal).catch(() => {}),
+        ]);
+      }
 
-    // Add custom blocked domains
-    for (const domain of domains) {
-      rules.push(`||${domain}^`);
-    }
+      // Add custom blocked domains
+      for (const domain of domains) {
+        rules.push(`||${domain}^`);
+      }
 
-    // Category-specific domain patterns
-    if (categories.includes('social_media')) {
-      rules.push('||facebook.com^', '||instagram.com^', '||twitter.com^', '||tiktok.com^', '||snapchat.com^');
-    }
-    if (categories.includes('gaming')) {
-      rules.push('||steam.com^', '||epicgames.com^', '||roblox.com^', '||minecraft.net^');
-    }
-    if (categories.includes('streaming')) {
-      rules.push('||netflix.com^', '||youtube.com^', '||twitch.tv^', '||hulu.com^', '||disneyplus.com^');
-    }
-    if (categories.includes('gambling')) {
-      rules.push('||bet365.com^', '||draftkings.com^', '||fanduel.com^', '||pokerstars.com^');
-    }
+      // Category-specific domain patterns
+      if (categories.includes('social_media')) {
+        rules.push('||facebook.com^', '||instagram.com^', '||twitter.com^', '||tiktok.com^', '||snapchat.com^');
+      }
+      if (categories.includes('gaming')) {
+        rules.push('||steam.com^', '||epicgames.com^', '||roblox.com^', '||minecraft.net^');
+      }
+      if (categories.includes('streaming')) {
+        rules.push('||netflix.com^', '||youtube.com^', '||twitch.tv^', '||hulu.com^', '||disneyplus.com^');
+      }
+      if (categories.includes('gambling')) {
+        rules.push('||bet365.com^', '||draftkings.com^', '||fanduel.com^', '||pokerstars.com^');
+      }
 
-    // Apply custom filtering rules
-    const response = await adguardFetch(
-      '/control/filtering/set_rules',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rules }),
-      },
-      signal
-    );
+      // Apply custom filtering rules
+      const response = await adguardFetch(
+        '/control/filtering/set_rules',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rules }),
+        },
+        signal
+      );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to sync rules: ${response.status} - ${errorText}`);
+      if (!response.ok) {
+        console.log('AdGuard sync returned non-OK status');
+        return false;
+      }
+
+      console.log('AdGuard sync completed:', { categories, domains, rulesCount: rules.length });
+      return true;
+    } catch (error) {
+      if ((error as Error).message === 'VPN_NOT_CONNECTED') {
+        console.log('Skipping AdGuard sync - VPN not connected');
+      } else {
+        console.log('AdGuard sync failed:', error);
+      }
+      return false;
     }
-
-    console.log('AdGuard sync completed:', { categories, domains, rulesCount: rules.length });
   };
 
   // Refresh blocking stats from AdGuard
+  // Silently fails if VPN not connected
   const refreshStats = useCallback(async () => {
     try {
       const response = await adguardFetch('/control/stats');
@@ -489,7 +535,13 @@ export function ParentalControlsProvider({ children }: { children: React.ReactNo
         setBlockingStats(stats);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      // Silently ignore VPN not connected and abort errors
+      const message = (error as Error).message || '';
+      if (message === 'VPN_NOT_CONNECTED' || message.includes('abort') || message.includes('Aborted')) {
+        return;
+      }
+      // Only log unexpected errors
+      console.log('Stats fetch failed:', message);
     }
   }, []);
 

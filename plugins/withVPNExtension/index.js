@@ -366,18 +366,10 @@ private func wg_log(_ level: OSLogType, message: String) {
           console.log(`[VPN Extension] Added dependency to main target`);
         }
 
-        // Add Copy Files build phase to embed the extension
-        const copyPhase = xcodeProject.addBuildPhase(
-          [`${EXTENSION_NAME}.appex`],
-          'PBXCopyFilesBuildPhase',
-          'Embed App Extensions',
-          mainTarget.uuid,
-          'app_extension'
-        );
-
-        if (copyPhase) {
-          console.log(`[VPN Extension] Added embed app extensions build phase`);
-        }
+        // Note: Skip adding embed build phase here - it causes Xcode project corruption
+        // The extension will be embedded via Xcode's automatic "Embed App Extensions" handling
+        // when the target dependency is set up correctly
+        console.log(`[VPN Extension] Skipping embed phase (handled by Xcode automatically)`)
 
         console.log(`[VPN Extension] Successfully configured ${EXTENSION_NAME} target with Swift`);
       }

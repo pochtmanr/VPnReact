@@ -1,24 +1,21 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
-  Calendar,
   ChevronRight,
-  Crown,
-  ExternalLink,
   HelpCircle,
   RefreshCw,
-  Shield,
-  Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -36,6 +33,16 @@ import { TIER_DISPLAY_NAMES, useTier } from '@/context/TierContext';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
+// Format date as "Jan 15, 2026"
+function formatDate(date: Date | null): string {
+  if (!date) return '';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -45,7 +52,12 @@ export default function SubscriptionScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Get RevenueCat subscription info and paywall control
-  const { activeSubscription, restorePurchases, refreshCustomerInfo, isLoading: isRevenueCatLoading, showPaywall } = useRevenueCat();
+  const {
+    activeSubscription,
+    restorePurchases,
+    refreshCustomerInfo,
+    showPaywall,
+  } = useRevenueCat();
 
   // Refresh subscription info when screen comes into focus
   useFocusEffect(
@@ -59,9 +71,6 @@ export default function SubscriptionScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      // TODO: Uncomment when RevenueCat UI is installed
-      // await RevenueCatUI.presentCustomerCenter();
-
       const url = Platform.select({
         ios: 'https://apps.apple.com/account/subscriptions',
         android: 'https://play.google.com/store/account/subscriptions',
@@ -111,13 +120,40 @@ export default function SubscriptionScreen() {
 
   // Open upgrade paywall
   const handleUpgrade = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     showPaywall();
   }, [showPaywall]);
 
   const handleContactSupport = useCallback(() => {
     router.push('/(tabs)/profile/contact-support');
   }, [router]);
+
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Determine status info for paid users
+  const statusInfo = useMemo(() => {
+    if (!isPro) return null;
+
+    const expirationDate = activeSubscription?.expirationDate;
+    const willRenew = activeSubscription?.willRenew ?? true;
+
+    if (expirationDate) {
+      const formattedDate = formatDate(expirationDate);
+      return {
+        label: willRenew
+          ? t('profile.subscription.renewsOn')
+          : t('profile.subscription.expiresOn'),
+        date: formattedDate,
+      };
+    }
+
+    return {
+      label: t('profile.subscription.statusText.activeSubscription'),
+      date: null,
+    };
+  }, [isPro, activeSubscription, t]);
 
   const cardStyle = useMemo(() => ({
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
@@ -136,6 +172,13 @@ export default function SubscriptionScreen() {
     paddingBottom: insets.bottom + 100,
     paddingHorizontal: 20,
   }), [insets.top, insets.bottom]);
+
+  const backButtonStyle = useMemo(() => ({
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+  }), [isDark]);
+
+  const spacerStyle = useMemo(() => ({ width: 40 }), []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -156,14 +199,8 @@ export default function SubscriptionScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Pressable
-              style={[
-                styles.backButton,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                },
-              ]}
-              onPress={() => router.back()}
+              style={[styles.backButton, backButtonStyle]}
+              onPress={handleGoBack}
               hitSlop={12}
             >
               <ArrowLeft size={20} color={colors.text} />
@@ -171,7 +208,7 @@ export default function SubscriptionScreen() {
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               {t('profile.subscription.title')}
             </Text>
-            <View style={{ width: 40 }} />
+            <View style={spacerStyle} />
           </View>
 
           <AnimatedView
@@ -182,88 +219,57 @@ export default function SubscriptionScreen() {
             </Text>
           </AnimatedView>
 
-          {/* Current Plan Card - HeroUI style with borderCurve: continuous */}
+          {/* Hero Card - NEO Style */}
           <AnimatedView
             entering={FadeInDown.delay(50).duration(300).easing(Easing.out(Easing.ease))}
-            style={[styles.planCard, cardStyle]}
+            style={styles.neoCard}
           >
-            {/* Plan Icon */}
-            <View style={[styles.planIconContainer, { backgroundColor: isPro ? '#FFD70015' : `${colors.textMuted}10` }]}>
-              {isPro ? (
-                <Crown size={32} color="#FFD700" />
-              ) : (
-                <Shield size={32} color={colors.textMuted} />
-              )}
-            </View>
+            {/* Background image */}
+            <Image
+              source={require('@/assets/images/subscriptions.png')}
+              style={styles.neoBackgroundImage}
+              resizeMode="cover"
+            />
 
-            {/* Plan Info */}
-            <View style={styles.planInfo}>
-              <Text style={[styles.planLabel, { color: colors.textSecondary }]}>{t('profile.subscription.currentPlan')}</Text>
-              <Text style={[styles.planName, { color: colors.text }]}>
-                {TIER_DISPLAY_NAMES[tier]}
+            {/* Top labels */}
+            <View style={styles.neoTopLabels}>
+              <Text style={styles.neoLabel}>DOPPLER</Text>
+              <Text style={styles.neoTitle}>
+                {isPro ? TIER_DISPLAY_NAMES[tier] : 'Premium'}
               </Text>
-              {isPro && (
-                <View style={[styles.activeBadge, { backgroundColor: `${colors.success}15` }]}>
-                  {isRevenueCatLoading ? (
-                    <ActivityIndicator size="small" color={colors.success} style={{ marginEnd: 4 }} />
-                  ) : (
-                    <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
-                  )}
-                  <Text style={[styles.activeBadgeText, { color: colors.success }]}>
-                    {isRevenueCatLoading ? t('profile.subscription.status.refreshing') : t('profile.subscription.status.active')}
-                  </Text>
-                </View>
-              )}
             </View>
 
-            {/* Active subscription info */}
-            {isPro && activeSubscription && (
-              <View style={styles.subscriptionDetails}>
-                <View style={styles.detailRow}>
-                  <Calendar size={16} color={colors.textSecondary} />
-                  <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-                    {activeSubscription.expirationDate
-                      ? t('profile.subscription.statusText.renewsOn', { date: activeSubscription.expirationDate.toLocaleDateString() })
-                      : t('profile.subscription.statusText.lifetimeAccess')}
+            {/* Bottom section with blur */}
+            <BlurView intensity={80} tint="dark" style={styles.neoBottomSection}>
+              <View style={styles.neoBottomContent}>
+                <View style={styles.neoBottomTextContainer}>
+                  <Text style={styles.neoBottomTitle}>
+                    {isPro
+                      ? (statusInfo?.date ? `${statusInfo.label}` : t('profile.subscription.status.active'))
+                      : t('profile.subscription.upgradeToPremium')}
+                  </Text>
+                  <Text style={styles.neoBottomSubtitle}>
+                    {isPro
+                      ? (statusInfo?.date || t('profile.subscription.statusText.activeSubscription'))
+                      : t('profile.subscription.premiumFeatures')}
                   </Text>
                 </View>
-                {activeSubscription.isInTrial && (
-                  <View style={[styles.trialBadge, { backgroundColor: `${colors.warning}15` }]}>
-                    <Sparkles size={14} color={colors.warning} />
-                    <Text style={[styles.trialText, { color: colors.warning }]}>{t('profile.subscription.freeTrial')}</Text>
-                  </View>
-                )}
-              </View>
-            )}
 
-            {/* Upgrade CTA for free users */}
-            {!isPro && (
-              <View style={[styles.upgradeSection, { borderTopColor: colors.border }]}>
-                <Text style={[styles.upgradeText, { color: colors.text }]}>
-                  {t('profile.subscription.cta.upgradeToPro')}
-                </Text>
-                <Text style={[styles.upgradeSubtext, { color: colors.textSecondary }]}>
-                  {t('profile.subscription.cta.unlockFeatures')}
-                </Text>
                 <Pressable
-                  onPress={handleUpgrade}
+                  onPress={isPro ? handleManageSubscription : handleUpgrade}
                   style={({ pressed }) => [
-                    styles.upgradeButton,
-                    pressed && { opacity: 0.8 },
+                    styles.neoButton,
+                    pressed && styles.neoButtonPressed,
                   ]}
                 >
-                  <LinearGradient
-                    colors={['#FFD700', '#FFA500']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.upgradeButtonGradient}
-                  >
-                    <Crown size={18} color="#FFFFFF" />
-                    <Text style={styles.upgradeButtonText}>{t('profile.subscription.cta.upgradeNow')}</Text>
-                  </LinearGradient>
+                  <Text style={styles.neoButtonText}>
+                    {isPro
+                      ? t('profile.subscription.cta.manage')
+                      : t('profile.subscription.cta.upgrade')}
+                  </Text>
                 </Pressable>
               </View>
-            )}
+            </BlurView>
           </AnimatedView>
 
           {/* Management Card - Contains all actions */}
@@ -271,30 +277,6 @@ export default function SubscriptionScreen() {
             entering={FadeInDown.delay(100).duration(300).easing(Easing.out(Easing.ease))}
             style={[styles.managementCard, cardStyle]}
           >
-            {/* Manage Subscription in App Store */}
-            <Pressable
-              onPress={handleManageSubscription}
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <ExternalLink size={20} color={colors.primary} />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={[styles.menuLabel, { color: colors.text }]}>
-                  {t('profile.subscription.management.manageInStore', { store: Platform.OS === 'ios' ? 'App Store' : 'Play Store' })}
-                </Text>
-                <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
-                  {t('profile.subscription.management.changeOrCancel')}
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.textMuted} />
-            </Pressable>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
             {/* Restore Purchases - Required by Apple */}
             <Pressable
               onPress={handleRestorePurchases}
@@ -393,113 +375,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
   },
-  // Plan Card - HeroUI inspired with continuous border curve
-  planCard: {
+
+  // NEO Style Card - matches HeroUI background image card
+  neoCard: {
+    backgroundColor: '#F5F5F0',
     borderRadius: 24,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    padding: 24,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  planIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  planInfo: {
-    alignItems: 'center',
-  },
-  planLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  planName: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  activeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  activeBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  subscriptionDetails: {
-    marginTop: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  detailText: {
-    fontSize: 14,
-  },
-  trialBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  trialText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  upgradeSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-    alignItems: 'center',
-    width: '100%',
-  },
-  upgradeText: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  upgradeSubtext: {
-    fontSize: 14,
-  },
-  upgradeButton: {
-    marginTop: 16,
-    width: '100%',
-    borderRadius: 14,
     overflow: 'hidden',
+    marginBottom: 16,
+    height: 340,
   },
-  upgradeButtonGradient: {
+  neoBackgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  neoTopLabels: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 10,
+  },
+  neoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(0, 0, 0, 0.5)',
+    marginBottom: 2,
+  },
+  neoTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: 'rgba(0, 0, 0, 0.85)',
+    letterSpacing: -0.3,
+  },
+  neoBottomSection: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  neoBottomContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  upgradeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  neoBottomTextContainer: {
+    flex: 1,
+  },
+  neoBottomTitle: {
+    fontSize: 17,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
+  neoBottomSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 2,
+  },
+  neoButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  neoButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  neoButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000000',
+  },
+
   // Management Card
   managementCard: {
     borderRadius: 20,
@@ -539,6 +489,7 @@ const styles = StyleSheet.create({
     marginStart: 64,
     marginEnd: 12,
   },
+
   // Info Footer
   infoFooter: {
     paddingHorizontal: 8,

@@ -1,9 +1,9 @@
 // AdGuard Home API Service
 // Connects to the AdGuard Home DNS server running on the VPN server
+// AdGuard is only accessible via VPN tunnel (internal IP)
 
-// Use internal VPN IP when connected, public IP otherwise
 const ADGUARD_API = {
-  baseUrls: ['http://10.0.0.1:3000', 'http://72.61.87.54:3000'],
+  baseUrl: 'http://10.0.0.1:3000',
   username: 'admin',
   password: 'VpnAdmin123',
 };
@@ -17,12 +17,6 @@ interface AdGuardStats {
   top_blocked_domains: Array<Record<string, number>>;
   blocked_filtering: number[];
   dns_queries: number[];
-}
-
-interface AdGuardStatus {
-  protection_enabled: boolean;
-  running: boolean;
-  version: string;
 }
 
 interface AdGuardFilteringStatus {
@@ -49,8 +43,8 @@ export interface AdBlockStats {
   filterRulesCount: number;
 }
 
-// Helper to make API request with fallback URLs and timeout
-async function adguardFetch(path: string, options: RequestInit = {}): Promise<Response> {
+// Helper to make API request with timeout - fails silently when VPN disconnected
+async function adguardFetch(path: string, options: RequestInit = {}): Promise<Response | null> {
   const auth = btoa(`${ADGUARD_API.username}:${ADGUARD_API.password}`);
   const headers = {
     'Authorization': `Basic ${auth}`,
@@ -58,63 +52,42 @@ async function adguardFetch(path: string, options: RequestInit = {}): Promise<Re
     ...options.headers,
   };
 
-  let lastError: Error | null = null;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
-  for (const baseUrl of ADGUARD_API.baseUrls) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const response = await fetch(`${ADGUARD_API.baseUrl}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
 
-      const response = await fetch(`${baseUrl}${path}`, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok || response.status === 401) {
-        // Success or auth issue (not network issue)
-        return response;
-      }
-    } catch (error) {
-      console.log(`AdGuard API request to ${baseUrl} failed:`, error);
-      lastError = error as Error;
-      // Try next URL
-    }
+    clearTimeout(timeoutId);
+    return response;
+  } catch {
+    // Silently fail - VPN likely not connected
+    return null;
   }
-
-  throw lastError || new Error('All AdGuard API endpoints failed');
 }
 
 async function fetchAdGuard<T>(endpoint: string): Promise<T | null> {
+  const response = await adguardFetch(endpoint);
+  if (!response?.ok) return null;
+
   try {
-    const response = await adguardFetch(endpoint);
-
-    if (!response.ok) {
-      console.warn(`AdGuard API error: ${response.status}`);
-      return null;
-    }
-
     return await response.json();
-  } catch (error) {
-    console.warn('AdGuard API fetch error:', error);
+  } catch {
     return null;
   }
 }
 
 async function postAdGuard(endpoint: string, body?: object): Promise<boolean> {
-  try {
-    const response = await adguardFetch(endpoint, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  const response = await adguardFetch(endpoint, {
+    method: 'POST',
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-    return response.ok;
-  } catch (error) {
-    console.warn('AdGuard API post error:', error);
-    return false;
-  }
+  return response?.ok ?? false;
 }
 
 export async function getAdBlockStats(): Promise<AdBlockStats> {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { VPNServer, ConnectionStatus, ConnectionLog } from '@/types/database';
 import { useAuth } from './AuthContext';
 
@@ -64,7 +64,7 @@ const VPNContext = createContext<VPNContextType | undefined>(undefined);
 const WireGuardModule = Platform.OS !== 'web' ? NativeModules.WireGuardVpnModule : null;
 
 export function VPNProvider({ children }: { children: React.ReactNode }) {
-  const { account } = useAuth();
+  const { account, deviceSession } = useAuth();
   const [servers, setServers] = useState<VPNServer[]>([]);
   const [selectedServer, setSelectedServer] = useState<VPNServer | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -104,16 +104,38 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, []);
 
+  // Sync ad block status to database for cross-device visibility
+  const syncAdBlockStatus = useCallback(async (adblockEnabled: boolean) => {
+    if (!isSupabaseConfigured || !account?.account_id || !deviceSession?.device_id) {
+      return;
+    }
+
+    try {
+      await supabase.rpc('update_device_status', {
+        p_account_id: account.account_id,
+        p_device_id: deviceSession.device_id,
+        p_adblock_enabled: adblockEnabled,
+      });
+      console.log('[VPNContext] Synced AdBlock status to database:', adblockEnabled);
+    } catch (error) {
+      // Non-critical - log but don't throw
+      console.warn('[VPNContext] Failed to sync adblock status:', error);
+    }
+  }, [account?.account_id, deviceSession?.device_id]);
+
   // Wrapper functions to save settings when they change
   const setAdBlockEnabled = useCallback(async (enabled: boolean) => {
     setAdBlockEnabledState(enabled);
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.AD_BLOCK_ENABLED, String(enabled));
       console.log('Ad block setting saved:', enabled);
+
+      // Sync to database for cross-device visibility
+      await syncAdBlockStatus(enabled);
     } catch (error) {
       console.error('Error saving ad block setting:', error);
     }
-  }, []);
+  }, [syncAdBlockStatus]);
 
   // Measure latency - works both when connected (through VPN) and disconnected (direct ping)
   const measureLatency = useCallback(async (forceServerLatency: boolean = false): Promise<number | null> => {
@@ -208,6 +230,36 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   const clearConnectionError = useCallback(() => {
     setConnectionError(null);
   }, []);
+
+  // Sync VPN connection status to database for cross-device visibility
+  const syncDeviceStatus = useCallback(async (vpnConnected: boolean) => {
+    if (!isSupabaseConfigured || !account?.account_id || !deviceSession?.device_id) {
+      return;
+    }
+
+    try {
+      await supabase.rpc('update_device_status', {
+        p_account_id: account.account_id,
+        p_device_id: deviceSession.device_id,
+        p_vpn_connected: vpnConnected,
+      });
+      console.log('[VPNContext] Synced VPN status to database:', vpnConnected);
+    } catch (error) {
+      // Non-critical - log but don't throw
+      console.warn('[VPNContext] Failed to sync device status:', error);
+    }
+  }, [account?.account_id, deviceSession?.device_id]);
+
+  // Sync VPN status when connection state changes
+  useEffect(() => {
+    const isConnected = connectionStatus === 'connected';
+    const isDisconnected = connectionStatus === 'disconnected';
+
+    // Only sync on definitive states (not connecting/disconnecting/error)
+    if (isConnected || isDisconnected) {
+      syncDeviceStatus(isConnected);
+    }
+  }, [connectionStatus, syncDeviceStatus]);
 
   // Initialize WireGuard module
   const initializeWireGuard = useCallback(async () => {

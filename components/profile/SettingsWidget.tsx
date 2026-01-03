@@ -1,19 +1,19 @@
 import { useRouter } from 'expo-router';
 import {
-  ChevronRight,
-  FileText,
-  HelpCircle,
-  Info,
-  Settings,
+    ChevronRight,
+    FileText,
+    HelpCircle,
+    Info,
+    Settings,
 } from 'lucide-react-native';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Linking,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
@@ -105,7 +105,7 @@ export const SettingsWidget = memo(function SettingsWidget({
   }, [themeMode, t]);
 
   const openPrivacyPolicy = useCallback(async () => {
-    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-privacy-policy');
+    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-privacy-policy'); 
   }, []);
 
   const openTermsOfService = useCallback(async () => {

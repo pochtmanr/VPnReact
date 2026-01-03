@@ -9,7 +9,9 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#000000"
+      "image": "./assets/images/NoBgLogo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
     },
     "ios": {
       "supportsTablet": true,
@@ -30,8 +32,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0A0A0F"
+        "foregroundImage": "./assets/images/NoBgLogo.png",
+        "backgroundColor": "#0A0A0F",
+        "monochromeImage": "./assets/images/WhiteLogo.png"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.simnetiq.vpnreact"
@@ -44,6 +47,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "./plugins/withAndroidVPN",
       "./plugins/withVPNExtension"
     ],
     "experiments": {

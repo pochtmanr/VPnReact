@@ -73,7 +73,7 @@ loadRevenueCatSDK();
 
 // RevenueCat API keys
 const REVENUECAT_API_KEY_IOS = 'appl_VnIBmCCtZiLNWYgoLnuAUtOtWyh';
-const REVENUECAT_API_KEY_ANDROID = 'goog_YOUR_ANDROID_API_KEY'; // TODO: Add Android key when needed
+const REVENUECAT_API_KEY_ANDROID = 'goog_AUfzfMLeAodsNkIvkmrJvMfMrmU';
 
 // Entitlement identifiers from RevenueCat dashboard
 // IMPORTANT: These must match EXACTLY what's configured in RevenueCat Dashboard
@@ -343,11 +343,39 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   }, []);
 
   // Sync RevenueCat App User ID with our account system
+  //
+  // IMPORTANT: Following RevenueCat best practices for "custom App User IDs only" apps:
+  // - We NEVER call Purchases.logOut() as this creates unnecessary anonymous users
+  // - When user logs in, we call logIn(accountId) which handles identity switching
+  // - When user logs out from the app, we just clear local customerInfo state
+  // - The next logIn() call will properly switch to the new user's identity
+  //
+  // See: https://www.revenuecat.com/docs/customers/identifying-customers
   useEffect(() => {
-    if (isInitialized && account?.account_id && !isMockMode) {
+    if (!isInitialized || isMockMode) return;
+
+    if (account?.account_id) {
+      // User logged in - sync their ID to RevenueCat
       syncAppUserId(account.account_id);
+    } else {
+      // User logged out from app - just clear local state
+      // DO NOT call Purchases.logOut() - this would:
+      // 1. Create a new anonymous user (wasteful)
+      // 2. Potentially cause cache file errors
+      // 3. Risk subscription aliasing issues
+      // The next logIn() call will properly switch identity
+      handleAppLogout();
     }
   }, [isInitialized, account?.account_id, isMockMode]);
+
+  // Handle app-level logout (NOT RevenueCat logout)
+  // Just clears local state - RevenueCat identity is preserved until next logIn()
+  function handleAppLogout() {
+    console.log('[RevenueCat] App logout - clearing local customer info');
+    setCustomerInfo(null);
+    // Note: We intentionally do NOT call Purchases.logOut() here
+    // The customerInfo listener will still fire but we ignore updates until next login
+  }
 
   // Listen for app state changes to refresh customer info
   useEffect(() => {
@@ -444,51 +472,160 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     }
   }
 
+  // Sync RevenueCat identity with Supabase account
+  // This is the ONLY place we should call Purchases.logIn()
   async function syncAppUserId(accountId: string) {
     if (!Purchases) return;
 
     try {
       const currentUserId = await Purchases.getAppUserID();
+      console.log('[RevenueCat] Current user ID:', currentUserId, '| Target:', accountId);
 
       // Only login if the user ID differs
       if (currentUserId !== accountId) {
-        const { customerInfo: newInfo } = await Purchases.logIn(accountId);
+        console.log('[RevenueCat] Switching identity from', currentUserId, 'to', accountId);
+
+        // logIn() handles all identity transitions:
+        // - Anonymous → Identified: Creates new customer or aliases existing
+        // - Identified (A) → Identified (B): Switches to B's customer record
+        // This is the correct way to switch users per RevenueCat docs
+        const { customerInfo: newInfo, created } = await Purchases.logIn(accountId);
+
+        console.log('[RevenueCat] Login result:', {
+          newUserId: accountId,
+          created, // true if this is a brand new customer in RevenueCat
+          hasActiveEntitlements: Object.keys(newInfo.entitlements.active).length > 0,
+        });
+
         setCustomerInfo(newInfo);
+
+        // Sync subscription to Supabase after identity switch
+        await syncSubscriptionToSupabase(newInfo);
+      } else {
+        // Already the correct user - just refresh customer info
+        console.log('[RevenueCat] Already logged in as', accountId);
+        const info = await Purchases.getCustomerInfo();
+        setCustomerInfo(info);
+        await syncSubscriptionToSupabase(info);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[RevenueCat] Error syncing user ID:', err);
+      console.error('[RevenueCat] Error details:', {
+        code: err?.code,
+        message: err?.message,
+        underlyingError: err?.underlyingErrorMessage,
+      });
+      // Don't throw - subscription features should degrade gracefully
     }
   }
 
   // ==========================================================================
-  // SUBSCRIPTION SYNC TO SUPABASE
+  // SUBSCRIPTION SYNC TO SUPABASE (WITH OWNERSHIP PROTECTION)
   // ==========================================================================
 
-  // Sync subscription status to Supabase for server-side checks (e.g., delete account blocking)
+  // Track last synced values to prevent duplicate syncs
+  const lastSyncRef = React.useRef<{
+    tier: string | null;
+    expiresAt: string | null;
+    transactionId: string | null;
+    timestamp: number;
+  }>({ tier: null, expiresAt: null, transactionId: null, timestamp: 0 });
+
+  // Generate a stable unique transaction identifier from entitlement data
+  // This is used to track subscription ownership and prevent duplication
+  function generateTransactionId(entitlement: {
+    productIdentifier: string;
+    originalPurchaseDate: string | null;
+  }): string | null {
+    if (!entitlement.originalPurchaseDate) return null;
+
+    // Create a stable ID from product + original purchase timestamp
+    // This will be the same regardless of which account restores it
+    const timestamp = new Date(entitlement.originalPurchaseDate).getTime();
+    return `${entitlement.productIdentifier}_${timestamp}`;
+  }
+
+  // Sync subscription status to Supabase with ownership enforcement
+  // Uses claim_subscription() RPC which:
+  // 1. Claims new subscriptions for the current account
+  // 2. Updates existing subscriptions owned by current account
+  // 3. Transfers subscriptions from other accounts (revokes old, grants new)
   async function syncSubscriptionToSupabase(info: CustomerInfo | null) {
     if (!isSupabaseConfigured || !account?.account_id) return;
 
-    try {
-      const tier = determineTierFromEntitlements(info);
+    const tier = determineTierFromEntitlements(info);
 
-      // Get expiration date from active entitlement
-      let expiresAt: string | null = null;
-      if (info) {
-        const proEntitlement = info.entitlements.active[ENTITLEMENTS.PRO];
-        const premiumEntitlement = info.entitlements.active[ENTITLEMENTS.PREMIUM];
-        const entitlement = premiumEntitlement || proEntitlement;
-        if (entitlement?.expirationDate) {
-          expiresAt = entitlement.expirationDate;
-        }
+    // Extract subscription details from active entitlement
+    let expiresAt: string | null = null;
+    let originalTransactionId: string | null = null;
+    let productId: string | null = null;
+
+    if (info) {
+      const proEntitlement = info.entitlements.active[ENTITLEMENTS.PRO];
+      const premiumEntitlement = info.entitlements.active[ENTITLEMENTS.PREMIUM];
+      const entitlement = premiumEntitlement || proEntitlement;
+
+      if (entitlement) {
+        expiresAt = entitlement.expirationDate || null;
+        productId = entitlement.productIdentifier;
+
+        // Generate stable transaction ID for ownership tracking
+        originalTransactionId = generateTransactionId({
+          productIdentifier: entitlement.productIdentifier,
+          originalPurchaseDate: entitlement.originalPurchaseDate,
+        });
       }
+    }
 
-      await supabase.rpc('sync_subscription', {
+    // Skip if nothing changed (deduplication)
+    const lastSync = lastSyncRef.current;
+    if (
+      lastSync.tier === tier &&
+      lastSync.expiresAt === expiresAt &&
+      lastSync.transactionId === originalTransactionId
+    ) {
+      return;
+    }
+
+    // Throttle: don't sync more than once per 30 seconds
+    const now = Date.now();
+    if (now - lastSync.timestamp < 30000) {
+      return;
+    }
+
+    try {
+      // Use claim_subscription for ownership-aware sync
+      // This prevents subscription duplication across accounts
+      const { data, error } = await supabase.rpc('claim_subscription', {
         p_account_id: account.account_id,
         p_tier: tier,
         p_expires_at: expiresAt,
+        p_original_transaction_id: originalTransactionId,
+        p_store: Platform.OS === 'ios' ? 'app_store' : 'play_store',
+        p_product_id: productId,
       });
 
-      console.log('[RevenueCat] Synced subscription to Supabase:', { tier, expiresAt });
+      if (error) {
+        console.warn('[RevenueCat] Failed to claim subscription:', error);
+        return;
+      }
+
+      // Update last sync state
+      lastSyncRef.current = { tier, expiresAt, transactionId: originalTransactionId, timestamp: now };
+
+      // Log the action taken
+      const result = data as { success: boolean; action?: string; previous_owner?: string };
+      if (result.success) {
+        if (result.action === 'transferred') {
+          console.log('[RevenueCat] Subscription transferred from:', result.previous_owner);
+          // The subscription was moved from another account to this one
+          // The previous account was automatically downgraded to free
+        } else if (result.action === 'claimed') {
+          console.log('[RevenueCat] New subscription claimed for account');
+        } else {
+          console.log('[RevenueCat] Subscription updated:', { tier, expiresAt });
+        }
+      }
     } catch (err) {
       // Non-critical - log but don't throw
       console.warn('[RevenueCat] Failed to sync subscription to Supabase:', err);
@@ -529,8 +666,18 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     }
   }
 
+  // Track last refresh time to prevent excessive API calls
+  const lastRefreshRef = React.useRef<number>(0);
+
   const refreshCustomerInfo = useCallback(async () => {
     if (!isInitialized || isMockMode) return;
+
+    // Throttle: don't refresh more than once per 10 seconds
+    const now = Date.now();
+    if (now - lastRefreshRef.current < 10000) {
+      return;
+    }
+    lastRefreshRef.current = now;
 
     try {
       await fetchCustomerInfo();
