@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "WhiteLogo.png",
+      "filename" : "Dopplerlight.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "BlackLogo.png",
+      "filename" : "Dopplerdark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "BlackLogo 1.png",
+      "filename" : "Dopplerdark 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

@@ -61,11 +61,10 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
       ) : (
         <Pressable
           onPress={() => router.push('/(tabs)/profile/subscription')}
-          style={({ pressed }) => [
-            styles.subscriptionRow,
-            pressed && { opacity: 0.7 },
-          ]}
+          style={styles.subscriptionRow}
         >
+          {({ pressed }) => (
+          <View style={[styles.subscriptionRowInner, pressed && { opacity: 0.7 }]}>
           <View style={[styles.subscriptionIcon, {
             backgroundColor: currentTier === 'free'
               ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)')
@@ -88,6 +87,8 @@ export const SubscriptionWidget = memo(function SubscriptionWidget({
             </Text>
           </View>
           <ChevronRight size={20} color={colors.textMuted} />
+          </View>
+          )}
         </Pressable>
       )}
     </AnimatedView>
@@ -106,9 +107,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   subscriptionRow: {
+    paddingVertical: 12,
+  },
+  subscriptionRowInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
     gap: 12,
   },
   subscriptionIcon: {

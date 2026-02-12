@@ -8,7 +8,9 @@ import {
   Modal,
   FlatList,
   Switch,
+  TextInput,
 } from 'react-native';
+
 import Animated, {
   FadeInDown,
   Easing,
@@ -42,6 +44,9 @@ import {
   Ban,
   Smartphone,
   Shield,
+  Search,
+  Heart,
+  Crown,
 } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useVPN } from '@/context/VPNContext';
@@ -87,45 +92,143 @@ function ServerModal({
   servers,
   selectedServer,
   onServerSelect,
+  favorites,
+  onToggleFavorite,
+  isPremiumLocked,
 }: {
   visible: boolean;
   onClose: () => void;
   servers: VPNServer[];
   selectedServer: VPNServer | null;
   onServerSelect: (server: VPNServer) => void;
+  favorites: string[];
+  onToggleFavorite: (serverId: string) => void;
+  isPremiumLocked: (server: VPNServer) => boolean;
 }) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { getServerCity, getServerCountry } = useServerTranslation();
+  const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter and sort servers
+  const filteredServers = React.useMemo(() => {
+    let filtered = servers;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = servers.filter(server => {
+        const cityName = getServerCity(server).toLowerCase();
+        const countryName = getServerCountry(server).toLowerCase();
+        return (
+          cityName.includes(query) ||
+          countryName.includes(query) ||
+          server.country_code.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // Sort: favorites first, then by country
+    return [...filtered].sort((a, b) => {
+      const aIsFavorite = favorites.includes(a.id);
+      const bIsFavorite = favorites.includes(b.id);
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+      return getServerCountry(a).localeCompare(getServerCountry(b));
+    });
+  }, [servers, searchQuery, favorites, getServerCity, getServerCountry]);
 
   const renderServer = ({ item }: { item: VPNServer }) => {
     const isSelected = selectedServer?.id === item.id;
+    const isFavorite = favorites.includes(item.id);
+    const isLocked = isPremiumLocked(item);
+
     return (
       <Pressable
         onPress={() => {
-          onServerSelect(item);
-          onClose();
+          if (!isLocked) {
+            onServerSelect(item);
+            onClose();
+          }
         }}
+        disabled={isLocked}
         style={[
           styles.serverItem,
           {
-            backgroundColor: isSelected
-              ? isDark ? `${colors.success}15` : `${colors.success}08`
-              : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-            borderColor: isSelected ? colors.success : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            backgroundColor: isLocked
+              ? isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
+              : isSelected
+                ? isDark ? `${colors.success}15` : `${colors.success}08`
+                : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            borderColor: isLocked
+              ? isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
+              : isSelected
+                ? colors.success
+                : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
           },
         ]}
       >
-        <Text style={styles.serverFlag}>{getCountryFlag(item.country_code)}</Text>
-        <View style={styles.serverTextContainer}>
-          <Text style={[styles.serverName, { color: colors.text }]}>{getServerCity(item)}</Text>
-          <Text style={[styles.serverCountry, { color: colors.textSecondary }]}>{getServerCountry(item)}</Text>
+        <View style={styles.serverFlagContainer}>
+          <Text style={[styles.serverFlag, isLocked && { opacity: 0.5 }]}>
+            {getCountryFlag(item.country_code)}
+          </Text>
+          {isLocked && (
+            <View style={styles.serverLockOverlay}>
+              <Lock size={12} color="#FFD700" />
+            </View>
+          )}
         </View>
-        {isSelected && (
-          <View style={[styles.selectedBadge, { backgroundColor: colors.success }]}>
-            <Text style={styles.selectedText}>Selected</Text>
+        <View style={styles.serverTextContainer}>
+          <View style={styles.serverNameRow}>
+            <Text style={[styles.serverName, { color: isLocked ? colors.textMuted : colors.text }]}>
+              {getServerCity(item)}
+            </Text>
+            {isLocked && (
+              <View style={styles.serverPremiumBadge}>
+                <Crown size={10} color="#FFD700" />
+                <Text style={styles.serverPremiumText}>PRO</Text>
+              </View>
+            )}
           </View>
+          <Text style={[styles.serverCountry, { color: isLocked ? colors.textMuted : colors.textSecondary }]}>
+            {getServerCountry(item)}
+          </Text>
+        </View>
+
+        {/* Favorite button */}
+        {!isLocked && (
+          <Pressable
+            onPress={() => onToggleFavorite(item.id)}
+            hitSlop={8}
+            style={[
+              styles.serverFavoriteButton,
+              {
+                backgroundColor: isFavorite
+                  ? isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'
+                  : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+              }
+            ]}
+          >
+            <Heart
+              size={14}
+              color={isFavorite ? '#EF4444' : colors.textMuted}
+              fill={isFavorite ? '#EF4444' : 'transparent'}
+            />
+          </Pressable>
         )}
+
+        {/* Status badge */}
+        {isLocked ? (
+          <View style={[styles.selectedBadge, { backgroundColor: 'rgba(255, 215, 0, 0.15)' }]}>
+            <Lock size={12} color="#FFD700" />
+            <Text style={[styles.selectedText, { color: '#FFD700' }]}>{t('server.locked')}</Text>
+          </View>
+        ) : isSelected ? (
+          <View style={[styles.selectedBadge, { backgroundColor: colors.success }]}>
+            <Text style={styles.selectedText}>{t('server.selected')}</Text>
+          </View>
+        ) : null}
       </Pressable>
     );
   };
@@ -149,17 +252,50 @@ function ServerModal({
           ]}
         >
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Server</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('server.title')}</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <X size={24} color={colors.text} />
             </Pressable>
           </View>
+
+          {/* Search Bar */}
+          <View style={[
+            styles.serverSearchContainer,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            }
+          ]}>
+            <Search size={18} color={colors.textMuted} />
+            <TextInput
+              style={[styles.serverSearchInput, { color: colors.text }]}
+              placeholder={t('server.search')}
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <X size={16} color={colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
+
           <FlatList
-            data={servers}
+            data={filteredServers}
             renderItem={renderServer}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.serverList}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.serverEmptyState}>
+                <Text style={[styles.serverEmptyText, { color: colors.textMuted }]}>
+                  {searchQuery ? t('server.empty.title') : t('server.empty.subtitle')}
+                </Text>
+              </View>
+            }
           />
         </View>
       </View>
@@ -395,6 +531,7 @@ export default function HomeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [serverModalVisible, setServerModalVisible] = useState(false);
+  const [favoriteServers, setFavoriteServers] = useState<string[]>([]);
 
   const isLoggedIn = isAuthenticated;
   const isConnected = connectionStatus === 'connected';
@@ -412,6 +549,24 @@ export default function HomeScreen() {
       selectServer(server);
     }
   }, [connectionStatus, selectServer]);
+
+  const handleToggleFavorite = useCallback((serverId: string) => {
+    setFavoriteServers(prev =>
+      prev.includes(serverId)
+        ? prev.filter(id => id !== serverId)
+        : [...prev, serverId]
+    );
+  }, []);
+
+  // Check if a server is premium-locked (for non-pro users)
+  // Currently all servers are available, but this can be extended
+  // to lock certain servers based on tier or server properties
+  const checkIsPremiumLocked = useCallback((server: VPNServer): boolean => {
+    // Example: lock servers marked as premium for free users
+    // For now, return false (all servers available)
+    // To enable: return !isPro && server.is_premium;
+    return false;
+  }, []);
 
   const openServerModal = () => {
     loadServersIfNeeded();
@@ -510,7 +665,7 @@ export default function HomeScreen() {
             {/* Content Filter */}
             <View style={[styles.settingRow, (!isConnected || !hasFilterAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)', opacity: (isConnected && hasFilterAccess) ? 1 : 0.5 }]}>
+                <View style={[styles.settingIcon, { backgroundColor: (isConnected && hasFilterAccess) ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)') : (isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)') }]}>
                   <Users size={20} color={(isConnected && hasFilterAccess) ? '#3B82F6' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
@@ -518,7 +673,7 @@ export default function HomeScreen() {
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{getFilterDisabledReason() || (parentalEnabled ? t('vpn.quickSettings.contentFilter.active') : t('vpn.quickSettings.contentFilter.description'))}</Text>
                 </View>
               </View>
-              <Switch value={parentalEnabled} onValueChange={handleFilterToggle} disabled={isFilterGating || isParentalToggling} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} style={{ opacity: (isFilterGating || isParentalToggling) ? 0.5 : 1 }} />
+              <Switch value={parentalEnabled} onValueChange={handleFilterToggle} disabled={isFilterGating || isParentalToggling} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={parentalEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} />
             </View>
 
             <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
@@ -526,7 +681,7 @@ export default function HomeScreen() {
             {/* Ad Blocker */}
             <View style={[styles.settingRow, (!isConnected || !hasAdBlockAccess) && styles.settingRowDisabled]}>
               <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)', opacity: (isConnected && hasAdBlockAccess) ? 1 : 0.5 }]}>
+                <View style={[styles.settingIcon, { backgroundColor: (isConnected && hasAdBlockAccess) ? (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)') : (isDark ? 'rgba(239, 68, 68, 0.08)' : 'rgba(239, 68, 68, 0.05)') }]}>
                   <Eye size={20} color={(isConnected && hasAdBlockAccess) ? '#EF4444' : colors.textMuted} />
                 </View>
                 <View style={styles.settingText}>
@@ -534,7 +689,7 @@ export default function HomeScreen() {
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{getAdBlockDisabledReason() || t('vpn.quickSettings.adBlocker.description')}</Text>
                 </View>
               </View>
-              <Switch value={adBlockEnabled} onValueChange={handleAdBlockToggle} disabled={isAdBlockGating} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} style={{ opacity: isAdBlockGating ? 0.5 : 1 }} />
+              <Switch value={adBlockEnabled} onValueChange={handleAdBlockToggle} disabled={isAdBlockGating} trackColor={{ false: colors.border, true: '#3B82F6' }} thumbColor={adBlockEnabled ? '#fff' : isDark ? '#666' : '#f4f4f4'} ios_backgroundColor={colors.border} />
             </View>
 
             {!isLoggedIn && (
@@ -569,6 +724,9 @@ export default function HomeScreen() {
         servers={servers}
         selectedServer={selectedServer}
         onServerSelect={handleServerSelect}
+        favorites={favoriteServers}
+        onToggleFavorite={handleToggleFavorite}
+        isPremiumLocked={checkIsPremiumLocked}
       />
     </View>
   );
@@ -628,10 +786,52 @@ const styles = StyleSheet.create({
   closeButton: { padding: 8 },
   serverList: { paddingHorizontal: 20, paddingTop: 16 },
   serverItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
-  serverFlag: { fontSize: 32, marginRight: 14 },
+  serverFlag: { fontSize: 32 },
+  serverFlagContainer: { position: 'relative', marginRight: 14 },
+  serverLockOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 8,
+    padding: 3,
+  },
   serverTextContainer: { flex: 1 },
+  serverNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   serverName: { fontSize: 16, fontWeight: '600' },
   serverCountry: { fontSize: 13, marginTop: 2 },
-  selectedBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  serverPremiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  serverPremiumText: { fontSize: 9, fontWeight: '700', color: '#FFD700' },
+  serverFavoriteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  serverSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    gap: 10,
+  },
+  serverSearchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  serverEmptyState: { alignItems: 'center', paddingVertical: 40 },
+  serverEmptyText: { fontSize: 14, textAlign: 'center' },
+  selectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   selectedText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });

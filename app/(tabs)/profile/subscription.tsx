@@ -7,8 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
   ChevronRight,
+  Globe,
   HelpCircle,
   RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +25,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -241,34 +246,74 @@ export default function SubscriptionScreen() {
 
             {/* Bottom section with blur */}
             <BlurView intensity={80} tint="dark" style={styles.neoBottomSection}>
-              <View style={styles.neoBottomContent}>
-                <View style={styles.neoBottomTextContainer}>
-                  <Text style={styles.neoBottomTitle}>
-                    {isPro
-                      ? (statusInfo?.date ? `${statusInfo.label}` : t('profile.subscription.status.active'))
-                      : t('profile.subscription.upgradeToPremium')}
-                  </Text>
-                  <Text style={styles.neoBottomSubtitle}>
-                    {isPro
-                      ? (statusInfo?.date || t('profile.subscription.statusText.activeSubscription'))
-                      : t('profile.subscription.premiumFeatures')}
-                  </Text>
+              {isPro ? (
+                /* Pro tier: compact row with status + manage button */
+                <View style={styles.neoBottomContent}>
+                  <View style={styles.neoBottomTextContainer}>
+                    <Text style={styles.neoBottomTitle}>
+                      {statusInfo?.date ? `${statusInfo.label}` : t('profile.subscription.status.active')}
+                    </Text>
+                    <Text style={styles.neoBottomSubtitle}>
+                      {statusInfo?.date || t('profile.subscription.statusText.activeSubscription')}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={handleManageSubscription}
+                    style={({ pressed }) => [
+                      styles.neoButton,
+                      pressed && styles.neoButtonPressed,
+                    ]}
+                  >
+                    <Text style={styles.neoButtonText}>
+                      {t('profile.subscription.cta.manage')}
+                    </Text>
+                  </Pressable>
                 </View>
-
-                <Pressable
-                  onPress={isPro ? handleManageSubscription : handleUpgrade}
-                  style={({ pressed }) => [
-                    styles.neoButton,
-                    pressed && styles.neoButtonPressed,
-                  ]}
-                >
-                  <Text style={styles.neoButtonText}>
-                    {isPro
-                      ? t('profile.subscription.cta.manage')
-                      : t('profile.subscription.cta.upgrade')}
+              ) : (
+                /* Free tier: column with feature pills + full-width upgrade */
+                <View style={styles.freeBottomContent}>
+                  <Text style={styles.neoBottomTitle}>
+                    {t('profile.subscription.upgradeToPremium')}
                   </Text>
-                </Pressable>
-              </View>
+                  <View style={styles.featurePills}>
+                    <View style={styles.featurePill}>
+                      <Globe size={12} color="rgba(255, 255, 255, 0.85)" />
+                      <Text style={styles.featurePillText}>
+                        {t('tier.features.premiumServers.title')}
+                      </Text>
+                    </View>
+                    <View style={styles.featurePill}>
+                      <ShieldCheck size={12} color="rgba(255, 255, 255, 0.85)" />
+                      <Text style={styles.featurePillText}>
+                        {t('tier.features.adBlocking.title')}
+                      </Text>
+                    </View>
+                    <View style={styles.featurePill}>
+                      <Smartphone size={12} color="rgba(255, 255, 255, 0.85)" />
+                      <Text style={styles.featurePillText}>
+                        {t('tier.features.devices.title')}
+                      </Text>
+                    </View>
+                    <View style={styles.featurePill}>
+                      <Zap size={12} color="rgba(255, 255, 255, 0.85)" />
+                      <Text style={styles.featurePillText}>
+                        {t('tier.features.prioritySupport.title')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={handleUpgrade}
+                    style={({ pressed }) => [
+                      styles.neoButtonFull,
+                      pressed && styles.neoButtonPressed,
+                    ]}
+                  >
+                    <Text style={styles.neoButtonText}>
+                      {t('profile.subscription.cta.upgradeNow')}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </BlurView>
           </AnimatedView>
 
@@ -336,6 +381,27 @@ export default function SubscriptionScreen() {
                 ? t('profile.subscription.infoFooter.ios')
                 : t('profile.subscription.infoFooter.android')}
             </Text>
+
+            {/* Legal Links - Required for Apple compliance */}
+            <View style={styles.legalLinksRow}>
+              <TouchableOpacity
+                onPress={() => Linking.openURL('https://dopplerland.vercel.app/en/terms')}
+                style={styles.legalLinkTouchable}
+              >
+                <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>
+                  {t('tier.paywall.terms')}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.legalSeparator, { color: colors.textMuted }]}>|</Text>
+              <TouchableOpacity
+                onPress={() => Linking.openURL('https://dopplerland.vercel.app/en/privacy')}
+                style={styles.legalLinkTouchable}
+              >
+                <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>
+                  {t('tier.paywall.privacy')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </AnimatedView>
         </Animated.ScrollView>
       </ScrollShadow>
@@ -444,10 +510,40 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     transform: [{ scale: 0.98 }],
   },
+  neoButtonFull: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 12,
+    borderRadius: 24,
+    alignItems: 'center',
+  },
   neoButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#000000',
+  },
+
+  // Free tier bottom section
+  freeBottomContent: {
+    gap: 10,
+  },
+  featurePills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  featurePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  featurePillText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
 
   // Management Card
@@ -493,10 +589,28 @@ const styles = StyleSheet.create({
   // Info Footer
   infoFooter: {
     paddingHorizontal: 8,
+    gap: 12,
   },
   infoText: {
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  legalLinkTouchable: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  legalLinkText: {
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
+    fontSize: 13,
   },
 });

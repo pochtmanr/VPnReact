@@ -19,6 +19,7 @@ import {
   Alert,
   InteractionManager,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -27,6 +28,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -353,7 +355,6 @@ export default function ContentFilterScreen() {
     [isDark]
   );
 
-  // Content container padding
   const contentContainerStyle = useMemo(
     () => ({
       paddingTop: insets.top + 12,

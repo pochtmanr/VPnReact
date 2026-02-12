@@ -4,27 +4,27 @@ import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { X } from 'lucide-react-native';
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // URLs for Terms and Privacy
-const TERMS_URL = 'https://dopplervpn.com/terms';
-const PRIVACY_URL = 'https://dopplervpn.com/privacy';
+const TERMS_URL = 'https://dopplerland.vercel.app/en/terms';
+const PRIVACY_URL = 'https://dopplerland.vercel.app/en/privacy';
 
 /**
  * Global paywall modal with welcome-screen-inspired full-screen design.
@@ -34,6 +34,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { isRTL } = useRTL();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const {
     isPaywallVisible,
     hidePaywall,
@@ -42,10 +43,12 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     yearlyPackage,
     purchasePackage,
     restorePurchases,
+    refreshOfferings,
     isLoading,
     isMockMode,
     isTrialEligible,
     trialDuration,
+    error: revenueCatError,
   } = useRevenueCat();
 
   const [fontsLoaded] = useFonts({
@@ -55,16 +58,58 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
 
+  // Auto-refresh offerings when modal opens if packages aren't loaded
+  // This helps recover from initialization failures during App Store review
+  useEffect(() => {
+    if (isPaywallVisible) {
+      console.log('[Paywall] Modal opened:', {
+        screenDimensions: { width: screenWidth, height: screenHeight },
+        hasYearlyPackage: !!yearlyPackage?.rcPackage,
+        hasSixMonthPackage: !!sixMonthPackage?.rcPackage,
+        hasMonthlyPackage: !!monthlyPackage?.rcPackage,
+        isMockMode,
+        isTrialEligible,
+        trialDays: trialDuration?.days,
+      });
+
+      if (!yearlyPackage?.rcPackage && !isMockMode) {
+        console.log('[Paywall] Packages not loaded, refreshing offerings...');
+        refreshOfferings();
+      }
+    }
+  }, [isPaywallVisible, yearlyPackage?.rcPackage, sixMonthPackage?.rcPackage, monthlyPackage?.rcPackage, isMockMode, refreshOfferings, screenWidth, screenHeight, isTrialEligible, trialDuration?.days]);
+
+  // Log error state for debugging
+  useEffect(() => {
+    if (isPaywallVisible && revenueCatError) {
+      console.error('[Paywall] RevenueCat error state:', revenueCatError);
+    }
+  }, [isPaywallVisible, revenueCatError]);
+
   // Default to yearly when modal opens
   const effectiveSelected = selectedPackage || yearlyPackage;
 
   const handlePurchase = useCallback(async () => {
-    if (!effectiveSelected) return;
+    if (!effectiveSelected) {
+      console.error('[Paywall] No package selected for purchase');
+      return;
+    }
+
+    console.log('[Paywall] Purchase attempt:', {
+      packageId: effectiveSelected.identifier,
+      productId: effectiveSelected.product?.identifier,
+      hasRcPackage: !!effectiveSelected.rcPackage,
+      isMockMode,
+      screenDimensions: { width: screenWidth, height: screenHeight },
+      platform: Platform.OS,
+      platformVersion: Platform.Version,
+    });
 
     if (isMockMode) {
+      console.error('[Paywall] Purchase blocked: Mock mode is active in production build');
       Alert.alert(
         t('common.status.error'),
-        t('tier.paywall.devMode')
+        'Subscription service is temporarily unavailable. Please restart the app and try again.'
       );
       return;
     }
@@ -72,19 +117,28 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     setIsPurchasing(true);
     try {
       const result = await purchasePackage(effectiveSelected);
+      console.log('[Paywall] Purchase result:', result);
+
       if (result.success) {
         Alert.alert(t('common.status.success'), t('tier.paywall.purchaseSuccess'), [
           { text: 'OK', onPress: hidePaywall },
         ]);
       } else if (result.error && result.error !== 'Purchase cancelled') {
+        console.error('[Paywall] Purchase failed:', result.error);
         Alert.alert(t('common.status.error'), result.error);
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[Paywall] Purchase exception:', {
+        error: err,
+        message: err?.message,
+        code: err?.code,
+        platform: Platform.OS,
+      });
       Alert.alert(t('common.status.error'), t('tier.paywall.purchaseError'));
     } finally {
       setIsPurchasing(false);
     }
-  }, [effectiveSelected, purchasePackage, hidePaywall, isMockMode, t]);
+  }, [effectiveSelected, purchasePackage, hidePaywall, isMockMode, t, screenWidth, screenHeight]);
 
   const handleRestore = useCallback(async () => {
     setIsPurchasing(true);
@@ -150,6 +204,18 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     }
   };
 
+  // Get billing period suffix for full price display (e.g., "$79.99/year")
+  const getBillingPeriod = (pkg: SubscriptionPackage): string => {
+    switch (pkg.packageType) {
+      case 'ANNUAL': return t('tier.paywall.perYear');
+      case 'SIX_MONTH': return t('tier.paywall.perSixMonths');
+      case 'MONTHLY': return t('tier.paywall.perMonth');
+      default: return '';
+    }
+  };
+
+  const hasPackages = !!(yearlyPackage || sixMonthPackage || monthlyPackage);
+
   const isSelected = (pkg: SubscriptionPackage) => {
     return effectiveSelected?.identifier === pkg.identifier;
   };
@@ -165,10 +231,10 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
       onRequestClose={hidePaywall}
     >
       <View style={styles.container}>
-        {/* Background Image */}
+        {/* Background Image - uses dynamic dimensions for iPad rotation support */}
         <Image
           source={require('@/assets/images/welcome.png')}
-          style={styles.backgroundImage}
+          style={[styles.backgroundImage, { width: screenWidth, height: screenHeight }]}
           resizeMode="cover"
         />
 
@@ -238,8 +304,20 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               adjustsFontSizeToFit
               minimumFontScale={0.8}
             >
-              {t('tier.paywall.unlockPremium')}
+              {t('tier.paywall.subtitle')}
             </Text>
+
+            {/* Feature List - Apple 3.1.2 compliance: explicitly list what user gets */}
+            <View style={styles.featureList}>
+              {(['premiumServers', 'adBlocking', 'contentFilter', 'devices', 'prioritySupport'] as const).map((key) => (
+                <View key={key} style={[styles.featureRow, isRTL && styles.featureRowRTL]}>
+                  <Text style={styles.featureCheck}>✓</Text>
+                  <Text style={[styles.featureText, isRTL && styles.textRTL]}>
+                    {t(`tier.features.${key}.title`)} — {t(`tier.features.${key}.description`)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
 
           {/* Spacer */}
@@ -261,7 +339,23 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               </View>
             )}
 
+            {/* Empty state when packages haven't loaded */}
+            {!hasPackages && !isProcessing && (
+              <View style={styles.emptyPackages}>
+                <Text style={[styles.emptyPackagesText, isRTL && styles.textRTL]}>
+                  {t('tier.paywall.noPackagesAvailable')}
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.7 }]}
+                  onPress={refreshOfferings}
+                >
+                  <Text style={styles.retryButtonText}>{t('tier.paywall.retry')}</Text>
+                </Pressable>
+              </View>
+            )}
+
             {/* Package Options */}
+            {hasPackages && (
             <View style={styles.packagesContainer}>
               {/* Yearly Package - Best Value */}
               {yearlyPackage && (
@@ -290,7 +384,9 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {formatPerMonthPrice(yearlyPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>{yearlyPackage.product.priceString}</Text>
+                  <Text style={styles.packagePrice}>
+                    {yearlyPackage.product.priceString}{getBillingPeriod(yearlyPackage)}
+                  </Text>
                 </Pressable>
               )}
 
@@ -316,7 +412,9 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {formatPerMonthPrice(sixMonthPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>{sixMonthPackage.product.priceString}</Text>
+                  <Text style={styles.packagePrice}>
+                    {sixMonthPackage.product.priceString}{getBillingPeriod(sixMonthPackage)}
+                  </Text>
                 </Pressable>
               )}
 
@@ -339,20 +437,23 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {getPackageName(monthlyPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>{monthlyPackage.product.priceString}</Text>
+                  <Text style={styles.packagePrice}>
+                    {monthlyPackage.product.priceString}{getBillingPeriod(monthlyPackage)}
+                  </Text>
                 </Pressable>
               )}
             </View>
+            )}
 
             {/* Continue Button */}
             <Pressable
               style={({ pressed }) => [
                 styles.continueButton,
                 pressed && { opacity: 0.9 },
-                isProcessing && { opacity: 0.7 },
+                (isProcessing || !hasPackages) && { opacity: 0.7 },
               ]}
               onPress={handlePurchase}
-              disabled={isProcessing}
+              disabled={isProcessing || !hasPackages}
             >
               <LinearGradient
                 colors={['#3B82F6', '#2563EB']}
@@ -369,7 +470,9 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                     adjustsFontSizeToFit
                     minimumFontScale={0.75}
                   >
-                    {t('tier.paywall.startTrial')}
+                    {isTrialEligible && trialDuration && trialDuration.days > 0
+                      ? t('tier.paywall.startTrial')
+                      : t('tier.paywall.subscribe')}
                   </Text>
                 )}
               </LinearGradient>
@@ -394,9 +497,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                     {t('tier.paywall.terms')}
                   </Text>
                 </TouchableOpacity>
-              </View>
-              {/* Second Row: Privacy */}
-              <View style={[styles.legalRow, isRTL && styles.legalRowRTL]}>
+                <Text style={styles.legalSeparator}>|</Text>
                 <TouchableOpacity onPress={openPrivacy} style={styles.legalLinkTouchable}>
                   <Text style={[styles.legalLink, isRTL && styles.textRTL]} numberOfLines={1}>
                     {t('tier.paywall.privacy')}
@@ -405,10 +506,17 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               </View>
             </View>
 
-            {/* Auto-renew notice */}
-            <Text style={[styles.autoRenewText, isRTL && styles.textRTL]} numberOfLines={2}>
-              {t('tier.paywall.cancelAnytime')}
-            </Text>
+            {/* Apple-compliant subscription disclosure */}
+            <View style={styles.disclosureContainer}>
+              {isTrialEligible && trialDuration && trialDuration.days > 0 && (
+                <Text style={[styles.disclosureText, isRTL && styles.textRTL]}>
+                  {t('tier.paywall.trialDisclosure')}
+                </Text>
+              )}
+              <Text style={[styles.disclosureText, isRTL && styles.textRTL]}>
+                {t('tier.paywall.subscriptionDisclosure')}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -423,8 +531,8 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    // Width and height are applied dynamically via useWindowDimensions
+    // to support iPad rotation and split-view
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -479,6 +587,33 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     textAlign: 'center',
     letterSpacing: -0.2,
+  },
+
+  // Feature list - Apple 3.1.2 compliance
+  featureList: {
+    marginTop: 20,
+    gap: 8,
+    alignSelf: 'stretch',
+    paddingHorizontal: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  featureRowRTL: {
+    flexDirection: 'row-reverse',
+  },
+  featureCheck: {
+    fontSize: 14,
+    color: '#10B981',
+    marginTop: 1,
+  },
+  featureText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.6)',
+    flex: 1,
+    lineHeight: 18,
   },
 
   // Spacer
@@ -634,9 +769,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255, 255, 255, 0.2)',
   },
-  autoRenewText: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.25)',
+  // Empty packages state
+  emptyPackages: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  emptyPackagesText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Apple-compliant disclosure
+  disclosureContainer: {
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  disclosureText: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: 'rgba(255, 255, 255, 0.2)',
     textAlign: 'center',
   },
 });

@@ -46,35 +46,36 @@ export const FreeSubscriptionCard = memo(function FreeSubscriptionCard({
 
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [
-          styles.row,
-          pressed && { opacity: 0.7 },
-        ]}
+        style={styles.row}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={t('profile.subscription.accessibility.viewSubscription')}
       >
-        {/* Icon */}
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
-          ]}
-        >
-          <Shield size={22} color={colors.textMuted} />
-        </View>
+        {({ pressed }) => (
+          <View style={[styles.rowInner, pressed && { opacity: 0.7 }]}>
+            {/* Icon */}
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
+              ]}
+            >
+              <Shield size={22} color={colors.textMuted} />
+            </View>
 
-        {/* Info */}
-        <View style={styles.infoContainer}>
-          <Text style={[styles.planName, { color: colors.text }]}>
-            {t('profile.subscription.plans.free')}
-          </Text>
-          <Text style={[styles.statusText, { color: colors.textSecondary }]}>
-            {t('profile.subscription.statusText.upgradePrompt')}
-          </Text>
-        </View>
+            {/* Info */}
+            <View style={styles.infoContainer}>
+              <Text style={[styles.planName, { color: colors.text }]}>
+                {t('profile.subscription.plans.free')}
+              </Text>
+              <Text style={[styles.statusText, { color: colors.textSecondary }]}>
+                {t('profile.subscription.statusText.upgradePrompt')}
+              </Text>
+            </View>
 
-        <ChevronRight size={20} color={colors.textMuted} />
+            <ChevronRight size={20} color={colors.textMuted} />
+          </View>
+        )}
       </Pressable>
     </AnimatedView>
   );
@@ -93,9 +94,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   row: {
+    paddingVertical: 12,
+  },
+  rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
     gap: 12,
   },
   iconContainer: {

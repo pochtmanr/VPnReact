@@ -53,25 +53,26 @@ const MenuItem = memo(function MenuItem({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.menuItem,
-        pressed && { opacity: 0.7 },
-      ]}
+      style={styles.menuItem}
     >
-      <View style={[styles.menuIcon, { backgroundColor: iconBgColor }]}>
-        <Icon size={20} color={defaultIconColor} />
-      </View>
-      <View style={styles.menuContent}>
-        <Text style={[styles.menuLabel, { color: colors.text }]}>{label}</Text>
-        {description && (
-          <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
-            {description}
-          </Text>
-        )}
-      </View>
-      {rightElement || (showChevron && (
-        <ChevronRight size={20} color={colors.textMuted} />
-      ))}
+      {({ pressed }) => (
+        <View style={[styles.menuItemInner, pressed && { opacity: 0.7 }]}>
+          <View style={[styles.menuIcon, { backgroundColor: iconBgColor }]}>
+            <Icon size={20} color={defaultIconColor} />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{label}</Text>
+            {description && (
+              <Text style={[styles.menuDescription, { color: colors.textSecondary }]}>
+                {description}
+              </Text>
+            )}
+          </View>
+          {rightElement || (showChevron && (
+            <ChevronRight size={20} color={colors.textMuted} />
+          ))}
+        </View>
+      )}
     </Pressable>
   );
 });
@@ -181,9 +182,11 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   menuItem: {
+    paddingVertical: 12,
+  },
+  menuItemInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
     gap: 12,
   },
   menuIcon: {

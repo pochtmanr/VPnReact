@@ -104,7 +104,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         do {
             // Parse the WireGuard configuration
-            let tunnelConfiguration = try TunnelConfiguration(fromWgQuickConfig: wgConfigString, called: "VPN Shield")
+            let tunnelConfiguration = try TunnelConfiguration(fromWgQuickConfig: wgConfigString, called: "Doppler VPN")
 
             wg_log(.info, message: "Configuration parsed successfully")
             wg_log(.info, message: "Interface address: \\(tunnelConfiguration.interface.addresses.map { $0.stringRepresentation }.joined(separator: ", "))")
@@ -215,7 +215,7 @@ private func wg_log(_ level: OSLogType, message: String) {
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>VPN Shield Tunnel</string>
+    <string>Doppler VPN Tunnel</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>

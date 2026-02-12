@@ -286,17 +286,20 @@ const DeviceAccordionItem = memo(function DeviceAccordionItem({
               {showRemoveButton && onRemove && (
                 <Pressable
                   onPress={onRemove}
-                  style={({ pressed }) => [
+                  style={[
                     styles.removeButton,
                     { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                    pressed && { opacity: 0.7 },
                   ]}
                   hitSlop={8}
                 >
-                  <X size={16} color={colors.error} />
-                  <Text style={[styles.removeButtonText, { color: colors.error }]}>
-                    Remove
-                  </Text>
+                  {({ pressed }) => (
+                    <View style={[styles.removeButtonInner, pressed && { opacity: 0.7 }]}>
+                      <X size={16} color={colors.error} />
+                      <Text style={[styles.removeButtonText, { color: colors.error }]}>
+                        Remove
+                      </Text>
+                    </View>
+                  )}
                 </Pressable>
               )}
 
@@ -603,11 +606,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   removeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  removeButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   removeButtonText: {

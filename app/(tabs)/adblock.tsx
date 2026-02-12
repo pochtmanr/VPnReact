@@ -23,6 +23,7 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

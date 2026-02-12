@@ -219,36 +219,37 @@ export const SubscriptionCard = memo(function SubscriptionCard({
 
       <Pressable
         onPress={handleCardPress}
-        style={({ pressed }) => [
-          styles.row,
-          pressed && { opacity: 0.7 },
-        ]}
+        style={styles.row}
       >
-        {/* Icon */}
-        <View style={[styles.iconContainer, { backgroundColor: '#FFD70020' }]}>
-          <Crown size={22} color="#FFD700" />
-        </View>
+        {({ pressed }) => (
+          <View style={[styles.rowInner, pressed && { opacity: 0.7 }]}>
+            {/* Icon */}
+            <View style={[styles.iconContainer, { backgroundColor: '#FFD70020' }]}>
+              <Crown size={22} color="#FFD700" />
+            </View>
 
-        {/* Info */}
-        <View style={styles.infoContainer}>
-          <View style={styles.planRow}>
-            <Text style={[styles.planName, { color: colors.text }]}>
-              {planName}
-            </Text>
-            {statusConfig && (
-              <View style={[styles.statusBadge, { backgroundColor: statusConfig.backgroundColor }]}>
-                <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
-                  {statusConfig.label}
+            {/* Info */}
+            <View style={styles.infoContainer}>
+              <View style={styles.planRow}>
+                <Text style={[styles.planName, { color: colors.text }]}>
+                  {planName}
                 </Text>
+                {statusConfig && (
+                  <View style={[styles.statusBadge, { backgroundColor: statusConfig.backgroundColor }]}>
+                    <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
+                      {statusConfig.label}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-          <Text style={[styles.statusText, { color: colors.textSecondary }]}>
-            {statusText}
-          </Text>
-        </View>
+              <Text style={[styles.statusText, { color: colors.textSecondary }]}>
+                {statusText}
+              </Text>
+            </View>
 
-        <ChevronRight size={20} color={colors.textMuted} />
+            <ChevronRight size={20} color={colors.textMuted} />
+          </View>
+        )}
       </Pressable>
     </AnimatedView>
   );
@@ -267,9 +268,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   row: {
+    paddingVertical: 12,
+  },
+  rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
     gap: 12,
   },
   iconContainer: {

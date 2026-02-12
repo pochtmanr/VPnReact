@@ -6,10 +6,15 @@ import { BlurView } from 'expo-blur';
 import {
   CheckCircle2,
   Circle,
+  Crown,
+  Heart,
+  Lock,
+  Search,
   Server,
   Shield,
   ShieldCheck,
   Signal,
+  X,
   Zap,
 } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react';
@@ -17,6 +22,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import Animated, {
@@ -111,14 +117,20 @@ function ServerCard({
   server,
   isSelected,
   isConnected,
+  isFavorite,
+  isPremiumLocked,
   onPress,
+  onToggleFavorite,
   cityName,
   countryName,
 }: {
   server: VPNServer;
   isSelected: boolean;
   isConnected: boolean;
+  isFavorite: boolean;
+  isPremiumLocked: boolean;
   onPress: () => void;
+  onToggleFavorite: () => void;
   cityName: string;
   countryName: string;
 }) {
@@ -128,16 +140,21 @@ function ServerCard({
   return (
     <Pressable
       onPress={onPress}
+      disabled={isPremiumLocked}
       style={({ pressed }) => [
         styles.serverCard,
         {
-          backgroundColor: isSelected
-            ? isDark ? `${colors.success}15` : `${colors.success}08`
-            : isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-          borderColor: isSelected
-            ? colors.success
-            : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          backgroundColor: isPremiumLocked
+            ? isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
+            : isSelected
+              ? isDark ? `${colors.success}15` : `${colors.success}08`
+              : isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+          borderColor: isPremiumLocked
+            ? isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+            : isSelected
+              ? colors.success
+              : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          transform: [{ scale: pressed && !isPremiumLocked ? 0.98 : 1 }],
         },
       ]}
     >
@@ -148,57 +165,130 @@ function ServerCard({
             styles.flagContainer,
             { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' }
           ]}>
-            <Text style={styles.flagEmoji}>{getCountryFlag(server.country_code)}</Text>
+            <Text style={[styles.flagEmoji, isPremiumLocked && { opacity: 0.5 }]}>
+              {getCountryFlag(server.country_code)}
+            </Text>
+            {isPremiumLocked && (
+              <View style={styles.lockOverlay}>
+                <Lock size={16} color="#FFD700" />
+              </View>
+            )}
           </View>
           <View style={styles.serverInfo}>
-            <Text style={[styles.serverName, { color: colors.text }]} numberOfLines={1}>
-              {cityName}
-            </Text>
-            <Text style={[styles.serverLocation, { color: colors.textSecondary }]} numberOfLines={1}>
+            <View style={styles.serverNameRow}>
+              <Text
+                style={[
+                  styles.serverName,
+                  { color: isPremiumLocked ? colors.textMuted : colors.text }
+                ]}
+                numberOfLines={1}
+              >
+                {cityName}
+              </Text>
+              {isPremiumLocked && (
+                <View style={styles.premiumBadge}>
+                  <Crown size={12} color="#FFD700" />
+                  <Text style={styles.premiumText}>PRO</Text>
+                </View>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.serverLocation,
+                { color: isPremiumLocked ? colors.textMuted : colors.textSecondary }
+              ]}
+              numberOfLines={1}
+            >
               {countryName}
             </Text>
           </View>
         </View>
 
-        {/* Status Badge */}
-        <View style={[
-          styles.statusBadge,
-          {
-            backgroundColor: isConnected
-              ? `${colors.success}20`
-              : isSelected
-                ? `${colors.primary}20`
-                : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-          }
-        ]}>
-          {isConnected ? (
-            <CheckCircle2 size={14} color={colors.success} />
-          ) : isSelected ? (
-            <Circle size={14} color={colors.primary} />
-          ) : (
-            <Circle size={14} color={colors.textMuted} />
+        {/* Favorite & Status */}
+        <View style={styles.cardActions}>
+          {!isPremiumLocked && (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onToggleFavorite();
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.favoriteButton,
+                {
+                  backgroundColor: isFavorite
+                    ? isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'
+                    : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                }
+              ]}
+            >
+              <Heart
+                size={16}
+                color={isFavorite ? '#EF4444' : colors.textMuted}
+                fill={isFavorite ? '#EF4444' : 'transparent'}
+              />
+            </Pressable>
           )}
-          <Text style={[
-            styles.statusText,
+
+          {/* Status Badge */}
+          <View style={[
+            styles.statusBadge,
             {
-              color: isConnected
-                ? colors.success
-                : isSelected
-                  ? colors.primary
-                  : colors.textMuted
+              backgroundColor: isPremiumLocked
+                ? isDark ? 'rgba(255, 215, 0, 0.15)' : 'rgba(255, 215, 0, 0.1)'
+                : isConnected
+                  ? `${colors.success}20`
+                  : isSelected
+                    ? `${colors.primary}20`
+                    : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
             }
           ]}>
-            {isConnected ? t('common.status.connected') : isSelected ? t('server.selected') : t('server.available')}
-          </Text>
+            {isPremiumLocked ? (
+              <>
+                <Lock size={14} color="#FFD700" />
+                <Text style={[styles.statusText, { color: '#FFD700' }]}>
+                  {t('server.locked')}
+                </Text>
+              </>
+            ) : isConnected ? (
+              <>
+                <CheckCircle2 size={14} color={colors.success} />
+                <Text style={[styles.statusText, { color: colors.success }]}>
+                  {t('common.status.connected')}
+                </Text>
+              </>
+            ) : isSelected ? (
+              <>
+                <Circle size={14} color={colors.primary} />
+                <Text style={[styles.statusText, { color: colors.primary }]}>
+                  {t('server.selected')}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Circle size={14} color={colors.textMuted} />
+                <Text style={[styles.statusText, { color: colors.textMuted }]}>
+                  {t('server.available')}
+                </Text>
+              </>
+            )}
+          </View>
         </View>
       </View>
 
       {/* Server Stats */}
-      <View style={[styles.statsContainer, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)' }]}>
+      <View style={[
+        styles.statsContainer,
+        {
+          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+          opacity: isPremiumLocked ? 0.5 : 1,
+        }
+      ]}>
         <View style={styles.statItem}>
-          <Signal size={16} color={colors.success} />
+          <Signal size={16} color={isPremiumLocked ? colors.textMuted : colors.success} />
           <View>
-            <Text style={[styles.statValue, { color: colors.text }]}>
+            <Text style={[styles.statValue, { color: isPremiumLocked ? colors.textMuted : colors.text }]}>
               {server.latency_ms != null ? `${server.latency_ms}ms` : 'N/A'}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('vpn.stats.latency')}</Text>
@@ -208,9 +298,9 @@ function ServerCard({
         <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)' }]} />
 
         <View style={styles.statItem}>
-          <Zap size={16} color={colors.warning} />
+          <Zap size={16} color={isPremiumLocked ? colors.textMuted : colors.warning} />
           <View>
-            <Text style={[styles.statValue, { color: colors.text }]}>WireGuard</Text>
+            <Text style={[styles.statValue, { color: isPremiumLocked ? colors.textMuted : colors.text }]}>WireGuard</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('server.protocol')}</Text>
           </View>
         </View>
@@ -218,9 +308,9 @@ function ServerCard({
         <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)' }]} />
 
         <View style={styles.statItem}>
-          <ShieldCheck size={16} color={colors.info} />
+          <ShieldCheck size={16} color={isPremiumLocked ? colors.textMuted : colors.info} />
           <View>
-            <Text style={[styles.statValue, { color: colors.text }]}>256-bit</Text>
+            <Text style={[styles.statValue, { color: isPremiumLocked ? colors.textMuted : colors.text }]}>256-bit</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('server.encryption')}</Text>
           </View>
         </View>
@@ -233,9 +323,14 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
   (
     {
       servers,
+      favorites,
       selectedServer,
       isConnected,
       onServerSelect,
+      onToggleFavorite,
+      isPremiumLocked,
+      searchQuery,
+      onSearchChange,
       onOpen,
     },
     ref
@@ -259,14 +354,41 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
       close: () => bottomSheetRef.current?.close(),
     }));
 
-    // Filter to only show WireGuard servers
-    const wireGuardServers = useMemo(() => {
-      return servers.filter(server =>
+    // Filter to only show WireGuard servers and apply search
+    const filteredServers = useMemo(() => {
+      const wireGuardServers = servers.filter(server =>
         server.protocol === 'wireguard' ||
         server.config_data?.includes('privateKey') ||
         server.config_data?.includes('PrivateKey')
       );
-    }, [servers]);
+
+      // Apply search filter
+      if (!searchQuery.trim()) {
+        return wireGuardServers;
+      }
+
+      const query = searchQuery.toLowerCase().trim();
+      return wireGuardServers.filter(server => {
+        const cityName = getServerCity(server).toLowerCase();
+        const countryName = getServerCountry(server).toLowerCase();
+        return (
+          cityName.includes(query) ||
+          countryName.includes(query) ||
+          server.country_code.toLowerCase().includes(query)
+        );
+      });
+    }, [servers, searchQuery, getServerCity, getServerCountry]);
+
+    // Sort servers: favorites first, then by country
+    const sortedServers = useMemo(() => {
+      return [...filteredServers].sort((a, b) => {
+        const aIsFavorite = favorites.includes(a.id);
+        const bIsFavorite = favorites.includes(b.id);
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+        return getServerCountry(a).localeCompare(getServerCountry(b));
+      });
+    }, [filteredServers, favorites, getServerCountry]);
 
     // Blur backdrop using the separated component
     const renderBackdrop = useCallback(
@@ -342,20 +464,55 @@ const ServerBottomSheet = forwardRef<ServerBottomSheetRef, ServerBottomSheetProp
             </View>
           </View>
 
+          {/* Search Bar */}
+          <View style={[
+            styles.searchContainer,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            }
+          ]}>
+            <Search size={18} color={colors.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder={t('server.search')}
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable
+                onPress={() => onSearchChange('')}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.clearButton,
+                  { transform: [{ scale: pressed ? 0.9 : 1 }] }
+                ]}
+              >
+                <X size={16} color={colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
+
           {/* Server List */}
           <BottomSheetScrollView
             style={styles.serversList}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {wireGuardServers.length > 0 ? (
-              wireGuardServers.map((server) => (
+            {sortedServers.length > 0 ? (
+              sortedServers.map((server) => (
                 <ServerCard
                   key={server.id}
                   server={server}
                   isSelected={selectedServer?.id === server.id}
                   isConnected={isConnected && selectedServer?.id === server.id}
+                  isFavorite={favorites.includes(server.id)}
+                  isPremiumLocked={isPremiumLocked(server)}
                   onPress={() => onServerSelect(server)}
+                  onToggleFavorite={() => onToggleFavorite(server.id)}
                   cityName={getServerCity(server)}
                   countryName={getServerCountry(server)}
                 />
@@ -563,5 +720,64 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
+  },
+  // Search
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  // Server Card extras
+  serverNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    padding: 4,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  premiumText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  favoriteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

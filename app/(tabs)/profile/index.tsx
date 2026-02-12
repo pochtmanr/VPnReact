@@ -253,7 +253,7 @@ export default function ProfileScreen() {
             entering={FadeInDown.delay(300).duration(300).easing(Easing.out(Easing.ease))}
             style={styles.versionContainer}
           >
-            <Text style={[styles.versionText, { color: colors.textMuted }]}>Doppler VPN v1.1.3</Text>
+            <Text style={[styles.versionText, { color: colors.textMuted }]}>Doppler VPN v1.4.0</Text>
           </AnimatedView>
         </Animated.ScrollView>
       </ScrollShadow>

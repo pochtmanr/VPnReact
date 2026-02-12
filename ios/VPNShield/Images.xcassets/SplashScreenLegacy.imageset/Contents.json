@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "NoBgLogo.png",
+      "filename" : "Dopplerdark.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "NoBgLogo 1.png",
+      "filename" : "Dopplerdark 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "NoBgLogo 2.png",
+      "filename" : "Dopplerdark 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

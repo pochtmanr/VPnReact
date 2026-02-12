@@ -59,26 +59,29 @@ export const AccountCard = memo(function AccountCard({
       {account && (
         <Pressable
           onPress={handleCopyAccountId}
-          style={({ pressed }) => [
+          style={[
             styles.copyButton,
             {
               backgroundColor: copied
                 ? `${colors.success}20`
                 : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
             },
-            pressed && { opacity: 0.7 },
           ]}
         >
-          {copied ? (
-            <>
-              <Check size={16} color={colors.success} />
-              <Text style={[styles.copyButtonText, { color: colors.success }]}>{t('profile.copied')}</Text>
-            </>
-          ) : (
-            <>
-              <Copy size={16} color={colors.primary} />
-              <Text style={[styles.copyButtonText, { color: colors.primary }]}>{t('profile.copyId')}</Text>
-            </>
+          {({ pressed }) => (
+            <View style={[styles.copyButtonInner, pressed && { opacity: 0.7 }]}>
+              {copied ? (
+                <>
+                  <Check size={16} color={colors.success} />
+                  <Text style={[styles.copyButtonText, { color: colors.success }]}>{t('profile.copied')}</Text>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} color={colors.primary} />
+                  <Text style={[styles.copyButtonText, { color: colors.primary }]}>{t('profile.copyId')}</Text>
+                </>
+              )}
+            </View>
           )}
         </Pressable>
       )}
@@ -120,11 +123,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   copyButton: {
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  copyButtonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
     gap: 8,
   },
   copyButtonText: {

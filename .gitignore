@@ -52,3 +52,4 @@ xcuserdata/
 # Keystore files
 *.keystore
 keystore.properties
+keyfolder/

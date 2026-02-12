@@ -1,42 +1,32 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
-import { Platform } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '@/context/ThemeContext';
 
 export default function TabLayout() {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
 
-  // Android-specific styling for Material Design compliance
-  const androidTabBarProps = Platform.OS === 'android' ? {
-    // Material Design 3 bottom navigation styling
-    rippleColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-    indicatorColor: colors.primary,
-    labelVisibilityMode: 'labeled' as const,
-    // Ensure proper background colors
-    backgroundColor: isDark ? '#1C1B1F' : '#FFFBFE',
-    // Icon colors: default is muted, selected is WHITE (to contrast with blue indicator)
-    iconColor: {
-      default: isDark ? '#CAC4D0' : '#49454F',
-      selected: '#FFFFFF', // White icon on blue indicator
-    },
-    labelStyle: {
-      default: {
-        color: isDark ? '#CAC4D0' : '#49454F',
-        fontSize: 12,
-        fontWeight: '500' as const,
-      },
-      selected: {
-        color: colors.primary,
-        fontSize: 12,
-        fontWeight: '600' as const,
-      },
-    },
-  } : {};
+  // Grayscale-only tab bar colors
+  const tabBarBg = isDark ? '#1C1C1E' : '#F2F2F7';
+  const selectedColor = isDark ? '#FFFFFF' : '#000000';
+  const unselectedColor = isDark ? '#8E8E93' : '#636366';
+  const indicatorBg = isDark ? '#333333' : '#D1D1D6';
 
   return (
-    <NativeTabs {...androidTabBarProps}>
+    <NativeTabs
+      backgroundColor={tabBarBg}
+      tintColor={selectedColor}
+      labelStyle={{
+        default: { color: unselectedColor },
+        selected: { color: selectedColor },
+      }}
+      iconColor={{
+        default: unselectedColor,
+        selected: selectedColor,
+      }}
+      indicatorColor={indicatorBg}
+      labelVisibilityMode="labeled">
       <NativeTabs.Trigger name="index">
         <Icon
           sf={{ default: 'shield', selected: 'shield.checkered' }}

@@ -363,7 +363,7 @@
         "refreshing": "Refreshing..."
       },
       "statusText": {
-        "upgradePrompt": "Upgrade to unlock all features",
+        "upgradePrompt": "Upgrade for premium servers, ad blocker, content filter, and 5 devices",
         "updatePayment": "Update payment method to continue access",
         "activeSubscription": "Active subscription",
         "renewsOn": "Renews {{date}}",
@@ -375,7 +375,7 @@
         "upgrade": "Upgrade",
         "upgradeNow": "Upgrade Now",
         "upgradeToPro": "Upgrade to Pro",
-        "unlockFeatures": "Unlock all premium features",
+        "unlockFeatures": "Get premium servers, ad blocking, content filter, 5 devices, and priority support",
         "manage": "Manage Subscription",
         "resubscribe": "Resubscribe",
         "fixPayment": "Fix Payment"
@@ -400,8 +400,8 @@
       "manageInSettings": "Please manage your subscription in Settings > Apple ID > Subscriptions",
       "noPurchasesFound": "No previous purchases were found for this account.",
       "restoreError": "Failed to restore purchases. Please try again.",
-      "upgradeToPremium": "Unlock Premium",
-      "premiumFeatures": "Ad blocking, unlimited devices & more",
+      "upgradeToPremium": "Upgrade to Premium",
+      "premiumFeatures": "Premium VPN servers in 50+ locations, DNS ad blocker, content filter, up to 5 devices, and priority support",
       "trialAvailable": "{{days}}-day free trial",
       "accessibility": {
         "upgradeLabel": "Upgrade to Premium",
@@ -573,30 +573,40 @@
       "contentFilter": {
         "title": "Content Filter",
         "description": "Block unwanted content"
+      },
+      "prioritySupport": {
+        "title": "Fast Support",
+        "description": "Priority customer support"
       }
     },
 
     "paywall": {
       "title": "Upgrade to Premium",
-      "subtitle": "Unlock all features",
+      "subtitle": "Everything included in Premium",
       "restore": "Restore Purchases",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",
       "yearly": "Yearly",
       "monthly": "Monthly",
       "sixMonths": "6 Months",
-      "perYear": "per year",
-      "perMonth": "per month",
+      "perYear": "/year",
+      "perSixMonths": "/6 mo",
+      "perMonth": "/month",
       "monthAbbr": "mo",
       "save": "Save {{percent}}%",
       "processing": "Processing...",
       "experience": "Experience",
       "truePrivacy": "true privacy.",
-      "unlockPremium": "Unlock all premium features",
-      "startFreeTrial": "Start with a 7-day free trial",
+      "unlockPremium": "Premium VPN servers, DNS ad blocker, content filter, up to 5 devices, and priority support",
+      "startFreeTrial": "Start with a {{days}}-day free trial",
       "bestValue": "Best Value",
       "startTrial": "Start Free Trial",
+      "subscribe": "Subscribe",
       "cancelAnytime": "Cancel anytime. Subscription auto-renews.",
+      "subscriptionDisclosure": "Payment is charged to your Apple ID at confirmation of purchase. Subscription automatically renews unless canceled at least 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > Apple ID > Subscriptions.",
+      "trialDisclosure": "Free trial converts to paid subscription unless canceled at least 24 hours before the trial ends. Any unused portion of the free trial will be forfeited upon purchase of a subscription.",
+      "noPackagesAvailable": "Unable to load subscription plans. Please check your connection and try again.",
+      "retry": "Retry",
       "restoreSuccess": "Your purchases have been restored!",
       "noPurchasesFound": "No previous purchases were found for this account.",
       "purchaseSuccess": "Thank you for subscribing!",
@@ -608,6 +618,7 @@
   "server": {
     "title": "Select Server",
     "subtitle": "Your private WireGuard server",
+    "search": "Search servers...",
     "recommended": "Recommended",
     "allServers": "All Servers",
     "premium": "Premium",
@@ -616,6 +627,7 @@
     "load": "{{percent}}% load",
     "selected": "Selected",
     "available": "Available",
+    "locked": "Pro Only",
     "protocol": "Protocol",
     "encryption": "Encryption",
     "empty": {

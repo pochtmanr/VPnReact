@@ -159,6 +159,7 @@ interface RevenueCatContextType {
   purchasePackage: (pkg: SubscriptionPackage) => Promise<{ success: boolean; error?: string }>;
   restorePurchases: () => Promise<{ success: boolean; restored: boolean; error?: string }>;
   refreshCustomerInfo: () => Promise<void>;
+  refreshOfferings: () => Promise<void>;
   checkTrialEligibility: (pkg: SubscriptionPackage) => Promise<boolean>;
 
   // Helpers
@@ -393,12 +394,19 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   }
 
   async function initializeRevenueCat() {
+    console.log('[RevenueCat] === INITIALIZATION START ===');
+    console.log('[RevenueCat] Platform:', Platform.OS);
+    console.log('[RevenueCat] isRevenueCatAvailable:', isRevenueCatAvailable);
+    console.log('[RevenueCat] Purchases object exists:', !!Purchases);
+    console.log('[RevenueCat] SDK load error:', sdkLoadError);
+
     // If native module isn't available, run in mock mode
     if (!isRevenueCatAvailable || !Purchases) {
-      console.warn('[RevenueCat] Running in mock mode - native module not available');
-      console.warn('[RevenueCat] isRevenueCatAvailable:', isRevenueCatAvailable);
-      console.warn('[RevenueCat] Purchases exists:', !!Purchases);
-      console.warn('[RevenueCat] SDK load error:', sdkLoadError);
+      // CRITICAL: This should NOT happen in production App Store builds
+      console.error('[RevenueCat] CRITICAL: SDK not available - this indicates a build configuration issue');
+      console.error('[RevenueCat] isRevenueCatAvailable:', isRevenueCatAvailable);
+      console.error('[RevenueCat] Purchases exists:', !!Purchases);
+      console.error('[RevenueCat] SDK load error:', sdkLoadError);
       setError(sdkLoadError || 'RevenueCat SDK not available');
       setIsMockMode(true);
       setIsInitialized(true);
@@ -446,6 +454,8 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       }
       if (offeringsResult.status === 'rejected') {
         console.error('[RevenueCat] Failed to fetch offerings:', offeringsResult.reason);
+        // Set a specific error for offerings failure - this helps diagnose App Store review issues
+        setError('Failed to load subscription products. Please check your internet connection.');
       }
 
       // Check if offerings were fetched successfully
@@ -457,8 +467,17 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
         packageIds: offs?.current?.availablePackages?.map(p => p.identifier) || [],
       });
 
+      // CRITICAL: Log warning if offerings are empty - this will cause purchase failures
+      if (!offs?.current?.availablePackages?.length) {
+        console.error('[RevenueCat] WARNING: No packages available in current offering!');
+        console.error('[RevenueCat] This will cause "Start Free Trial" to fail during App Store review');
+        console.error('[RevenueCat] Check: 1) RevenueCat dashboard offerings config, 2) App Store Connect product status, 3) Paid Apps Agreement');
+      }
+
       setIsInitialized(true);
-      setError(null);
+      if (offs?.current?.availablePackages?.length) {
+        setError(null);
+      }
       console.log('[RevenueCat] Initialization complete - mock mode:', false);
     } catch (err: any) {
       console.error('[RevenueCat] Initialization error:', err);
@@ -686,6 +705,39 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     }
   }, [isInitialized, isMockMode]);
 
+  // Track last offerings refresh time
+  const lastOfferingsRefreshRef = React.useRef<number>(0);
+
+  const refreshOfferings = useCallback(async () => {
+    if (!isInitialized || isMockMode || !Purchases) {
+      console.log('[RevenueCat] Cannot refresh offerings:', { isInitialized, isMockMode, hasPurchases: !!Purchases });
+      return;
+    }
+
+    // Throttle: don't refresh more than once per 10 seconds
+    const now = Date.now();
+    if (now - lastOfferingsRefreshRef.current < 10000) {
+      console.log('[RevenueCat] Offerings refresh throttled');
+      return;
+    }
+    lastOfferingsRefreshRef.current = now;
+
+    try {
+      console.log('[RevenueCat] Refreshing offerings...');
+      const offs = await fetchOfferings();
+      console.log('[RevenueCat] Offerings refreshed:', {
+        hasOfferings: !!offs,
+        currentOffering: offs?.current?.identifier || 'none',
+        availablePackages: offs?.current?.availablePackages?.length || 0,
+      });
+      if (offs?.current?.availablePackages?.length) {
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[RevenueCat] Error refreshing offerings:', err);
+    }
+  }, [isInitialized, isMockMode]);
+
   // ==========================================================================
   // PURCHASE ACTIONS
   // ==========================================================================
@@ -698,12 +750,38 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     }
 
     if (!isInitialized || !Purchases) {
-      return { success: false, error: 'Subscriptions not initialized' };
+      console.error('[RevenueCat] Purchase failed: SDK not initialized', {
+        isInitialized,
+        hasPurchases: !!Purchases,
+      });
+      return { success: false, error: 'Subscriptions not initialized. Please restart the app.' };
+    }
+
+    // Validate package before attempting purchase
+    if (!pkg) {
+      console.error('[RevenueCat] Purchase failed: No package provided');
+      return { success: false, error: 'No subscription package selected' };
     }
 
     if (!pkg.rcPackage) {
-      return { success: false, error: 'Invalid package' };
+      console.error('[RevenueCat] Purchase failed: Invalid package (no rcPackage)', {
+        packageId: pkg.identifier,
+        productId: pkg.product?.identifier,
+      });
+      return { success: false, error: 'Invalid package. Please try refreshing the app.' };
     }
+
+    // Verify offerings are loaded and product exists
+    if (!offerings?.current) {
+      console.error('[RevenueCat] Purchase failed: No offerings available');
+      return { success: false, error: 'Subscription products not loaded. Please check your connection and try again.' };
+    }
+
+    console.log('[RevenueCat] Starting purchase', {
+      packageId: pkg.identifier,
+      productId: pkg.product.identifier,
+      price: pkg.product.priceString,
+    });
 
     setIsLoading(true);
 
@@ -714,31 +792,77 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       // Check if entitlement is now active
       const tier = determineTierFromEntitlements(newInfo);
       if (tier !== 'free') {
+        console.log('[RevenueCat] Purchase successful', { tier });
         return { success: true };
       }
 
-      return { success: false, error: 'Purchase completed but entitlement not active' };
+      console.warn('[RevenueCat] Purchase completed but entitlement not active', {
+        activeEntitlements: Object.keys(newInfo.entitlements.active),
+        expectedEntitlements: [ENTITLEMENTS.PRO, ENTITLEMENTS.PREMIUM],
+      });
+      return { success: false, error: 'Purchase completed but subscription not activated. Please contact support.' };
     } catch (err) {
       const purchaseError = err as PurchasesError;
 
-      // Handle user cancellation gracefully
-      if (PURCHASES_ERROR_CODE && purchaseError.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
-        return { success: false, error: 'Purchase cancelled' };
+      // Log detailed error info for debugging (especially for iPad App Store review)
+      console.error('[RevenueCat] Purchase error details:', {
+        code: purchaseError.code,
+        message: purchaseError.message,
+        underlyingErrorMessage: (purchaseError as any).underlyingErrorMessage,
+        userInfo: (purchaseError as any).userInfo,
+        productId: pkg.product.identifier,
+        platform: Platform.OS,
+        isIPad: Platform.OS === 'ios' && Platform.isPad,
+        platformVersion: Platform.Version,
+      });
+
+      // Handle specific StoreKit error codes
+      if (PURCHASES_ERROR_CODE) {
+        switch (purchaseError.code) {
+          case PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR:
+            console.log('[RevenueCat] User cancelled purchase');
+            return { success: false, error: 'Purchase cancelled' };
+
+          case PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR:
+            console.log('[RevenueCat] Product already purchased, refreshing...');
+            await refreshCustomerInfo();
+            return { success: true };
+
+          case PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR:
+            return { success: false, error: 'App Store is temporarily unavailable. Please try again later.' };
+
+          case PURCHASES_ERROR_CODE.PURCHASE_NOT_ALLOWED_ERROR:
+            return { success: false, error: 'Purchases are not allowed on this device. Please check your device restrictions.' };
+
+          case PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR:
+            return { success: false, error: 'Payment is pending. You will be notified when it completes.' };
+
+          case PURCHASES_ERROR_CODE.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+            return { success: false, error: 'This product is not available for purchase in your region.' };
+
+          case PURCHASES_ERROR_CODE.NETWORK_ERROR:
+            return { success: false, error: 'Network error. Please check your connection and try again.' };
+
+          case PURCHASES_ERROR_CODE.INVALID_CREDENTIALS_ERROR:
+            return { success: false, error: 'Invalid App Store credentials. Please sign out and sign back into the App Store.' };
+
+          case PURCHASES_ERROR_CODE.RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR:
+            return { success: false, error: 'This subscription is already linked to another account.' };
+
+          case PURCHASES_ERROR_CODE.UNKNOWN_ERROR:
+          default:
+            // For unknown errors, include more context
+            const errorMsg = purchaseError.message || 'An unexpected error occurred';
+            return { success: false, error: `Purchase failed: ${errorMsg}` };
+        }
       }
 
-      // Handle already purchased
-      if (PURCHASES_ERROR_CODE && purchaseError.code === PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR) {
-        // Refresh to get updated state
-        await refreshCustomerInfo();
-        return { success: true };
-      }
-
-      console.error('[RevenueCat] Purchase error:', purchaseError);
-      return { success: false, error: purchaseError.message || 'Purchase failed' };
+      // Fallback for when error codes aren't available
+      return { success: false, error: purchaseError.message || 'Purchase failed. Please try again.' };
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized, isMockMode, refreshCustomerInfo]);
+  }, [isInitialized, isMockMode, refreshCustomerInfo, offerings]);
 
   const restorePurchases = useCallback(async (): Promise<{
     success: boolean;
@@ -805,14 +929,18 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     };
   }, [customerInfo]);
 
-  // Convert offerings to packages (or use mock packages)
+  // Convert offerings to packages
+  // IMPORTANT: Only use mock packages in actual mock mode (development/Expo Go).
+  // In production, return empty array if offerings haven't loaded — this prevents
+  // showing fake packages with null rcPackage that cause "Invalid package" errors
+  // when the user taps "Start Free Trial".
   const packages = useMemo((): SubscriptionPackage[] => {
     if (isMockMode) {
       return getMockPackages();
     }
 
     const current = offerings?.current;
-    if (!current) return getMockPackages(); // Fallback to mock if no offerings
+    if (!current) return [];
 
     return current.availablePackages.map(convertPackage);
   }, [offerings, isMockMode]);
@@ -880,6 +1008,31 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     }
   }, [isMockMode]);
 
+  // Auto-check trial eligibility when offerings change
+  // This ensures the paywall shows the correct CTA ("Start Free Trial" vs "Subscribe")
+  useEffect(() => {
+    if (isMockMode || !Purchases || !offerings?.current?.availablePackages?.length) return;
+
+    const productIds = offerings.current.availablePackages.map(
+      (p: PurchasesPackage) => p.product.identifier
+    );
+
+    Purchases.checkTrialOrIntroductoryPriceEligibility(productIds)
+      .then((eligibility: Record<string, { status: number }>) => {
+        // INTRO_ELIGIBILITY_STATUS: UNKNOWN = 0, INELIGIBLE = 1, ELIGIBLE = 2
+        const anyEligible = Object.values(eligibility).some(e => e.status === 2);
+        setIsTrialEligible(anyEligible);
+        console.log('[RevenueCat] Trial eligibility auto-checked:', {
+          anyEligible,
+          products: Object.entries(eligibility).map(([id, e]) => `${id}: ${e.status}`),
+        });
+      })
+      .catch((err: any) => {
+        console.warn('[RevenueCat] Error auto-checking trial eligibility:', err);
+        // Keep default (true) on error — StoreKit will show the correct terms at purchase
+      });
+  }, [offerings, isMockMode]);
+
   // Derive trial duration from yearly package (or first package with intro)
   const trialDuration = useMemo(() => {
     const pkgWithTrial = yearlyPackage || sixMonthPackage || monthlyPackage;
@@ -934,6 +1087,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     purchasePackage,
     restorePurchases,
     refreshCustomerInfo,
+    refreshOfferings,
     checkTrialEligibility,
 
     // Helpers
@@ -963,6 +1117,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     purchasePackage,
     restorePurchases,
     refreshCustomerInfo,
+    refreshOfferings,
     checkTrialEligibility,
     getPackageByProductId,
     formatPrice,
