@@ -309,7 +309,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
 
             {/* Feature List - Apple 3.1.2 compliance: explicitly list what user gets */}
             <View style={styles.featureList}>
-              {(['premiumServers', 'adBlocking', 'contentFilter', 'devices', 'prioritySupport'] as const).map((key) => (
+              {(['premiumServers', 'adBlocking', 'contentFilter', 'devices'] as const).map((key) => (
                 <View key={key} style={[styles.featureRow, isRTL && styles.featureRowRTL]}>
                   <Text style={styles.featureCheck}>✓</Text>
                   <Text style={[styles.featureText, isRTL && styles.textRTL]}>
@@ -560,27 +560,27 @@ const styles = StyleSheet.create({
   // Top Section
   topSection: {
     alignItems: 'center',
-    paddingTop: 80,
+    paddingTop: 40,
   },
   appLogo: {
-    width: 64,
-    height: 64,
-    marginBottom: 32,
+    width: 56,
+    height: 56,
+    marginBottom: 20,
   },
   titleLight: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '300',
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   titleItalic: {
-    fontSize: 32,
+    fontSize: 28,
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     letterSpacing: -0.5,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
@@ -591,8 +591,8 @@ const styles = StyleSheet.create({
 
   // Feature list - Apple 3.1.2 compliance
   featureList: {
-    marginTop: 20,
-    gap: 8,
+    marginTop: 16,
+    gap: 6,
     alignSelf: 'stretch',
     paddingHorizontal: 8,
   },
