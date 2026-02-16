@@ -288,31 +288,12 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     initializeWireGuard();
   }, [initializeWireGuard]);
 
-  // Fetch servers via backend API (falls back to Supabase direct)
+  // Fetch servers directly from Supabase — always fresh, no hardcoded data
   const refreshServers = useCallback(async () => {
-    try {
-      // Try backend API first
-      const response = await fetch(`${VPN_API_URL}/api/vpn/servers`);
-      if (response.ok) {
-        const json = await response.json();
-        const serverList: VPNServer[] = json.servers || [];
-        setServers(serverList);
-        setServersLoaded(true);
-        if (!selectedServer && serverList.length > 0) {
-          setSelectedServer(serverList[0]);
-        }
-        setLoading(false);
-        return;
-      }
-    } catch (apiError) {
-      console.warn('[VPNContext] API fetch failed, falling back to Supabase:', apiError);
-    }
-
-    // Fallback: Supabase direct (safe columns only, no config_data)
     try {
       const { data, error } = await supabase
         .from('vpn_servers')
-        .select('id, name, country, country_code, city, ip_address, port, load_percentage, is_premium, latency_ms, is_active')
+        .select('id, name, country, country_code, city, ip_address, port, load_percentage, is_premium, latency_ms, is_active, speed_mbps')
         .eq('is_active', true)
         .order('country', { ascending: true });
 
