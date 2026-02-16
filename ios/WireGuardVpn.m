@@ -142,7 +142,8 @@ RCT_EXPORT_METHOD(connect:(NSDictionary *)config
       @"[Peer]\n"
       @"PublicKey = %@\n"
       @"AllowedIPs = %@\n"
-      @"Endpoint = %@:%@\n",
+      @"Endpoint = %@:%@\n"
+      @"PersistentKeepalive = 25\n",
       privateKey,
       clientAddress,
       [dns componentsJoinedByString:@", "],
