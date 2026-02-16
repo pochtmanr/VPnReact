@@ -5,6 +5,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { VPNServer, ConnectionStatus, ConnectionLog } from '@/types/database';
 import { useAuth } from './AuthContext';
 
+const VPN_API_URL = process.env.EXPO_PUBLIC_VPN_API_URL || 'https://dopplervpn.org';
+
 // Storage keys for persisting settings
 const STORAGE_KEYS = {
   AD_BLOCK_ENABLED: '@vpn_settings/ad_block_enabled',
@@ -286,29 +288,39 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     initializeWireGuard();
   }, [initializeWireGuard]);
 
-  // Fetch servers - only WireGuard servers
+  // Fetch servers via backend API (falls back to Supabase direct)
   const refreshServers = useCallback(async () => {
+    try {
+      // Try backend API first
+      const response = await fetch(`${VPN_API_URL}/api/vpn/servers`);
+      if (response.ok) {
+        const json = await response.json();
+        const serverList: VPNServer[] = json.servers || [];
+        setServers(serverList);
+        setServersLoaded(true);
+        if (!selectedServer && serverList.length > 0) {
+          setSelectedServer(serverList[0]);
+        }
+        setLoading(false);
+        return;
+      }
+    } catch (apiError) {
+      console.warn('[VPNContext] API fetch failed, falling back to Supabase:', apiError);
+    }
+
+    // Fallback: Supabase direct (safe columns only, no config_data)
     try {
       const { data, error } = await supabase
         .from('vpn_servers')
-        .select('*')
+        .select('id, name, country, country_code, city, ip_address, port, load_percentage, is_premium, latency_ms, is_active')
         .eq('is_active', true)
         .order('country', { ascending: true });
 
       if (!error && data) {
-        // Filter to only include WireGuard servers
-        const wireGuardServers = data.filter(server =>
-          server.protocol === 'wireguard' ||
-          server.config_data?.includes('privateKey') ||
-          server.config_data?.includes('PrivateKey')
-        );
-
-        setServers(wireGuardServers);
+        setServers(data as VPNServer[]);
         setServersLoaded(true);
-
-        // Auto-select the first WireGuard server if none selected
-        if (!selectedServer && wireGuardServers.length > 0) {
-          setSelectedServer(wireGuardServers[0]);
+        if (!selectedServer && data.length > 0) {
+          setSelectedServer(data[0] as VPNServer);
         }
       }
     } catch (error) {
@@ -604,20 +616,8 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
     await addLog('connected', `Connected to ${selectedServer.city}. (${modeLabel} mode)`);
   }
 
-  // Connect to VPN using WireGuard
-  async function connect() {
-    if (!selectedServer) return;
-
-    // Use simulation for web only
-    if (Platform.OS === 'web') {
-      return connectSimulation();
-    }
-
-    // Clear any previous error
-    setConnectionError(null);
-    setConnectionStatus('connecting');
-    await addLog('connecting', `Connecting to ${selectedServer.city}, ${selectedServer.country}...`);
-
+  // Try connecting to a specific server via backend API
+  async function connectToServer(server: VPNServer): Promise<boolean> {
     try {
       // Ensure WireGuard is initialized
       await initializeWireGuard();
@@ -626,16 +626,35 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         throw new Error('WireGuard native module not available. Please rebuild the app.');
       }
 
-      // Check if server has WireGuard config
-      if (!selectedServer.config_data) {
-        throw new Error('No WireGuard configuration available for this server');
+      // Call backend API to get per-user WireGuard config
+      const response = await fetch(`${VPN_API_URL}/api/vpn/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          account_id: account?.account_id,
+          server_id: server.id,
+          device_id: deviceSession?.device_id || Platform.OS,
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`API error ${response.status}: ${errBody}`);
       }
 
-      // Parse the config
-      const wgConfig = await parseWireGuardConfig(selectedServer.config_data);
+      const data = await response.json();
+      const configString: string = data.config;
+      const publicKey: string | undefined = data.public_key;
 
+      // Parse the WireGuard config string
+      const wgConfig = await parseWireGuardConfig(configString);
       if (!wgConfig) {
-        throw new Error('Invalid WireGuard configuration');
+        throw new Error('Invalid WireGuard configuration from API');
+      }
+
+      // Store public_key for disconnect cleanup
+      if (publicKey) {
+        await AsyncStorage.setItem('@vpn/active_public_key', publicKey);
       }
 
       // Connect using WireGuard
@@ -650,6 +669,50 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         presharedKey: wgConfig.presharedKey,
         clientAddress: wgConfig.clientAddress,
       });
+
+      return true;
+    } catch (error) {
+      console.warn(`[VPNContext] Failed to connect to ${server.city}:`, error);
+      return false;
+    }
+  }
+
+  // Connect to VPN using WireGuard with auto-fallback
+  async function connect() {
+    if (!selectedServer) return;
+
+    // Use simulation for web only
+    if (Platform.OS === 'web') {
+      return connectSimulation();
+    }
+
+    // Clear any previous error
+    setConnectionError(null);
+    setConnectionStatus('connecting');
+    await addLog('connecting', `Connecting to ${selectedServer.city}, ${selectedServer.country}...`);
+
+    try {
+      // Try selected server first
+      let connected = await connectToServer(selectedServer);
+
+      // Auto-fallback: try other servers if selected fails
+      if (!connected) {
+        const otherServers = servers.filter(s => s.id !== selectedServer.id);
+        for (const fallbackServer of otherServers) {
+          setConnectionStatus('connecting');
+          await addLog('connecting', `Trying ${fallbackServer.city}, ${fallbackServer.country}...`);
+          connected = await connectToServer(fallbackServer);
+          if (connected) {
+            // Update selected server to the one that worked
+            setSelectedServer(fallbackServer);
+            break;
+          }
+        }
+      }
+
+      if (!connected) {
+        throw new Error('All servers failed. Please try again later.');
+      }
 
       setConnectionStatus('connected');
       setConnectionStartTime(new Date());
@@ -715,6 +778,21 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       if (WireGuardModule?.disconnect) {
         await WireGuardModule.disconnect();
       }
+
+      // Fire-and-forget: notify backend to remove WG peer
+      AsyncStorage.getItem('@vpn/active_public_key').then(publicKey => {
+        if (publicKey && account?.account_id) {
+          fetch(`${VPN_API_URL}/api/vpn/disconnect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              account_id: account.account_id,
+              public_key: publicKey,
+            }),
+          }).catch(err => console.warn('[VPNContext] Backend disconnect notify failed:', err));
+          AsyncStorage.removeItem('@vpn/active_public_key');
+        }
+      });
 
       const duration = connectionStartTime
         ? Math.floor((new Date().getTime() - connectionStartTime.getTime()) / 1000)
