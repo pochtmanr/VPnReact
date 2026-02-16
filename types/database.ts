@@ -165,15 +165,14 @@ export interface Database {
           city: string;
           ip_address: string;
           port: number;
-          protocol?: 'udp' | 'tcp' | 'wireguard';
-          config_data?: string;
+          protocol: 'udp' | 'tcp' | 'wireguard';
+          config_data: string;
           load_percentage: number;
           is_premium: boolean;
           latency_ms: number | null;
           is_active: boolean;
-          speed_mbps?: number;
-          created_at?: string;
-          updated_at?: string;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;

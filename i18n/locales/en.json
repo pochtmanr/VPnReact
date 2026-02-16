@@ -363,7 +363,7 @@
         "refreshing": "Refreshing..."
       },
       "statusText": {
-        "upgradePrompt": "Upgrade for premium servers, ad blocker, content filter, and 10 devices",
+        "upgradePrompt": "Upgrade for premium servers, ad blocker, content filter, and 5 devices",
         "updatePayment": "Update payment method to continue access",
         "activeSubscription": "Active subscription",
         "renewsOn": "Renews {{date}}",
@@ -375,7 +375,7 @@
         "upgrade": "Upgrade",
         "upgradeNow": "Upgrade Now",
         "upgradeToPro": "Upgrade to Pro",
-        "unlockFeatures": "Get premium servers, ad blocking, content filter, 10 devices",
+        "unlockFeatures": "Get premium servers, ad blocking, content filter, 5 devices, and priority support",
         "manage": "Manage Subscription",
         "resubscribe": "Resubscribe",
         "fixPayment": "Fix Payment"
@@ -401,7 +401,7 @@
       "noPurchasesFound": "No previous purchases were found for this account.",
       "restoreError": "Failed to restore purchases. Please try again.",
       "upgradeToPremium": "Upgrade to Premium",
-      "premiumFeatures": "Premium VPN servers in 50+ locations, DNS ad blocker, content filter, up to 10 devices",
+      "premiumFeatures": "Premium VPN servers in 50+ locations, DNS ad blocker, content filter, up to 5 devices, and priority support",
       "trialAvailable": "{{days}}-day free trial",
       "accessibility": {
         "upgradeLabel": "Upgrade to Premium",
@@ -509,40 +509,13 @@
           "question": "Why is my connection slow?",
           "answer": "Try connecting to a server closer to your location. Server load and your internet speed also affect VPN performance."
         },
+        "subscription": {
+          "question": "How do I change my subscription plan?",
+          "answer": "Go to Profile > Subscription to view and manage your current plan. You can upgrade or downgrade at any time."
+        },
         "secure": {
           "question": "Is my data secure?",
           "answer": "Yes! We use military-grade AES-256 encryption and maintain a strict no-logs policy to protect your privacy."
-        }
-      },
-      "subscriptionFaq": {
-        "title": "Subscription & Billing",
-        "whatIsIncluded": {
-          "question": "What is included in Premium?",
-          "answer": "Premium includes access to VPN servers in 50+ locations, DNS-level ad blocker that works across all apps, content filter with parental controls, connection on up to 10 devices simultaneously, and WireGuard encryption."
-        },
-        "plans": {
-          "question": "What plans are available?",
-          "answer": "We offer three plans: Monthly, 6-Month, and Yearly. All plans include the same features. Longer plans offer a lower per-month price. Prices are shown in your local currency at checkout."
-        },
-        "freeTrial": {
-          "question": "Is there a free trial?",
-          "answer": "Yes, eligible users get a 7-day free trial with full access to all Premium features. The trial converts to a paid subscription unless canceled at least 24 hours before it ends."
-        },
-        "cancel": {
-          "question": "How do I cancel my subscription?",
-          "answer": "Go to Settings > Apple ID > Subscriptions on your device and select Doppler VPN to cancel. Your access continues until the end of the current billing period. You will not be charged after cancellation."
-        },
-        "changePlan": {
-          "question": "Can I change my plan?",
-          "answer": "Go to Profile > Subscription and tap Manage Subscription. This opens your Apple ID subscription settings where you can upgrade, downgrade, or cancel your plan."
-        },
-        "restore": {
-          "question": "I paid but my features aren't unlocked",
-          "answer": "Go to Profile > Subscription and tap Restore Purchases. This will re-sync your subscription with our servers. If the issue persists, contact our support team."
-        },
-        "refund": {
-          "question": "How do I get a refund?",
-          "answer": "Refunds are handled by Apple. Visit reportaproblem.apple.com, sign in with your Apple ID, find the Doppler VPN charge, and request a refund. Apple typically processes refunds within 48 hours."
         }
       },
       "bugReport": {
@@ -570,7 +543,7 @@
         "premiumServers": "Premium Servers",
         "adBlocking": "Ad Blocking",
         "contentFilter": "Content Filter",
-        "devices": "10 Devices"
+        "devices": "5 Devices"
       }
     }
   },
@@ -594,7 +567,7 @@
         "description": "DNS-level protection"
       },
       "devices": {
-        "title": "10 Devices",
+        "title": "5 Devices",
         "description": "Connect multiple devices"
       },
       "contentFilter": {
@@ -624,7 +597,7 @@
       "processing": "Processing...",
       "experience": "Experience",
       "truePrivacy": "true privacy.",
-      "unlockPremium": "Premium VPN servers, DNS ad blocker, content filter, up to 10 devices",
+      "unlockPremium": "Premium VPN servers, DNS ad blocker, content filter, up to 5 devices, and priority support",
       "startFreeTrial": "Start with a {{days}}-day free trial",
       "bestValue": "Best Value",
       "startTrial": "Start Free Trial",

@@ -129,39 +129,12 @@ export default function ContactSupportScreen() {
       answer: t('profile.support.faq.slow.answer'),
     },
     {
+      question: t('profile.support.faq.subscription.question'),
+      answer: t('profile.support.faq.subscription.answer'),
+    },
+    {
       question: t('profile.support.faq.secure.question'),
       answer: t('profile.support.faq.secure.answer'),
-    },
-  ], [t]);
-
-  const subscriptionFaqs = useMemo(() => [
-    {
-      question: t('profile.support.subscriptionFaq.whatIsIncluded.question'),
-      answer: t('profile.support.subscriptionFaq.whatIsIncluded.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.plans.question'),
-      answer: t('profile.support.subscriptionFaq.plans.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.freeTrial.question'),
-      answer: t('profile.support.subscriptionFaq.freeTrial.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.cancel.question'),
-      answer: t('profile.support.subscriptionFaq.cancel.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.changePlan.question'),
-      answer: t('profile.support.subscriptionFaq.changePlan.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.restore.question'),
-      answer: t('profile.support.subscriptionFaq.restore.answer'),
-    },
-    {
-      question: t('profile.support.subscriptionFaq.refund.question'),
-      answer: t('profile.support.subscriptionFaq.refund.answer'),
     },
   ], [t]);
 
@@ -389,29 +362,9 @@ export default function ContactSupportScreen() {
           </View>
         </AnimatedView>
 
-        {/* Subscription FAQ Card */}
-        <AnimatedView
-          entering={FadeInDown.delay(150).duration(300).easing(Easing.out(Easing.ease))}
-          style={[
-            styles.faqCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-            },
-          ]}
-        >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.support.subscriptionFaq.title')}</Text>
-
-          <View style={styles.faqList}>
-            {subscriptionFaqs.map((faq, index) => (
-              <FAQItem key={index} question={faq.question} answer={faq.answer} />
-            ))}
-          </View>
-        </AnimatedView>
-
         {/* Response Time Info */}
         <AnimatedView
-          entering={FadeInDown.delay(175).duration(300).easing(Easing.out(Easing.ease))}
+          entering={FadeInDown.delay(150).duration(300).easing(Easing.out(Easing.ease))}
           style={[
             styles.infoCard,
             {
