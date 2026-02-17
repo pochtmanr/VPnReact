@@ -196,6 +196,17 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
 
   // Format price per month using the user's locale and product's currency
   // This ensures EU users see € and proper formatting (e.g., "8,33 €/mo" not "$8.33/mo")
+  // Format price with optional promo discount
+  const formatDiscountedPrice = (priceString: string, price: number, currencyCode: string) => {
+    if (!promoResult?.valid || !promoResult.discount) return null;
+    const discounted = price * (1 - promoResult.discount / 100);
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode }).format(discounted);
+    } catch {
+      return `$${discounted.toFixed(2)}`;
+    }
+  };
+
   const formatPerMonthPrice = (pkg: SubscriptionPackage) => {
     const price = pkg.product.price;
     const currencyCode = pkg.product.currencyCode;
@@ -316,27 +327,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               adjustsFontSizeToFit
               minimumFontScale={0.7}
             >
-              {t('tier.paywall.experience')}
-            </Text>
-            <Text
-              style={[
-                styles.titleItalic,
-                fontsLoaded && { fontFamily: 'IBMPlexSerif_400Regular_Italic' },
-                isRTL && styles.textRTL,
-              ]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-            >
-              {t('tier.paywall.truePrivacy')}
-            </Text>
-            <Text
-              style={[styles.subtitle, isRTL && styles.textRTL]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-            >
-              {t('tier.paywall.subtitle')}
+              Doppler VPN Pro
             </Text>
 
             {/* Feature List - Apple 3.1.2 compliance: explicitly list what user gets */}
@@ -416,9 +407,20 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {formatPerMonthPrice(yearlyPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>
-                    {yearlyPackage.product.priceString}{getBillingPeriod(yearlyPackage)}
-                  </Text>
+                  {promoResult?.valid ? (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.packagePrice, { textDecorationLine: 'line-through', opacity: 0.5, fontSize: 12 }]}>
+                        {yearlyPackage.product.priceString}
+                      </Text>
+                      <Text style={[styles.packagePrice, { color: '#22C55E' }]}>
+                        {formatDiscountedPrice(yearlyPackage.product.priceString, yearlyPackage.product.price, yearlyPackage.product.currencyCode)}{getBillingPeriod(yearlyPackage)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.packagePrice}>
+                      {yearlyPackage.product.priceString}{getBillingPeriod(yearlyPackage)}
+                    </Text>
+                  )}
                 </Pressable>
               )}
 
@@ -444,9 +446,20 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {formatPerMonthPrice(sixMonthPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>
-                    {sixMonthPackage.product.priceString}{getBillingPeriod(sixMonthPackage)}
-                  </Text>
+                  {promoResult?.valid ? (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.packagePrice, { textDecorationLine: 'line-through', opacity: 0.5, fontSize: 12 }]}>
+                        {sixMonthPackage.product.priceString}
+                      </Text>
+                      <Text style={[styles.packagePrice, { color: '#22C55E' }]}>
+                        {formatDiscountedPrice(sixMonthPackage.product.priceString, sixMonthPackage.product.price, sixMonthPackage.product.currencyCode)}{getBillingPeriod(sixMonthPackage)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.packagePrice}>
+                      {sixMonthPackage.product.priceString}{getBillingPeriod(sixMonthPackage)}
+                    </Text>
+                  )}
                 </Pressable>
               )}
 
@@ -469,9 +482,20 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
                       {getPackageName(monthlyPackage)}
                     </Text>
                   </View>
-                  <Text style={styles.packagePrice}>
-                    {monthlyPackage.product.priceString}{getBillingPeriod(monthlyPackage)}
-                  </Text>
+                  {promoResult?.valid ? (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.packagePrice, { textDecorationLine: 'line-through', opacity: 0.5, fontSize: 12 }]}>
+                        {monthlyPackage.product.priceString}
+                      </Text>
+                      <Text style={[styles.packagePrice, { color: '#22C55E' }]}>
+                        {formatDiscountedPrice(monthlyPackage.product.priceString, monthlyPackage.product.price, monthlyPackage.product.currencyCode)}{getBillingPeriod(monthlyPackage)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.packagePrice}>
+                      {monthlyPackage.product.priceString}{getBillingPeriod(monthlyPackage)}
+                    </Text>
+                  )}
                 </Pressable>
               )}
             </View>
