@@ -6,13 +6,48 @@ static NSString *const kVPNDescription = @"VPN Shield";
 
 @implementation WireGuardVpn {
   NETunnelProviderManager *_cachedManager;
+  BOOL _hasListeners;
 }
 
 RCT_EXPORT_MODULE(WireGuardVpnModule)
 
++ (BOOL)requiresMainQueueSetup {
+  return NO;
+}
+
 - (NSArray<NSString *> *)supportedEvents
 {
   return @[@"vpnStateChanged"];
+}
+
+- (void)startObserving {
+  _hasListeners = YES;
+}
+
+- (void)stopObserving {
+  _hasListeners = NO;
+}
+
+- (void)registerStatusObserver {
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:NEVPNStatusDidChangeNotification object:nil];
+  if (_cachedManager) {
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(vpnStatusDidChange:)
+                                                 name:NEVPNStatusDidChangeNotification
+                                               object:_cachedManager.connection];
+  }
+}
+
+- (void)vpnStatusDidChange:(NSNotification *)notification {
+  if (!_cachedManager) return;
+  NEVPNStatus status = _cachedManager.connection.status;
+  NSLog(@"[WireGuardVpn] Status changed: %@", [self stringFromVPNStatus:status]);
+  if (_hasListeners) {
+    [self sendEventWithName:@"vpnStateChanged" body:@{
+      @"isConnected": @(status == NEVPNStatusConnected),
+      @"tunnelState": [self stringFromVPNStatus:status]
+    }];
+  }
 }
 
 RCT_EXPORT_METHOD(initialize:(RCTPromiseResolveBlock)resolve
@@ -196,8 +231,9 @@ RCT_EXPORT_METHOD(connect:(NSDictionary *)config
           return;
         }
 
-        // Cache the manager
+        // Cache the manager and observe status
         self->_cachedManager = manager;
+        [self registerStatusObserver];
         NSLog(@"[WireGuardVpn] VPN tunnel started successfully");
         resolve(nil);
       }];
@@ -228,6 +264,17 @@ RCT_EXPORT_METHOD(disconnect:(RCTPromiseResolveBlock)resolve
 RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
+  // Use cached manager for fast status checks (no disk reload)
+  if (self->_cachedManager) {
+    NEVPNStatus status = self->_cachedManager.connection.status;
+    resolve(@{
+      @"isConnected": @(status == NEVPNStatusConnected),
+      @"tunnelState": [self stringFromVPNStatus:status]
+    });
+    return;
+  }
+
+  // Fallback: load from preferences if no cached manager
   [NETunnelProviderManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETunnelProviderManager *> * _Nullable managers, NSError * _Nullable error) {
     if (error) {
       reject(@"STATUS_ERROR", error.localizedDescription, error);
@@ -242,6 +289,9 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
       });
       return;
     }
+
+    self->_cachedManager = manager;
+    [self registerStatusObserver];
 
     NEVPNStatus status = manager.connection.status;
     resolve(@{

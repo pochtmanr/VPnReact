@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Gift, LogOut, Trash2 } from 'lucide-react-native';
+import { LogOut, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -217,21 +217,6 @@ export default function ProfileScreen() {
           {/* Subscription Section - Show promo card for free users */}
           {!isPro && <FreeSubscriptionCard cardStyle={cardStyle} animationDelay={100} />}
           {isPro && <SubscriptionCard cardStyle={cardStyle} animationDelay={100} />}
-
-          {/* Redeem Promo Code */}
-          <AnimatedView
-            entering={FadeInDown.delay(120).duration(300).easing(Easing.out(Easing.ease))}
-          >
-            <Pressable
-              onPress={() => router.push('/(tabs)/profile/redeem-promo')}
-              style={[styles.promoButton, cardStyle]}
-            >
-              <Gift size={20} color={colors.primary} />
-              <Text style={[styles.promoButtonText, { color: colors.text }]}>
-                {t('profile.redeemPromo', 'Redeem Promo Code')}
-              </Text>
-            </Pressable>
-          </AnimatedView>
 
           {/* Devices Section */}
           <DevicesWidget cardStyle={cardStyle} animationDelay={150} />

@@ -83,6 +83,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [serversLoaded, setServersLoaded] = useState(false);
   const latencyIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectCountRef = React.useRef<number>(0);
 
   // DNS servers - AdGuard DNS when ad blocking is enabled, regular DNS otherwise
   const AD_BLOCK_DNS = ['10.0.0.1']; // VPN server running AdGuard Home
@@ -424,19 +425,28 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         const status: WireGuardStatus = await WireGuardModule.getStatus();
 
         if (status.isConnected && connectionStatus !== 'connected' && connectionStatus !== 'disconnecting' && connectionStatus !== 'disconnected') {
+          disconnectCountRef.current = 0;
           setConnectionStatus('connected');
           if (!connectionStartTime) {
             setConnectionStartTime(new Date());
           }
         } else if (!status.isConnected && connectionStatus === 'connected') {
-          const duration = connectionStartTime
-            ? Math.floor((new Date().getTime() - connectionStartTime.getTime()) / 1000)
-            : 0;
-          setConnectionStatus('disconnected');
-          setConnectionStartTime(null);
-          if (selectedServer) {
-            addLog('disconnected', 'VPN disconnected.', { duration_seconds: duration });
+          // Grace period: require 3 consecutive "not connected" polls before marking disconnected
+          // This prevents transient status flickers from killing the tunnel
+          disconnectCountRef.current = (disconnectCountRef.current || 0) + 1;
+          if (disconnectCountRef.current >= 3) {
+            disconnectCountRef.current = 0;
+            const duration = connectionStartTime
+              ? Math.floor((new Date().getTime() - connectionStartTime.getTime()) / 1000)
+              : 0;
+            setConnectionStatus('disconnected');
+            setConnectionStartTime(null);
+            if (selectedServer) {
+              addLog('disconnected', 'VPN disconnected.', { duration_seconds: duration });
+            }
           }
+        } else if (status.isConnected) {
+          disconnectCountRef.current = 0;
         }
       } catch (error) {
         // Ignore status check errors

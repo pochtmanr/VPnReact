@@ -1,10 +1,11 @@
+import { useAuth } from '@/context/AuthContext';
 import { SubscriptionPackage, useRevenueCat } from '@/context/RevenueCatContext';
 import { useRTL } from '@/i18n/useRTL';
 import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm-plex-serif';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { X } from 'lucide-react-native';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -15,6 +16,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -50,6 +52,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     trialDuration,
     error: revenueCatError,
   } = useRevenueCat();
+  const { account } = useAuth();
 
   const [fontsLoaded] = useFonts({
     IBMPlexSerif_400Regular_Italic,
@@ -57,6 +60,10 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
 
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  const [promoValidating, setPromoValidating] = useState(false);
+  const [promoResult, setPromoResult] = useState<{ valid: boolean; discount: number; id?: string } | null>(null);
 
   // Auto-refresh offerings when modal opens if packages aren't loaded
   // This helps recover from initialization failures during App Store review
@@ -139,6 +146,31 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
       setIsPurchasing(false);
     }
   }, [effectiveSelected, purchasePackage, hidePaywall, isMockMode, t, screenWidth, screenHeight]);
+
+  const validatePromo = useCallback(async () => {
+    if (!promoCode.trim()) return;
+    setPromoValidating(true);
+    setPromoResult(null);
+    try {
+      const plan = effectiveSelected?.packageType === 'MONTHLY' ? 'monthly'
+        : effectiveSelected?.packageType === 'SIX_MONTH' ? 'semiannual' : 'annual';
+      const res = await fetch('https://doppler-miniapp.vercel.app/api/promo/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim().toUpperCase(), plan, account_id: account?.account_id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid && data.discount_percent) {
+        setPromoResult({ valid: true, discount: data.discount_percent, id: data.promo_id });
+      } else {
+        setPromoResult({ valid: false, discount: 0 });
+      }
+    } catch {
+      setPromoResult({ valid: false, discount: 0 });
+    } finally {
+      setPromoValidating(false);
+    }
+  }, [promoCode, effectiveSelected]);
 
   const handleRestore = useCallback(async () => {
     setIsPurchasing(true);
@@ -444,6 +476,46 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
               )}
             </View>
             )}
+
+            {/* Promo Code */}
+            <View style={styles.promoContainer}>
+              {!promoExpanded ? (
+                <Pressable onPress={() => setPromoExpanded(true)}>
+                  <Text style={styles.promoToggle}>{t('tier.paywall.havePromo', 'Have a promo code?')}</Text>
+                </Pressable>
+              ) : (
+                <View style={styles.promoInputRow}>
+                  <TextInput
+                    style={styles.promoInput}
+                    placeholder={t('tier.paywall.promoPlaceholder', 'Enter code')}
+                    placeholderTextColor="#999"
+                    value={promoCode}
+                    onChangeText={(text) => { setPromoCode(text); setPromoResult(null); }}
+                    autoCapitalize="characters"
+                    returnKeyType="done"
+                    onSubmitEditing={validatePromo}
+                  />
+                  <Pressable
+                    style={[styles.promoApplyBtn, promoValidating && { opacity: 0.6 }]}
+                    onPress={validatePromo}
+                    disabled={promoValidating || !promoCode.trim()}
+                  >
+                    {promoValidating ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.promoApplyText}>{t('tier.paywall.apply', 'Apply')}</Text>
+                    )}
+                  </Pressable>
+                </View>
+              )}
+              {promoResult && (
+                <Text style={[styles.promoMessage, { color: promoResult.valid ? '#22C55E' : '#EF4444' }]}>
+                  {promoResult.valid
+                    ? t('tier.paywall.promoApplied', '✓ {{discount}}% discount applied!', { discount: promoResult.discount })
+                    : t('tier.paywall.promoInvalid', 'Invalid or expired promo code')}
+                </Text>
+              )}
+            </View>
 
             {/* Continue Button */}
             <Pressable
@@ -802,5 +874,47 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     color: 'rgba(255, 255, 255, 0.2)',
     textAlign: 'center',
+  },
+  promoContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+    alignItems: 'center',
+  },
+  promoToggle: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
+  promoInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  promoInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  promoApplyBtn: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  promoApplyText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  promoMessage: {
+    fontSize: 13,
+    marginTop: 6,
   },
 });
