@@ -545,7 +545,7 @@ export default function HomeScreen() {
   };
 
   const handleServerSelect = useCallback((server: typeof servers[0]) => {
-    if (connectionStatus === 'disconnected') {
+    if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
       selectServer(server);
     }
   }, [connectionStatus, selectServer]);
@@ -639,7 +639,7 @@ export default function HomeScreen() {
               disabled={isConnecting || isConnected}
               style={({ pressed }) => [
                 styles.serverSelectButton,
-                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', opacity: (isConnecting || isConnected) ? 0.6 : pressed ? 0.8 : 1 },
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)', borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', opacity: isConnecting ? 0.6 : pressed ? 0.8 : 1 },
               ]}
             >
               <View style={styles.serverSelectLeft}>

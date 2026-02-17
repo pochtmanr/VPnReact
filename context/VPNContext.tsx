@@ -423,7 +423,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       try {
         const status: WireGuardStatus = await WireGuardModule.getStatus();
 
-        if (status.isConnected && connectionStatus !== 'connected' && connectionStatus !== 'disconnecting') {
+        if (status.isConnected && connectionStatus !== 'connected' && connectionStatus !== 'disconnecting' && connectionStatus !== 'disconnected') {
           setConnectionStatus('connected');
           if (!connectionStartTime) {
             setConnectionStartTime(new Date());
@@ -539,6 +539,9 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
           switch (key.trim().toLowerCase()) {
             case 'privatekey':
               config.privateKey = value;
+              break;
+            case 'address':
+              config.clientAddress = value;
               break;
             case 'dns':
               // Override with our ad block setting
@@ -763,8 +766,13 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
       if (WireGuardModule?.disconnect) {
         await WireGuardModule.disconnect();
         // Give the tunnel time to fully stop
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
+
+      // Force state to disconnected BEFORE clearing isDisconnecting
+      setConnectionStatus('disconnected');
+      setConnectionStartTime(null);
+      setConnectionError(null);
 
       // Fire-and-forget: notify backend to remove WG peer
       AsyncStorage.getItem('@vpn/active_public_key').then(publicKey => {
@@ -785,9 +793,7 @@ export function VPNProvider({ children }: { children: React.ReactNode }) {
         ? Math.floor((new Date().getTime() - connectionStartTime.getTime()) / 1000)
         : 0;
 
-      setConnectionStatus('disconnected');
-      setConnectionStartTime(null);
-      setConnectionError(null);
+      // State already set above, just clear the flag and log
       setIsDisconnecting(false);
       await addLog('disconnected', 'VPN disconnected.', { duration_seconds: duration });
     } catch (error) {
