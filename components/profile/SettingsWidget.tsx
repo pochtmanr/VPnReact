@@ -106,11 +106,11 @@ export const SettingsWidget = memo(function SettingsWidget({
   }, [themeMode, t]);
 
   const openPrivacyPolicy = useCallback(async () => {
-    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-privacy-policy'); 
+    await Linking.openURL('https://www.dopplervpn.org/en/privacy'); 
   }, []);
 
   const openTermsOfService = useCallback(async () => {
-    await Linking.openURL('https://www.simnetiq.store/doppler-vpn-terms-of-service');
+    await Linking.openURL('https://www.dopplervpn.org/en/terms');
   }, []);
 
   return (

@@ -23,8 +23,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 // URLs for Terms and Privacy
-const TERMS_URL = 'https://dopplerland.vercel.app/en/terms';
-const PRIVACY_URL = 'https://dopplerland.vercel.app/en/privacy';
+const TERMS_URL = 'https://www.dopplervpn.org/en/terms';
+const PRIVACY_URL = 'https://www.dopplervpn.org/en/privacy';
 
 /**
  * Global paywall modal with welcome-screen-inspired full-screen design.

@@ -6,6 +6,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   Dimensions,
   Image,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -187,11 +188,11 @@ export default function WelcomeScreen() {
             <Text style={styles.footerText}>
               {t('auth.welcome.footer.byContinuing')}{' '}
             </Text>
-            <Pressable>
+            <Pressable onPress={() => Linking.openURL('https://www.dopplervpn.org/en/terms')}>
               <Text style={styles.footerLink}>{t('tier.paywall.terms')}</Text>
             </Pressable>
             <Text style={styles.footerText}> {t('auth.welcome.footer.and')} </Text>
-            <Pressable>
+            <Pressable onPress={() => Linking.openURL('https://www.dopplervpn.org/en/privacy')}>
               <Text style={styles.footerLink}>{t('tier.paywall.privacy')}</Text>
             </Pressable>
           </View>

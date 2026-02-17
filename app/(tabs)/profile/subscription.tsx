@@ -385,7 +385,7 @@ export default function SubscriptionScreen() {
             {/* Legal Links - Required for Apple compliance */}
             <View style={styles.legalLinksRow}>
               <TouchableOpacity
-                onPress={() => Linking.openURL('https://dopplerland.vercel.app/en/terms')}
+                onPress={() => Linking.openURL('https://www.dopplervpn.org/en/terms')}
                 style={styles.legalLinkTouchable}
               >
                 <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>
@@ -394,7 +394,7 @@ export default function SubscriptionScreen() {
               </TouchableOpacity>
               <Text style={[styles.legalSeparator, { color: colors.textMuted }]}>|</Text>
               <TouchableOpacity
-                onPress={() => Linking.openURL('https://dopplerland.vercel.app/en/privacy')}
+                onPress={() => Linking.openURL('https://www.dopplervpn.org/en/privacy')}
                 style={styles.legalLinkTouchable}
               >
                 <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>

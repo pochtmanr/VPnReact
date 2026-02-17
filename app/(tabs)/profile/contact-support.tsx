@@ -178,7 +178,7 @@ export default function ContactSupportScreen() {
   };
 
   const handleTelegram = () => {
-    Linking.openURL('https://t.me/doppler_vpn_bot');
+    Linking.openURL('https://t.me/DopplerSupportBot');
   };
 
   // Render back button
