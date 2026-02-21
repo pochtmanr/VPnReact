@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { VPNServer, ConnectionStatus, ConnectionLog } from '@/types/database';
 import { useAuth } from './AuthContext';
 
-const VPN_API_URL = process.env.EXPO_PUBLIC_VPN_API_URL || 'https://dopplervpn.org';
+const VPN_API_URL = process.env.EXPO_PUBLIC_VPN_API_URL || 'https://www.dopplervpn.org';
 
 // Storage keys for persisting settings
 const STORAGE_KEYS = {
