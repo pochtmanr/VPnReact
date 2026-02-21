@@ -12,7 +12,16 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "credentialsSource": "remote",
+      "ios": {
+        "appExtensions": [
+          {
+            "targetName": "VPNShieldTunnel",
+            "bundleIdentifier": "com.simnetiq.vpnreact.VPNShieldTunnel"
+          }
+        ]
+      }
     }
   },
   "submit": {
