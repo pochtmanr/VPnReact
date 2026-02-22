@@ -32,5 +32,5 @@ export const PROMO_API_URL = requireEnv('EXPO_PUBLIC_PROMO_API_URL');
 // URLs
 export const TERMS_URL = 'https://www.dopplervpn.org/en/terms';
 export const PRIVACY_URL = 'https://www.dopplervpn.org/en/privacy';
-export const SUPPORT_EMAIL = 'support@dopplervpn.org';
-export const SUPPORT_BOT_URL = 'https://t.me/dopplervpn_support_bot';
+export const SUPPORT_EMAIL = 'support@simnetiq.store';
+export const SUPPORT_BOT_URL = 'https://t.me/DopplerSupportBot';
