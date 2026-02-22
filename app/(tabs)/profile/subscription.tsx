@@ -1,3 +1,4 @@
+import { TERMS_URL, PRIVACY_URL } from '@/constants/env';
 import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -385,7 +386,7 @@ export default function SubscriptionScreen() {
             {/* Legal Links - Required for Apple compliance */}
             <View style={styles.legalLinksRow}>
               <TouchableOpacity
-                onPress={() => Linking.openURL('https://www.dopplervpn.org/en/terms')}
+                onPress={() => Linking.openURL(TERMS_URL)}
                 style={styles.legalLinkTouchable}
               >
                 <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>
@@ -394,7 +395,7 @@ export default function SubscriptionScreen() {
               </TouchableOpacity>
               <Text style={[styles.legalSeparator, { color: colors.textMuted }]}>|</Text>
               <TouchableOpacity
-                onPress={() => Linking.openURL('https://www.dopplervpn.org/en/privacy')}
+                onPress={() => Linking.openURL(PRIVACY_URL)}
                 style={styles.legalLinkTouchable}
               >
                 <Text style={[styles.legalLinkText, { color: colors.textMuted }]}>

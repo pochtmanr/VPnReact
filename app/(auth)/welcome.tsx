@@ -1,3 +1,4 @@
+import { TERMS_URL, PRIVACY_URL } from '@/constants/env';
 import { IBMPlexSerif_400Regular_Italic, useFonts } from '@expo-google-fonts/ibm-plex-serif';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -188,11 +189,11 @@ export default function WelcomeScreen() {
             <Text style={styles.footerText}>
               {t('auth.welcome.footer.byContinuing')}{' '}
             </Text>
-            <Pressable onPress={() => Linking.openURL('https://www.dopplervpn.org/en/terms')}>
+            <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
               <Text style={styles.footerLink}>{t('tier.paywall.terms')}</Text>
             </Pressable>
             <Text style={styles.footerText}> {t('auth.welcome.footer.and')} </Text>
-            <Pressable onPress={() => Linking.openURL('https://www.dopplervpn.org/en/privacy')}>
+            <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
               <Text style={styles.footerLink}>{t('tier.paywall.privacy')}</Text>
             </Pressable>
           </View>

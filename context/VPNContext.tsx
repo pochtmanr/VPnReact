@@ -4,8 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { VPNServer, ConnectionStatus, ConnectionLog } from '@/types/database';
 import { useAuth } from './AuthContext';
-
-const VPN_API_URL = process.env.EXPO_PUBLIC_VPN_API_URL || 'https://www.dopplervpn.org';
+import { VPN_API_URL } from '@/constants/env';
 
 // Storage keys for persisting settings
 const STORAGE_KEYS = {

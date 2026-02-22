@@ -2,10 +2,12 @@
 // Connects to the AdGuard Home DNS server running on the VPN server
 // AdGuard is only accessible via VPN tunnel (internal IP)
 
+import { ADGUARD_URL, ADGUARD_USERNAME, ADGUARD_PASSWORD } from '@/constants/env';
+
 const ADGUARD_API = {
-  baseUrl: 'http://10.0.0.1:3000',
-  username: 'admin',
-  password: 'VpnAdmin123',
+  baseUrl: ADGUARD_URL,
+  username: ADGUARD_USERNAME,
+  password: ADGUARD_PASSWORD,
 };
 
 interface AdGuardStats {

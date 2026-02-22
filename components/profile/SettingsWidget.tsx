@@ -1,3 +1,4 @@
+import { TERMS_URL, PRIVACY_URL } from '@/constants/env';
 import { useRouter } from 'expo-router';
 import {
     ChevronRight,
@@ -106,11 +107,11 @@ export const SettingsWidget = memo(function SettingsWidget({
   }, [themeMode, t]);
 
   const openPrivacyPolicy = useCallback(async () => {
-    await Linking.openURL('https://www.dopplervpn.org/en/privacy'); 
+    await Linking.openURL(PRIVACY_URL);
   }, []);
 
   const openTermsOfService = useCallback(async () => {
-    await Linking.openURL('https://www.dopplervpn.org/en/terms');
+    await Linking.openURL(TERMS_URL);
   }, []);
 
   return (

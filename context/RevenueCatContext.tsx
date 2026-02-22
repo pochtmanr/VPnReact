@@ -71,9 +71,10 @@ loadRevenueCatSDK();
 // CONFIGURATION
 // =============================================================================
 
-// RevenueCat API keys
-const REVENUECAT_API_KEY_IOS = 'appl_VnIBmCCtZiLNWYgoLnuAUtOtWyh';
-const REVENUECAT_API_KEY_ANDROID = 'goog_AUfzfMLeAodsNkIvkmrJvMfMrmU';
+// RevenueCat API keys — loaded from environment
+import { REVENUECAT_IOS_KEY, REVENUECAT_ANDROID_KEY } from '@/constants/env';
+const REVENUECAT_API_KEY_IOS = REVENUECAT_IOS_KEY;
+const REVENUECAT_API_KEY_ANDROID = REVENUECAT_ANDROID_KEY;
 
 // Entitlement identifiers from RevenueCat dashboard
 // IMPORTANT: These must match EXACTLY what's configured in RevenueCat Dashboard

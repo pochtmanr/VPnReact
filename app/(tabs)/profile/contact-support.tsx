@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '@/constants/env';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -174,7 +175,7 @@ export default function ContactSupportScreen() {
   }, [bugDescription, account?.account_id, t]);
 
   const handleEmailSupport = () => {
-    Linking.openURL('mailto:support@simnetiq.store?subject=Support Request');
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Support Request`);
   };
 
   const handleTelegram = () => {

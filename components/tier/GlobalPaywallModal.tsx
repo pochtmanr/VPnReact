@@ -24,9 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-// URLs for Terms and Privacy
-const TERMS_URL = 'https://www.dopplervpn.org/en/terms';
-const PRIVACY_URL = 'https://www.dopplervpn.org/en/privacy';
+import { TERMS_URL, PRIVACY_URL, PROMO_API_URL } from '@/constants/env';
 
 /**
  * Global paywall modal with welcome-screen-inspired full-screen design.
@@ -154,7 +152,7 @@ export const GlobalPaywallModal = memo(function GlobalPaywallModal() {
     try {
       const plan = effectiveSelected?.packageType === 'MONTHLY' ? 'monthly'
         : effectiveSelected?.packageType === 'SIX_MONTH' ? 'semiannual' : 'annual';
-      const res = await fetch('https://doppler-miniapp.vercel.app/api/promo/validate', {
+      const res = await fetch(`${PROMO_API_URL}/api/promo/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: promoCode.trim().toUpperCase(), plan, account_id: account?.account_id }),

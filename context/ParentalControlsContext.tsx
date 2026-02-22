@@ -134,13 +134,12 @@ interface ParentalControlsContextType {
 
 const ParentalControlsContext = createContext<ParentalControlsContextType | undefined>(undefined);
 
-// AdGuard Home API configuration
-// Use internal VPN IP when connected, public IP otherwise
+// AdGuard Home API configuration — credentials from env
+import { ADGUARD_URL, ADGUARD_USERNAME, ADGUARD_PASSWORD } from '@/constants/env';
 const ADGUARD_API = {
-  // AdGuard is only reachable via VPN tunnel (internal IP)
-  baseUrl: 'http://10.0.0.1:3000',
-  username: 'admin',
-  password: 'VpnAdmin123',
+  baseUrl: ADGUARD_URL,
+  username: ADGUARD_USERNAME,
+  password: ADGUARD_PASSWORD,
 };
 
 // Helper to check if error is an abort/timeout error
