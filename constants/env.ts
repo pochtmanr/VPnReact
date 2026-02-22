@@ -22,7 +22,7 @@ export const REVENUECAT_IOS_KEY = requireEnv('EXPO_PUBLIC_REVENUECAT_IOS_KEY');
 export const REVENUECAT_ANDROID_KEY = requireEnv('EXPO_PUBLIC_REVENUECAT_ANDROID_KEY');
 
 // AdGuard (runs on VPN internal network — credentials still in env, not source)
-export const ADGUARD_URL = process.env.EXPO_PUBLIC_ADGUARD_URL || 'http://10.0.0.1:3000';
+export const ADGUARD_URL = requireEnv('EXPO_PUBLIC_ADGUARD_URL');
 export const ADGUARD_USERNAME = requireEnv('EXPO_PUBLIC_ADGUARD_USERNAME');
 export const ADGUARD_PASSWORD = requireEnv('EXPO_PUBLIC_ADGUARD_PASSWORD');
 

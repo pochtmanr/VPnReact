@@ -1,4 +1,4 @@
-import { SUPPORT_EMAIL } from '@/constants/env';
+import { SUPPORT_EMAIL, SUPPORT_BOT_URL } from '@/constants/env';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -18,6 +18,7 @@ import {
     ActivityIndicator,
     Alert,
     Linking,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -150,8 +151,8 @@ export default function ContactSupportScreen() {
       const { error } = await supabase.from('bug_reports').insert({
         account_id: account?.account_id || null,
         description: bugDescription.trim(),
-        app_version: '1.0.0',
-        platform: 'ios',
+        app_version: '1.4.2',
+        platform: Platform.OS,
       });
 
       if (error) {
@@ -179,7 +180,7 @@ export default function ContactSupportScreen() {
   };
 
   const handleTelegram = () => {
-    Linking.openURL('https://t.me/DopplerSupportBot');
+    Linking.openURL(SUPPORT_BOT_URL);
   };
 
   // Render back button
