@@ -3,6 +3,23 @@
 --
 -- WHY: everyone in a country was landing on one box (Taiwan buffering). The bot
 -- side now picks the least-loaded active server (doppler-bot getServerMarzbanConfig).
+-- ============================================================================
+-- PARTIALLY APPLIED 2026-08-17 -- DO NOT RUN THIS FILE AS-IS.
+--
+-- Section 1 only (the `max_users` column + check constraint) has been applied to
+-- project fzlrhmjdjjzcgstaeblu, as migration `add_vpn_servers_max_users_column_only`.
+-- It was applied because doppler-bot SELECTs `max_users` and was getting a hard
+-- PostgREST 400 on every call.
+--
+-- Sections 2-4 must NOT be replayed. They rewrite vpn_servers_safe, get_servers and
+-- get_servers_v2 from a July 2026 snapshot, which would silently revert:
+--   * the 2026-08-16 version gate (min_tun_version / app_version_at_least), and
+--   * the BE-03 `tunnel_mode` + `client_flags` keys and the device_tokens telemetry.
+--
+-- If max_users ever genuinely needs to reach clients, re-derive those functions from
+-- the LIVE bodies (`pg_get_functiondef`), never from this file.
+-- ============================================================================
+
 -- This migration adds the capacity column and surfaces `max_users` (alongside the
 -- already-returned `load_percentage`) through both get_servers RPCs so clients can
 -- default-pick a non-saturated node. Adding a key is additive; existing apps decode
