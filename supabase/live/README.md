@@ -43,7 +43,7 @@ is deliberately run in **two sittings** with `20260906T100500` applied in betwee
 | 3 | apply `20260906T100200_claim_subscription_guards.sql` |
 | 4 | apply `20260906T100300_revoke_subscription_guards.sql` |
 | 5 | apply `20260906T100400_admin_subscription_rpcs.sql` |
-| 6 | run `20260906T100600` **steps 1-3** — temp table → REVIEW → REPAIR |
+| 6 | run `20260906T100600` **steps 1-3** — one execution, run twice: reconstruct → REVIEW → (REPAIR) |
 | 7 | apply `20260906T100500_downgrade_expired_subscriptions.sql` |
 | 8 | run `20260906T100600` **steps 4-5** — one manual sweep → ASSERT |
 
@@ -53,12 +53,54 @@ hand. Any web-checkout customer whose term had been truncated would be swept to 
 backfill got a chance to restore it. And step 8 cannot come before step 7, because the widened
 body has to exist before it can be run — `T100600`'s step 4 has a guard that refuses otherwise.
 
-Run steps 6 and 8 **in the same SQL Editor session**: step 1 creates a `TEMP` table that steps 2
-and 3 read, and a temp table does not outlive its session. Losing it is harmless — step 1 is
-idempotent and read-only — but you have to re-run it.
+**Sessions.** Steps 1-3 are a single `BEGIN;…COMMIT;` block, so its `TEMP` table never has to
+survive a second trip to the server — the Dashboard SQL Editor does not guarantee that two
+executions reach the same backend connection, and a temp table belongs to a connection. Run the
+block once with `v_confirm := false` to get the REVIEW output (nothing is written), and only run it
+again with `v_confirm := true` if that output showed rows. Steps 4 and 5 read no temp table, so
+they need no session affinity with steps 1-3 and can be run later, elsewhere.
 
-The same block appears in the headers of both `20260906T100500` and `20260906T100600`. If the
+The same order block appears in the headers of both `20260906T100500` and `20260906T100600`. If the
 three ever disagree, they are all wrong and must be fixed together.
+
+## The reconcile gate
+
+Two migrations replace a live function body that was **not** written from the live dump:
+
+| File | Body came from | Diff it against |
+|---|---|---|
+| `20260906T100200_claim_subscription_guards.sql` | the repo copy, `20260102_subscription_ownership.sql:74-229` | `2026-09-06-subscription-rpcs.sql` **§2.1** |
+| `20260906T100500_downgrade_expired_subscriptions.sql` | **observed behaviour only** — no copy exists in any repo | `2026-09-06-subscription-rpcs.sql` **§2.4** |
+
+Both **refuse to run** until you say you have done the diff. After doing it, run this inside the
+same transaction — after the `BEGIN;` and before the rest of the file:
+
+```sql
+SET LOCAL doppler.reconciled_from_dump = '2026-09-06-subscription-rpcs.sql';
+```
+
+`SET LOCAL` scopes it to that transaction, so it cannot leak into the next migration and silently
+pre-satisfy its gate. (`SELECT set_config('doppler.reconciled_from_dump',
+'2026-09-06-subscription-rpcs.sql', false);` works too, but is session-scoped — prefer `SET LOCAL`.)
+
+Forgetting it costs a loud abort naming the file and the section to read, and nothing else. It is a
+gate against skipping the diff, not against a bad diff — it cannot tell whether you actually
+compared anything. It exists because every earlier instruction to do so was a comment, and a
+comment is not a gate.
+
+## Reading step 4's verification output
+
+After the manual sweep, `20260906T100600` step 4 lists what was swept:
+
+```sql
+SELECT … FROM public.subscription_audit WHERE writer_fn = 'downgrade_expired_subscriptions' …
+```
+
+**Zero rows there is not proof the sweep did nothing.** `writer_fn` is parsed from the PL/pgSQL
+call stack, and it is empty when the stack cannot be read or when the function was inlined or
+renamed. Confirm against the sweeper's own return value (`{"downgraded": N}`) and against the
+`reason = 'expiry sweep'` rows, and treat a disagreement between the three as a reason to look
+harder — not as a clean run.
 
 ## What is *not* allowed from this machine
 

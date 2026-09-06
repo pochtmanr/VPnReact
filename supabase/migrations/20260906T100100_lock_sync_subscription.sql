@@ -62,6 +62,7 @@ DO $guard$
 DECLARE
     v_n    integer;
     v_args text;
+    v_ret  text;
 BEGIN
     SELECT count(*) INTO v_n
     FROM pg_proc p
@@ -88,6 +89,18 @@ BEGIN
         RAISE EXCEPTION
             'ABORT: public.sync_subscription identity args are (%), expected (text, text, timestamp with time zone).',
             v_args;
+    END IF;
+
+    -- CREATE OR REPLACE cannot change a return type. Asserted here so the
+    -- failure names the expected type instead of just refusing.
+    SELECT pg_get_function_result(p.oid) INTO v_ret
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'sync_subscription';
+
+    IF v_ret IS DISTINCT FROM 'jsonb' THEN
+        RAISE EXCEPTION
+            'ABORT: sync_subscription returns %, but the stub below declares jsonb. CREATE OR REPLACE cannot change a return type — match the live type (live/2026-09-06-subscription-rpcs.sql §2.3) and keep the stub non-writing.',
+            v_ret;
     END IF;
 
     RAISE NOTICE 'sync_subscription declared args live: %',

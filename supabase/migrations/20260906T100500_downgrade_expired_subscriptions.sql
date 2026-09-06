@@ -27,6 +27,15 @@
 --   No ordering of whole files satisfies both constraints, which is why
 --   T100600 is split rather than this file being moved.
 --
+-- RECONCILE GATE
+--   This file REFUSES to run until you have diffed the body below against
+--   live/2026-09-06-subscription-rpcs.sql §2.4 — which matters more here than
+--   anywhere else in the batch, because this body is a RECONSTRUCTION and no
+--   copy of the function exists in any repo. After the diff, run inside the
+--   same transaction:
+--       SET LOCAL doppler.reconciled_from_dump = '2026-09-06-subscription-rpcs.sql';
+--   See the gate immediately below BEGIN;.
+--
 -- DO NOT TOUCH cron.job in this file or in any file in this batch. The schedule
 -- is correct; only the WHERE clause is wrong. Adding a second cron entry would
 -- call the same function and skip the same rows (§6c).
@@ -96,6 +105,36 @@
 -- =============================================================================
 
 BEGIN;
+
+-- -----------------------------------------------------------------------------
+-- Reconcile gate — mechanical, not prose
+-- -----------------------------------------------------------------------------
+-- The body further down was written from observed behaviour only — there is NO copy of this function in any repo, not from live. Every
+-- instruction to diff it against the dump has so far been a comment, and a
+-- comment is not a gate. This is:
+--
+--     SET LOCAL doppler.reconciled_from_dump = '2026-09-06-subscription-rpcs.sql';
+--
+-- Run that INSIDE this transaction — immediately after the BEGIN; above and
+-- before this block — once you have actually opened
+-- supabase/live/2026-09-06-subscription-rpcs.sql §2.4 and diffed it against
+-- the body below, carrying across anything live does that this file does not.
+--
+-- SET LOCAL scopes it to this transaction, so it cannot leak into the next
+-- migration and silently pre-satisfy its gate. `SELECT set_config(
+-- 'doppler.reconciled_from_dump', '2026-09-06-subscription-rpcs.sql', false);`
+-- works too but is session-scoped — prefer SET LOCAL.
+--
+-- Forgetting it costs a loud abort and nothing else.
+DO $reconcile$
+BEGIN
+    IF current_setting('doppler.reconciled_from_dump', true)
+       IS DISTINCT FROM '2026-09-06-subscription-rpcs.sql' THEN
+        RAISE EXCEPTION
+            'ABORT: this file replaces a live function body with one written from a RECONSTRUCTION from observed behaviour; no copy exists in any repo. Open supabase/live/2026-09-06-subscription-rpcs.sql §2.4, diff it against the body in this file, carry across anything live does that this file does not — then run, inside this same transaction:  SET LOCAL doppler.reconciled_from_dump = ''2026-09-06-subscription-rpcs.sql'';  and re-run this file.';
+    END IF;
+END
+$reconcile$;
 
 -- -----------------------------------------------------------------------------
 -- Preconditions

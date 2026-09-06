@@ -40,9 +40,46 @@
 -- ORDER
 --   Apply 20260906T100000 (the audit trail) first. Every write below is then
 --   attributable, which is the point of doing them in this order.
+--
+-- RECONCILE GATE
+--   This file REFUSES to run until you have diffed the claim_subscription body
+--   below against live/2026-09-06-subscription-rpcs.sql §2.1. After the diff,
+--   run inside the same transaction:
+--       SET LOCAL doppler.reconciled_from_dump = '2026-09-06-subscription-rpcs.sql';
+--   See the gate immediately below BEGIN;.
 -- =============================================================================
 
 BEGIN;
+
+-- -----------------------------------------------------------------------------
+-- Reconcile gate — mechanical, not prose
+-- -----------------------------------------------------------------------------
+-- The body further down was written from the repo copy at migrations/20260102_subscription_ownership.sql:74-229, not from live. Every
+-- instruction to diff it against the dump has so far been a comment, and a
+-- comment is not a gate. This is:
+--
+--     SET LOCAL doppler.reconciled_from_dump = '2026-09-06-subscription-rpcs.sql';
+--
+-- Run that INSIDE this transaction — immediately after the BEGIN; above and
+-- before this block — once you have actually opened
+-- supabase/live/2026-09-06-subscription-rpcs.sql §2.1 and diffed it against
+-- the body below, carrying across anything live does that this file does not.
+--
+-- SET LOCAL scopes it to this transaction, so it cannot leak into the next
+-- migration and silently pre-satisfy its gate. `SELECT set_config(
+-- 'doppler.reconciled_from_dump', '2026-09-06-subscription-rpcs.sql', false);`
+-- works too but is session-scoped — prefer SET LOCAL.
+--
+-- Forgetting it costs a loud abort and nothing else.
+DO $reconcile$
+BEGIN
+    IF current_setting('doppler.reconciled_from_dump', true)
+       IS DISTINCT FROM '2026-09-06-subscription-rpcs.sql' THEN
+        RAISE EXCEPTION
+            'ABORT: this file replaces a live function body with one written from the repo copy, which §7 demonstrates is not authoritative. Open supabase/live/2026-09-06-subscription-rpcs.sql §2.1, diff it against the body in this file, carry across anything live does that this file does not — then run, inside this same transaction:  SET LOCAL doppler.reconciled_from_dump = ''2026-09-06-subscription-rpcs.sql'';  and re-run this file.';
+    END IF;
+END
+$reconcile$;
 
 -- -----------------------------------------------------------------------------
 -- Preconditions
@@ -51,6 +88,7 @@ DO $guard$
 DECLARE
     v_n    integer;
     v_args text;
+    v_ret  text;
 BEGIN
     -- claim_subscription must exist exactly once. A second overload means the
     -- CREATE OR REPLACE below would leave the unguarded original callable while
@@ -74,6 +112,19 @@ BEGIN
         RAISE EXCEPTION
             'ABORT: claim_subscription identity args are (%), expected (text, text, timestamp with time zone, text, text, text).',
             v_args;
+    END IF;
+
+    -- CREATE OR REPLACE cannot change a return type: a mismatch fails with
+    -- "cannot change return type of existing function", which does not say
+    -- WHICH type it expected. Assert it here so the message names both.
+    SELECT pg_get_function_result(p.oid) INTO v_ret
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'claim_subscription';
+
+    IF v_ret IS DISTINCT FROM 'jsonb' THEN
+        RAISE EXCEPTION
+            'ABORT: claim_subscription returns %, but the body below declares jsonb. CREATE OR REPLACE cannot change a return type — reconcile against live/2026-09-06-subscription-rpcs.sql §2.1 and adjust.',
+            v_ret;
     END IF;
 
     -- PostgREST dispatches on argument NAMES. Print the live ones so the

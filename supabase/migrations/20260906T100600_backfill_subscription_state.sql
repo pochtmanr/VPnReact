@@ -6,8 +6,11 @@
 -- *** THIS IS THE ONLY FILE IN THE BATCH THAT RUNS DML ON accounts. ***
 -- *** RUN IT INTERACTIVELY, STEP BY STEP. DO NOT PASTE IT WHOLE.    ***
 --
--- Steps 1 and 2 are read-only. Steps 3, 4 and 5 are live and are each marked
---     <<< OPERATOR: ... >>>
+-- Steps 1-3 are one execution, run TWICE: the first run reconstructs and
+-- REVIEWs and writes nothing, and the repair only fires on a second run after
+-- the operator sets v_confirm := true. Steps 4 and 5 are separate executions.
+-- Everything that writes is marked  <<< OPERATOR: ... >>>.
+--
 -- Step 3 is the repair and is expected to change NOTHING. Step 4 runs the
 -- widened sweeper once by hand. Step 5 asserts that nothing is left stuck.
 --
@@ -29,7 +32,8 @@
 --   4.  apply 20260906T100300_revoke_subscription_guards.sql
 --   5.  apply 20260906T100400_admin_subscription_rpcs.sql
 --
---   6.  >>> THIS FILE, STEPS 1-3 <<<   temp table -> REVIEW -> REPAIR
+--   6.  >>> THIS FILE, STEPS 1-3 <<<   one execution, run twice:
+--                                        reconstruct -> REVIEW -> (REPAIR)
 --       Restores any web-checkout term that was truncated. Must happen BEFORE
 --       the sweeper is widened, or a truncated row gets swept to free and the
 --       evidence that it was ever paid stops being actionable.
@@ -48,10 +52,15 @@
 -- ordering of whole files that satisfies both, so this file is deliberately
 -- run in two sittings.
 --
--- It must be run in ONE SQL Editor SESSION across both sittings, because step 1
--- creates a TEMP table that steps 2 and 3 read. A temp table lives for the
--- session, so opening a new editor tab between steps loses it. If that happens,
--- re-run step 1 — it is idempotent and read-only.
+-- Steps 1-3 are ONE execution: a single BEGIN;…COMMIT; block, so the TEMP table
+-- it builds never has to survive a second trip to the server. That matters
+-- because the Supabase Dashboard SQL Editor does not guarantee that two
+-- executions reach the same backend connection, and a temp table belongs to a
+-- connection — an earlier version of this file could fail with "relation
+-- web_invoice_terms does not exist" for no reason the operator could see.
+--
+-- Steps 4 and 5 read no temp table, so they need no session affinity with
+-- steps 1-3 and can be run later, elsewhere, after T100500 has been applied.
 --
 -- =============================================================================
 -- PART 7B — reconstruct what web-checkout customers actually paid for
@@ -87,14 +96,30 @@
 
 
 -- -----------------------------------------------------------------------------
--- STEP 1 — build the reconstruction (read-only; creates a TEMP table)
+-- STEPS 1-3 — ONE EXECUTION.  <<< OPERATOR: run this whole block, twice >>>
 -- -----------------------------------------------------------------------------
--- Schema-qualified to pg_temp on purpose: an unqualified DROP would resolve
--- through search_path and could hit a PERMANENT public.web_invoice_terms if one
--- ever existed. This must only ever drop this session's own scratch table.
-DROP TABLE IF EXISTS pg_temp.web_invoice_terms;
+-- Run 1: leave v_confirm = false. You get the reconstruction and the REVIEW
+--        output, and NOTHING is written.
+-- Run 2: only if the REVIEW output showed rows. Set v_confirm := true and
+--        v_actor := your name, then run the block again.
+--
+-- WHY ONE BLOCK. An earlier version had these as three separate executions
+-- sharing a TEMP table. The Supabase Dashboard SQL Editor does not guarantee
+-- that two executions land on the same backend connection, and a temp table
+-- belongs to a connection — so step 2 could fail with
+-- "relation web_invoice_terms does not exist" for no reason the operator could
+-- see. Everything that touches the temp table now happens in one execution.
+-- (Steps 4 and 5 never read it, so they are unaffected and stay separate.)
+--
+-- The REVIEW output is still read before anything is written: on run 1 the
+-- repair is skipped and says so.
 
-CREATE TEMP TABLE web_invoice_terms AS
+BEGIN;
+
+-- ---- STEP 1: build the reconstruction (read-only) ---------------------------
+-- ON COMMIT DROP: this table exists only for this transaction now, which is
+-- the whole point — nothing downstream depends on it surviving.
+CREATE TEMP TABLE web_invoice_terms ON COMMIT DROP AS
 WITH paid AS (
     SELECT
         split_part(plan, ':', 1) AS plan_id,
@@ -135,20 +160,16 @@ GROUP BY account_id;
 
 -- Sanity: how many accounts were reconstructed, and how many still have a live
 -- floor. Compare against dump-queries §7's pre-change count.
-SELECT count(*)                                                    AS accounts_with_paid_invoices,
-       count(*) FILTER (WHERE entitled_until_floor > now())         AS floor_still_in_future,
-       min(entitled_until_floor)                                    AS earliest_floor,
-       max(entitled_until_floor)                                    AS latest_floor
+SELECT count(*)                                            AS accounts_with_paid_invoices,
+       count(*) FILTER (WHERE entitled_until_floor > now()) AS floor_still_in_future,
+       min(entitled_until_floor)                            AS earliest_floor,
+       max(entitled_until_floor)                            AS latest_floor
 FROM web_invoice_terms;
 
 
--- -----------------------------------------------------------------------------
--- STEP 2 — REVIEW. Read this output before running step 3.
--- -----------------------------------------------------------------------------
+-- ---- STEP 2: REVIEW ---------------------------------------------------------
 -- Every row here is an account that PAID for a term still running, whose
--- accounts row disagrees. `disagreement` says how.
---
--- EXPECTED: zero rows.
+-- accounts row disagrees. `disagreement` says how.  EXPECTED: zero rows.
 SELECT
     a.account_id,
     a.subscription_tier,
@@ -193,52 +214,64 @@ WHERE t.entitled_until_floor <= now()
 ORDER BY t.entitled_until_floor DESC;
 
 
--- -----------------------------------------------------------------------------
--- STEP 3 — REPAIR.  <<< OPERATOR: run after reviewing the SELECT above >>>
--- -----------------------------------------------------------------------------
--- If STEP 2 returned NO rows, this transaction updates nothing and the COMMIT
--- is a no-op. That is the expected outcome. Run it anyway — a no-op COMMIT is
--- cheaper than a skipped step somebody has to reason about later.
+-- ---- STEP 3: REPAIR ---------------------------------------------------------
+-- This is the ONLY DML on public.accounts in the entire 2026-09-06 batch, and
+-- it is behind a flag the operator has to edit by hand.
 --
--- If STEP 2 DID return rows, read them first. This is a live UPDATE on
--- accounts, and it is the only DML on accounts in the entire 2026-09-06 batch.
---
--- GREATEST(current, floor) — this can only ever move an expiry FORWARD. It
--- never shortens, never downgrades, and never touches an account whose row
--- already agrees.
---
--- Set the actor to your own name before running.
+-- GREATEST(current, floor) — it can only ever move an expiry FORWARD. It never
+-- shortens, never downgrades, and never touches an account whose row already
+-- agrees.
+DO $repair$
+DECLARE
+    -- <<< OPERATOR: both of these must be edited on run 2. >>>
+    v_confirm CONSTANT boolean := false;          -- set to true after reading STEP 2's output
+    v_actor   CONSTANT text    := '(set me)';     -- your name; lands in subscription_audit.actor
 
-BEGIN;
+    v_n integer;
+BEGIN
+    IF NOT v_confirm THEN
+        RAISE NOTICE
+            'REPAIR SKIPPED — v_confirm is false. Read STEP 2''s output above. If it returned zero rows (the expected outcome) you are done with steps 1-3: nothing needs repairing. If it returned rows, set v_confirm := true and v_actor := your name, then run this whole block again.';
+        RETURN;
+    END IF;
 
-SELECT set_config('doppler.reason',
-                  'backfill 2026-09-06: paid web invoice term restored', true),
-       set_config('doppler.actor', '(set me)', true);
+    IF btrim(v_actor) = '' OR v_actor = '(set me)' THEN
+        RAISE EXCEPTION
+            'ABORT: set v_actor to your name before repairing. An unattributed row in subscription_audit is the exact problem this batch exists to fix.';
+    END IF;
 
-UPDATE public.accounts a SET
-    subscription_tier       = 'pro',
-    subscription_expires_at = GREATEST(
-                                  coalesce(a.subscription_expires_at, t.entitled_until_floor),
-                                  t.entitled_until_floor),
-    -- Only fills a NULL store. An account that already says app_store or
-    -- oxapay keeps saying it; this backfill is evidence about the TERM, not
-    -- about the channel.
-    subscription_store      = coalesce(a.subscription_store, t.last_provider),
-    updated_at              = now()
-FROM web_invoice_terms t
-WHERE a.account_id = t.account_id
-  AND t.entitled_until_floor > now()
-  AND (
-        a.subscription_tier IS NULL
-     OR a.subscription_tier = 'free'
-     OR a.subscription_expires_at IS NULL
-     OR a.subscription_expires_at < t.entitled_until_floor
-  );
+    PERFORM set_config('doppler.reason',
+                       'backfill 2026-09-06: paid web invoice term restored', true);
+    PERFORM set_config('doppler.actor', v_actor, true);
 
--- Read what the repair actually did, from the audit trail it just wrote.
--- Expect: one row per repair, writer_fn NULL (plain SQL, no function in the
--- stack), and every new_expires_at >= its old_expires_at. Zero rows is the
--- expected result overall.
+    UPDATE public.accounts a SET
+        subscription_tier       = 'pro',
+        subscription_expires_at = GREATEST(
+                                      coalesce(a.subscription_expires_at, t.entitled_until_floor),
+                                      t.entitled_until_floor),
+        -- Only fills a NULL store. An account that already says app_store or
+        -- oxapay keeps saying it; this backfill is evidence about the TERM, not
+        -- about the channel.
+        subscription_store      = coalesce(a.subscription_store, t.last_provider),
+        updated_at              = now()
+    FROM web_invoice_terms t
+    WHERE a.account_id = t.account_id
+      AND t.entitled_until_floor > now()
+      AND (
+            a.subscription_tier IS NULL
+         OR a.subscription_tier = 'free'
+         OR a.subscription_expires_at IS NULL
+         OR a.subscription_expires_at < t.entitled_until_floor
+      );
+
+    GET DIAGNOSTICS v_n = ROW_COUNT;
+    RAISE NOTICE 'REPAIR: % row(s) updated by %', v_n, v_actor;
+END
+$repair$;
+
+-- What the repair actually did, read from the audit trail it just wrote.
+-- Expect one row per repair, writer_fn NULL (plain SQL, no function in the
+-- stack), and every new_expires_at >= its old_expires_at.
 SELECT account_id, old_tier, new_tier, old_expires_at, new_expires_at,
        old_store, new_store, writer_fn, reason, actor
 FROM public.subscription_audit
@@ -246,14 +279,15 @@ WHERE reason = 'backfill 2026-09-06: paid web invoice term restored'
 ORDER BY id DESC;
 
 COMMIT;
--- ^ If the audit rows above are NOT what you expect, run ROLLBACK instead of
---   COMMIT. The temp table survives either way: step 1 was not inside this
---   transaction.
+-- ^ If the audit rows above are NOT what you expect, run ROLLBACK instead.
+--   On run 1 (v_confirm = false) this COMMIT writes nothing and is a no-op.
+
 
 
 -- =============================================================================
 -- ===  STOP.  Apply 20260906T100500_downgrade_expired_subscriptions.sql now. ===
--- ===  Then come back and run steps 4 and 5 in THIS SAME SESSION.           ===
+-- ===  Then run steps 4 and 5 — any session, any tab: they read no temp    ===
+-- ===  table and depend only on T100500 being applied.                      ===
 -- =============================================================================
 
 
@@ -350,10 +384,24 @@ SELECT public.downgrade_expired_subscriptions();
 -- What it just swept, in full. Every row should be a revolut/oxapay account
 -- 4-111 days past expiry. A store row here is expected too: those were inside
 -- the 3-day grace before and are not now.
+--
+-- ZERO ROWS HERE IS NOT PROOF THE SWEEP DID NOTHING. writer_fn is parsed from
+-- the PL/pgSQL call stack and comes back NULL whenever that stack cannot be
+-- read. Cross-check all three of: the sweeper's own return value
+-- ({"downgraded": N}), this query, and the reason-based query below. If they
+-- disagree, look harder — do not read it as a clean run.
 SELECT changed_at, account_id, old_tier, old_store, old_expires_at,
        now() - old_expires_at AS was_overdue_by, reason
 FROM public.subscription_audit
 WHERE writer_fn = 'downgrade_expired_subscriptions'
+  AND changed_at > now() - interval '10 minutes'
+ORDER BY changed_at;
+
+-- The same question asked without relying on writer_fn. These two should agree
+-- with each other and with {"downgraded": N} above.
+SELECT changed_at, account_id, old_tier, old_store, old_expires_at, writer_fn
+FROM public.subscription_audit
+WHERE reason = 'expiry sweep'
   AND changed_at > now() - interval '10 minutes'
 ORDER BY changed_at;
 
@@ -408,8 +456,10 @@ ORDER BY subscription_expires_at;
 -- -----------------------------------------------------------------------------
 -- CLEANUP
 -- -----------------------------------------------------------------------------
---   DROP TABLE IF EXISTS pg_temp.web_invoice_terms;
---   (or just close the session — a TEMP table does not outlive it)
+--   Nothing to do. web_invoice_terms is created ON COMMIT DROP inside the
+--   steps 1-3 transaction, so it is gone by the time that block finishes —
+--   which is also why steps 4 and 5 do not read it and can be run in a
+--   different session, on a different day, from a different tab.
 
 
 -- =============================================================================
