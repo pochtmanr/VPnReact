@@ -271,6 +271,7 @@ DO $precheck$
 DECLARE
     v_def   text;
     v_code  text;
+    v_upd   text;
     v_where text;
 BEGIN
     v_def := pg_get_functiondef('public.downgrade_expired_subscriptions()'::regprocedure);
@@ -282,13 +283,27 @@ BEGIN
     v_code := regexp_replace(v_def, '--[^' || E'\n' || ']*', '', 'g');
 
     -- ASSERTION 1 — the functional change is present.
-    -- Everything after the LAST `WHERE` in the comment-stripped body is the
-    -- sweep's predicate (`^.*WHERE` is greedy, so it consumes through the last
-    -- one). The widened predicate names only subscription_tier and
-    -- subscription_expires_at. If it still mentions the store or the
-    -- transaction id, the store filter is still there and this step would sweep
-    -- the same rows the old body always did — i.e. not the stuck ones.
-    v_where := regexp_replace(v_code, '(?is)^.*WHERE', '');
+    --
+    -- Anchor on the sweep's OWN statement, not on the body as a whole. An
+    -- earlier version took "everything after the last WHERE", which is sound
+    -- only while the UPDATE happens to hold the last WHERE in the function: any
+    -- trailing SELECT … WHERE or INSERT … WHERE in the live body would shift
+    -- the window past the store predicate and wave an un-widened sweeper
+    -- through.
+    --
+    -- So: first take the UPDATE … accounts statement, from its keyword to its
+    -- terminating semicolon (non-greedy, so it stops at the first `;`), then
+    -- take that statement's own predicate — everything after the FIRST `WHERE`
+    -- inside it. The SET list is excluded by construction, which matters
+    -- because the SET list legitimately contains `subscription_store = NULL`.
+    v_upd := substring(v_code from '(?is)UPDATE\s+(?:public\.)?accounts\y.*?;');
+
+    IF v_upd IS NULL THEN
+        RAISE EXCEPTION
+            'ABORT: could not locate an `UPDATE … accounts …;` statement in downgrade_expired_subscriptions. The live body does not have the shape this precheck understands — read it yourself and confirm the store predicate is gone before running the sweep by hand.';
+    END IF;
+
+    v_where := regexp_replace(v_upd, '(?is)^.*?WHERE', '');
 
     IF v_where ILIKE '%subscription_store%'
        OR v_where ILIKE '%original_transaction_id%'
@@ -308,12 +323,20 @@ BEGIN
             'ABORT: downgrade_expired_subscriptions does not set doppler.reason = ''expiry sweep''. That line is MANDATORY (20260906T100500 EDIT 2) — without it every row this sweep touches lands in subscription_audit with no reason.';
     END IF;
 
-    -- Both assertions are TEXT assertions on a body nobody has dumped yet, so
-    -- a false abort is possible — if the live body happens to name one of those
-    -- columns after its WHERE clause for some other reason, this stops. That is
-    -- the safe direction: it stops and prints the predicate it found, so you
-    -- can read it and decide. It will never let an un-widened sweeper through
-    -- silently, which is the failure that would matter.
+    -- Both assertions are TEXT assertions on a body nobody has dumped yet.
+    --
+    -- What they DO cover: the predicate of the first `UPDATE … accounts …;`
+    -- statement in the body, with the SET list and every other statement
+    -- excluded by the anchoring above.
+    --
+    -- What they DO NOT cover: a body that filters the sweep somewhere other
+    -- than that predicate — a second UPDATE, a cursor loop, a CTE, or a
+    -- subquery carrying its own WHERE inside the SET list. If the dump shows
+    -- any of those shapes, this precheck is not evidence and you must read the
+    -- predicate yourself.
+    --
+    -- A false abort is also possible, and is the safe direction: it stops and
+    -- prints the predicate it found, so you can read it and decide.
     RAISE NOTICE 'precheck OK: the sweeper is widened and stamps doppler.reason.';
 END
 $precheck$;
