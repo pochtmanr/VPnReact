@@ -116,7 +116,18 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $fn$
+DECLARE
+    v_ua text;
 BEGIN
+    -- Guarded: a stub that raises is worse than a stub that logs less. The GUC
+    -- is only ever set by PostgREST, but a malformed value must not turn a
+    -- deprecation answer into an exception.
+    BEGIN
+        v_ua := (nullif(current_setting('request.headers', true), '')::jsonb) ->> 'user-agent';
+    EXCEPTION WHEN OTHERS THEN
+        v_ua := NULL;
+    END;
+
     -- Deliberately writes nothing. Logged so that a caller nobody has found
     -- shows up in the Postgres logs with enough context to identify it.
     RAISE LOG '[sync_subscription] DEPRECATED call refused: account=% tier=% expires=% role=% ua=%',
@@ -124,10 +135,7 @@ BEGIN
         p_tier,
         p_expires_at,
         coalesce(nullif(current_setting('role', true), 'none'), session_user::text),
-        coalesce(
-            (nullif(current_setting('request.headers', true), '')::jsonb) ->> 'user-agent',
-            '(no request context)'
-        );
+        coalesce(v_ua, '(no request context)');
 
     RETURN jsonb_build_object(
         'success', false,

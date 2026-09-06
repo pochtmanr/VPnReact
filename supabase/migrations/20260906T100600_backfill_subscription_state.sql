@@ -58,7 +58,10 @@
 -- -----------------------------------------------------------------------------
 -- STEP 1 — build the reconstruction (read-only; creates a TEMP table)
 -- -----------------------------------------------------------------------------
-DROP TABLE IF EXISTS web_invoice_terms;
+-- Schema-qualified to pg_temp on purpose: an unqualified DROP would resolve
+-- through search_path and could hit a PERMANENT public.web_invoice_terms if one
+-- ever existed. This must only ever drop this session's own scratch table.
+DROP TABLE IF EXISTS pg_temp.web_invoice_terms;
 
 CREATE TEMP TABLE web_invoice_terms AS
 WITH paid AS (
@@ -281,7 +284,7 @@ ORDER BY t.entitled_until_floor DESC;
 -- -----------------------------------------------------------------------------
 -- CLEANUP
 -- -----------------------------------------------------------------------------
---   DROP TABLE IF EXISTS web_invoice_terms;
+--   DROP TABLE IF EXISTS pg_temp.web_invoice_terms;
 --   (or just close the session — a TEMP table does not outlive it)
 
 
