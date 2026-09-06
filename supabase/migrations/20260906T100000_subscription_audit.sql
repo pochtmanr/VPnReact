@@ -433,15 +433,29 @@ COMMIT;
 --      AND tgname LIKE 'trg_accounts_subscription_audit%';
 --    -- expect: 3 rows (…_ins, …_upd, …_del), tgenabled='O'
 --
--- 2b. An account born entitled is recorded:
+-- 2b. An account born entitled is recorded.
+--
+--    Do NOT write this as a three-column INSERT. The repo's accounts DDL is not
+--    authoritative (§7 — create_account gained p_brand out of band), so the
+--    live table may carry NOT NULL columns this file does not know about and a
+--    hand-written INSERT would fail on those rather than on anything to do with
+--    the trigger. Clone a real row instead, so every column is populated
+--    whatever the live shape turns out to be:
 --
 --    BEGIN;
---      INSERT INTO public.accounts (account_id, subscription_tier, subscription_expires_at)
---      VALUES ('VPN-AUDT-TEST-0001', 'pro', now() + interval '1 day');
+--      CREATE TEMP TABLE _audit_seed ON COMMIT DROP AS
+--        SELECT * FROM public.accounts LIMIT 1;
+--      UPDATE _audit_seed SET
+--        id                      = gen_random_uuid(),
+--        account_id              = 'VPN-AUDT-TEST-0001',
+--        subscription_tier       = 'pro',
+--        subscription_expires_at = now() + interval '1 day',
+--        original_transaction_id = NULL;   -- the partial UNIQUE index
+--      INSERT INTO public.accounts SELECT * FROM _audit_seed;
 --      SELECT account_id, op, old_tier, new_tier, writer_fn
 --        FROM public.subscription_audit ORDER BY id DESC LIMIT 1;
 --      -- expect op='INSERT', old_tier NULL, new_tier 'pro'
---    ROLLBACK;
+--    ROLLBACK;   -- <- rolls back the clone AND its audit row
 --
 -- 3. End-to-end, on a row that does not matter. Pick a genuinely free account
 --    with no txn and no expiry, and put it back afterwards. This is the ONLY

@@ -59,9 +59,22 @@
 --   time). It is a hypothesis, not a dump.
 --
 --   You MUST replace the body below with live/2026-09-06-subscription-rpcs.sql
---   §2.4 and then make exactly one edit to it — delete the store predicate —
---   plus optionally add the set_config line. Do not apply this reconstruction
---   as written unless the dump turns out to match it.
+--   §2.4 and then make exactly TWO edits to it. Do not apply this
+--   reconstruction as written unless the dump turns out to match it.
+--
+--     EDIT 1 (the functional change): delete the store predicate from the
+--             WHERE clause.
+--     EDIT 2 (MANDATORY, not optional): add
+--                 PERFORM set_config('doppler.reason', 'expiry sweep', true);
+--             as the first statement of the body, exactly as spelled here.
+--
+--   Edit 2 is load-bearing in two places, which is why it is not a nicety:
+--     * every swept row's audit entry carries a reason, so the sweep stops
+--       being the silent writer it has always been;
+--     * 20260906T100600 step 4 has a precheck that REFUSES to run the manual
+--       sweep unless this exact string is present in the installed body. Drop
+--       the line and that step aborts with a message about the store predicate
+--       that will send you looking in the wrong place.
 --
 --   Specifically unknown until the dump exists:
 --     * the RETURN TYPE. CREATE OR REPLACE CANNOT CHANGE IT. If live returns
@@ -151,11 +164,16 @@ AS $fn$
 DECLARE
     v_count integer;
 BEGIN
-    -- Stamped so every swept row's audit entry says what did it. The sweep used
-    -- to be completely silent: it writes no subscription_events row and, before
-    -- 20260906T100000, left nothing behind but an updated_at on a 6-hour
-    -- boundary — which is how "is it even scheduled?" stayed an open question
-    -- for months and got answered wrong once.
+    -- MANDATORY — do not drop this line when reconciling against the dump, and
+    -- do not reword the string. Two things depend on it:
+    --   1. every swept row's audit entry carries a reason, so the sweep stops
+    --      being the silent writer it has always been. It writes no
+    --      subscription_events row and, before 20260906T100000, left nothing
+    --      behind but an updated_at on a 6-hour boundary — which is how "is it
+    --      even scheduled?" stayed an open question for months and got answered
+    --      wrong once;
+    --   2. 20260906T100600 step 4 asserts this exact literal is present in the
+    --      installed body before it will run the manual sweep.
     PERFORM set_config('doppler.reason', 'expiry sweep', true);
 
     UPDATE public.accounts SET
@@ -230,6 +248,7 @@ COMMIT;
 --   DECLARE
 --       v_count integer;
 --   BEGIN
+--       -- MANDATORY here too — see EDIT 2 in the header.
 --       PERFORM set_config('doppler.reason', 'expiry sweep', true);
 --       UPDATE public.accounts SET
 --           subscription_tier       = 'free',

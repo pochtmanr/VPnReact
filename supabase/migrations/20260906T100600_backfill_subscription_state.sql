@@ -268,12 +268,53 @@ COMMIT;
 -- silently does nothing useful — which is why the guard below refuses to run.
 
 DO $precheck$
+DECLARE
+    v_def   text;
+    v_code  text;
+    v_where text;
 BEGIN
-    IF pg_get_functiondef('public.downgrade_expired_subscriptions()'::regprocedure)
-       NOT LIKE '%expiry sweep%' THEN
+    v_def := pg_get_functiondef('public.downgrade_expired_subscriptions()'::regprocedure);
+
+    -- Strip -- line comments before asserting anything. The installed body is
+    -- full of prose that legitimately mentions the very identifiers this
+    -- precheck looks for ("PRESERVED: … original_transaction_id …"), and
+    -- matching on prose is how a precheck starts lying.
+    v_code := regexp_replace(v_def, '--[^' || E'\n' || ']*', '', 'g');
+
+    -- ASSERTION 1 — the functional change is present.
+    -- Everything after the LAST `WHERE` in the comment-stripped body is the
+    -- sweep's predicate (`^.*WHERE` is greedy, so it consumes through the last
+    -- one). The widened predicate names only subscription_tier and
+    -- subscription_expires_at. If it still mentions the store or the
+    -- transaction id, the store filter is still there and this step would sweep
+    -- the same rows the old body always did — i.e. not the stuck ones.
+    v_where := regexp_replace(v_code, '(?is)^.*WHERE', '');
+
+    IF v_where ILIKE '%subscription_store%'
+       OR v_where ILIKE '%original_transaction_id%'
+       OR v_where ILIKE '%subscription_claimed_at%'
+       OR v_where ILIKE '%revenuecat_synced_at%' THEN
         RAISE EXCEPTION
-            'ABORT: 20260906T100500 has not been applied — downgrade_expired_subscriptions is still the old store-filtered body. Apply it, then re-run this step.';
+            'ABORT: downgrade_expired_subscriptions still filters on a store/ownership column. 20260906T100500 has not been applied, or its EDIT 1 (delete the store predicate) was not made. Predicate found: %',
+            btrim(v_where);
     END IF;
+
+    -- ASSERTION 2 — the audit marker is present.
+    -- 20260906T100500 EDIT 2 makes this literal MANDATORY. It is asserted
+    -- separately from assertion 1 so the failure message says which edit is
+    -- missing rather than leaving you to guess.
+    IF v_code NOT LIKE '%expiry sweep%' THEN
+        RAISE EXCEPTION
+            'ABORT: downgrade_expired_subscriptions does not set doppler.reason = ''expiry sweep''. That line is MANDATORY (20260906T100500 EDIT 2) — without it every row this sweep touches lands in subscription_audit with no reason.';
+    END IF;
+
+    -- Both assertions are TEXT assertions on a body nobody has dumped yet, so
+    -- a false abort is possible — if the live body happens to name one of those
+    -- columns after its WHERE clause for some other reason, this stops. That is
+    -- the safe direction: it stops and prints the predicate it found, so you
+    -- can read it and decide. It will never let an un-widened sweeper through
+    -- silently, which is the failure that would matter.
+    RAISE NOTICE 'precheck OK: the sweeper is widened and stamps doppler.reason.';
 END
 $precheck$;
 
@@ -316,10 +357,10 @@ BEGIN
       AND subscription_expires_at < now() - interval '3 days';
 
     IF v_n <> 0 THEN
-        -- One placeholder per argument. RAISE treats %% as a literal percent
-        -- and does NOT consume an argument for it, so a stray %% here would
-        -- fail with 'too many parameters specified for RAISE' — at exactly the
-        -- moment the assertion is trying to tell you something.
+        -- Exactly one % per argument, and no %% anywhere. RAISE counts
+        -- placeholders against arguments and errors on a mismatch — which
+        -- would replace this assertion's message with a complaint about the
+        -- assertion itself, at precisely the moment it has something to say.
         RAISE EXCEPTION
             'ASSERT FAILED: % account(s) still pro more than 3 days past expiry: %',
             v_n, v_list;

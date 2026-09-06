@@ -535,6 +535,35 @@ BEGIN
     -- account whose Pro came from revolut, oxapay or an admin grant has been
     -- paid for through a channel this event does not speak for. Only an
     -- app_store/play_store term is genuinely superseded by a store restore.
+    -- REFUSE A TRANSFER THAT CARRIES NO TERM, BEFORE ANY WRITE.
+    --
+    -- The other two branches can absorb a NULL p_expires_at safely:
+    -- subscription_apply_grant returns ignored/no_expiry and writes nothing, so
+    -- the account is left exactly as it was. This branch cannot, because it
+    -- writes to the PREVIOUS owner first — and it has to, since the partial
+    -- UNIQUE index on accounts.original_transaction_id means the new owner
+    -- cannot take the transaction until the old row releases it. Calling
+    -- apply_grant first is therefore not an option: it would raise 23505.
+    --
+    -- So without this guard, a claim with a valid transaction id and no expiry
+    -- would downgrade a store-backed previous owner, move ownership, and then
+    -- grant the new owner NOTHING (ignored/no_expiry, which reports
+    -- success:true). Result: one paid subscription, nobody entitled, and no
+    -- undo — the previous owner's term is already clamped.
+    --
+    -- A transfer event that names no expiry tells us nothing about the term, so
+    -- the correct answer is to move nothing at all and wait for one that does.
+    IF p_expires_at IS NULL THEN
+        RETURN jsonb_build_object(
+            'success',        true,
+            'action',         'ignored',
+            'reason',         'no_expiry',
+            'note',           'transfer refused: event carried no expiry, ownership left with the current owner',
+            'owner',          v_existing_owner,
+            'attempted_owner', p_account_id
+        );
+    END IF;
+
     SELECT subscription_tier, subscription_store, original_transaction_id
       INTO v_prev_tier, v_prev_store, v_prev_txn
     FROM accounts
@@ -592,8 +621,18 @@ BEGIN
         p_product_id              => p_product_id,
         p_set_ownership           => true
     );
+    -- p_expires_at is non-NULL here (guarded at the top of this branch), so
+    -- apply_grant cannot return ignored/no_expiry. The only remaining failure
+    -- is account_not_found, which means the new owner's row was deleted between
+    -- the existence check at the top of this function and now. Returning here
+    -- leaves the previous owner downgraded with ownership not yet moved, so
+    -- RAISE instead: the EXCEPTION handler below turns it into
+    -- {success:false, error:'database_error'} AND rolls back every write this
+    -- call made, which is the only correct outcome mid-transfer.
     IF NOT coalesce((v_grant ->> 'success')::boolean, false) THEN
-        RETURN v_grant;
+        RAISE EXCEPTION
+            'transfer aborted: subscription_apply_grant failed for new owner % — %',
+            p_account_id, v_grant::text;
     END IF;
 
     -- RECONCILE :208-213 — unchanged.
@@ -733,6 +772,20 @@ COMMIT;
 --    -- server rule AND is invisible to the sweeper, so it can never be cleaned up.
 --    -- (An ownership row IS created and kept: the transaction is genuinely
 --    --  claimed by this account, there is simply no term to grant yet.)
+--
+-- 8b. A transfer with NO expiry moves NOTHING:
+--
+--    -- 'T-Y' is owned by account B, which is pro via app_store
+--    SELECT public.claim_subscription('<A>', 'pro', NULL, 'T-Y');
+--    -- expect {"success":true,"action":"ignored","reason":"no_expiry", "owner":"<B>"}
+--    SELECT account_id, subscription_tier, subscription_expires_at, original_transaction_id
+--      FROM public.accounts WHERE account_id IN ('<A>','<B>');
+--    -- expect B UNCHANGED (still pro, still holds T-Y) and A unchanged.
+--    -- Without the guard at the top of the transfer branch this downgraded B,
+--    -- moved ownership to A, and granted A nothing.
+--    SELECT count(*) FROM public.subscription_audit
+--     WHERE account_id IN ('<A>','<B>') AND changed_at > now() - interval '1 minute';
+--    -- expect 0
 --
 -- 9. A transfer away from a legacy row (txn set, store NULL) DOES downgrade:
 --
