@@ -1,0 +1,328 @@
+-- PROPOSAL — not yet applied; apply only after VPnReact/supabase/live/2026-09-06-subscription-rpcs.sql exists and the body below has been reconciled against the live dump
+-- =============================================================================
+-- 20260906T100600 — backfill: restore truncated web terms, then sweep once
+-- =============================================================================
+--
+-- *** THIS IS THE ONLY FILE IN THE BATCH THAT RUNS DML ON accounts. ***
+-- *** RUN IT INTERACTIVELY, STEP BY STEP. DO NOT PASTE IT WHOLE.    ***
+--
+-- Steps 1 and 2 are read-only. Step 3 is the repair and is expected to change
+-- NOTHING. Step 4 runs the widened sweeper once by hand. Step 5 asserts.
+--
+-- It must be run in ONE SQL Editor session, because step 1 creates a TEMP table
+-- that steps 2 and 3 read. A temp table lives for the session, so opening a new
+-- editor tab between steps loses it.
+--
+-- ORDER
+--   20260906T100000 (audit)  — required, or none of this is reversible
+--   20260906T100100 (sync stub)
+--   20260906T100200 (claim guards)
+--   20260906T100300 (revoke guards)
+--   20260906T100400 (admin rpcs)
+--   20260906T100500 (widened sweeper)  — required by step 4
+--   THIS FILE
+--
+-- =============================================================================
+-- PART 7B — reconstruct what web-checkout customers actually paid for
+-- =============================================================================
+--
+-- WHY A RECONSTRUCTION IS POSSIBLE AT ALL
+--   Web checkout never goes through claim_subscription. Both webhooks
+--   (landing/src/app/api/oxapay/webhook/route.ts:144-168,
+--   revolut/webhook/route.ts:191-216) do a raw UPDATE on accounts and insert a
+--   vpn_invoices row. The invoice row is the receipt, and it survives every
+--   writer that has ever mangled the account row. Its `plan` column is
+--   `${planId}:${accountId}` and its `created_at` is when the money arrived.
+--
+--   Plan lengths, from the webhooks' shared PLAN_DAYS map. Web plans bake in
+--   trial compensation because web checkout cannot replicate the 3-day store
+--   trial: monthly 30+7 = 37, 6month 180+14 = 194, yearly 365+30 = 395.
+--
+-- WHAT "FLOOR" MEANS, AND WHY IT IS A FLOOR
+--   entitled_until_floor = max over that account's paid invoices of
+--   (created_at + plan days). It deliberately does NOT model stacking: a
+--   customer who bought two monthlies a week apart is entitled past the max of
+--   the two individual terms, not to it. So the floor UNDER-states the term.
+--   That asymmetry is the point — this backfill may only ever RESTORE time, and
+--   an under-stated floor cannot take any away.
+--
+-- EXPECTED RESULT: ZERO REPAIRS.
+--   All 14 paid-but-lapsed rows are legitimately expired monthlies. The one
+--   live paid web account, VPN-CKC4-…, is pro to 2026-12-05 and already
+--   agrees with its invoice. If step 2 returns rows, something has been
+--   truncated and it is worth understanding WHICH writer did it — the audit
+--   trail from 20260906T100000 will say, for anything that happens from now on.
+-- =============================================================================
+
+
+-- -----------------------------------------------------------------------------
+-- STEP 1 — build the reconstruction (read-only; creates a TEMP table)
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS web_invoice_terms;
+
+CREATE TEMP TABLE web_invoice_terms AS
+WITH paid AS (
+    SELECT
+        split_part(plan, ':', 1) AS plan_id,
+        split_part(plan, ':', 2) AS account_id,
+        provider,
+        created_at
+    FROM public.vpn_invoices
+    WHERE status = 'paid'
+      -- Anchored on both ends. A plan string that does not match this exactly
+      -- is not something this backfill understands, and guessing at it is how
+      -- a backfill grants a year to the wrong person. dump-queries §7 lists
+      -- every paid invoice that fails this regex; if that list is non-empty,
+      -- widen the regex deliberately before trusting anything below.
+      AND plan ~ '^(monthly|6month|yearly):VPN-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$'
+),
+termed AS (
+    SELECT
+        account_id,
+        provider,
+        created_at,
+        plan_id,
+        CASE plan_id
+            WHEN 'monthly' THEN 37     -- 30 + 7 trial compensation
+            WHEN '6month'  THEN 194    -- 180 + 14
+            WHEN 'yearly'  THEN 395    -- 365 + 30
+        END AS days
+    FROM paid
+)
+SELECT
+    account_id,
+    max(created_at + make_interval(days => days))              AS entitled_until_floor,
+    count(*)                                                   AS paid_invoices,
+    max(created_at)                                            AS last_paid_at,
+    (array_agg(provider ORDER BY created_at DESC))[1]          AS last_provider,
+    (array_agg(plan_id  ORDER BY created_at DESC))[1]          AS last_plan
+FROM termed
+GROUP BY account_id;
+
+-- Sanity: how many accounts were reconstructed, and how many still have a live
+-- floor. Compare against dump-queries §7's pre-change count.
+SELECT count(*)                                                    AS accounts_with_paid_invoices,
+       count(*) FILTER (WHERE entitled_until_floor > now())         AS floor_still_in_future,
+       min(entitled_until_floor)                                    AS earliest_floor,
+       max(entitled_until_floor)                                    AS latest_floor
+FROM web_invoice_terms;
+
+
+-- -----------------------------------------------------------------------------
+-- STEP 2 — REVIEW. Read this output before running step 3.
+-- -----------------------------------------------------------------------------
+-- Every row here is an account that PAID for a term still running, whose
+-- accounts row disagrees. `disagreement` says how.
+--
+-- EXPECTED: zero rows.
+SELECT
+    a.account_id,
+    a.subscription_tier,
+    a.subscription_store,
+    a.subscription_expires_at,
+    t.entitled_until_floor,
+    t.entitled_until_floor - coalesce(a.subscription_expires_at, '-infinity'::timestamptz)
+                                              AS shortfall,
+    t.paid_invoices,
+    t.last_paid_at,
+    t.last_provider,
+    t.last_plan,
+    a.updated_at,
+    CASE
+        WHEN a.subscription_tier IS NULL OR a.subscription_tier = 'free'
+             THEN 'tier is free but a paid term is still running'
+        WHEN a.subscription_expires_at IS NULL
+             THEN 'tier is pro but expiry was nulled'
+        ELSE 'expiry is earlier than the paid term'
+    END                                       AS disagreement
+FROM web_invoice_terms t
+JOIN public.accounts a ON a.account_id = t.account_id
+WHERE t.entitled_until_floor > now()
+  AND (
+        a.subscription_tier IS NULL
+     OR a.subscription_tier = 'free'
+     OR a.subscription_expires_at IS NULL
+     OR a.subscription_expires_at < t.entitled_until_floor
+  )
+ORDER BY shortfall DESC;
+
+-- The other half of the picture: paid web accounts that are legitimately
+-- expired. These must NOT be repaired; they are listed so that "14 paid rows,
+-- 0 repairs" can be shown to add up rather than asserted.
+SELECT
+    a.account_id, a.subscription_tier, a.subscription_store,
+    a.subscription_expires_at, t.entitled_until_floor,
+    now() - t.entitled_until_floor AS expired_for
+FROM web_invoice_terms t
+JOIN public.accounts a ON a.account_id = t.account_id
+WHERE t.entitled_until_floor <= now()
+ORDER BY t.entitled_until_floor DESC;
+
+
+-- -----------------------------------------------------------------------------
+-- STEP 3 — REPAIR. Run ONLY if step 2 returned rows.
+-- -----------------------------------------------------------------------------
+-- Wrapped in an explicit transaction so the audit output can be read before
+-- committing. Change the final ROLLBACK to COMMIT only when the audit rows
+-- printed inside it are what you expect.
+--
+-- GREATEST(current, floor) — this can only ever move an expiry FORWARD. It
+-- never shortens, never downgrades, and never touches an account whose row
+-- already agrees.
+--
+--   BEGIN;
+--
+--     SELECT set_config('doppler.reason',
+--                       'backfill 2026-09-06: paid web invoice term restored', true),
+--            set_config('doppler.actor', '<your name>', true);
+--
+--     UPDATE public.accounts a SET
+--         subscription_tier       = 'pro',
+--         subscription_expires_at = GREATEST(
+--                                       coalesce(a.subscription_expires_at, t.entitled_until_floor),
+--                                       t.entitled_until_floor),
+--         -- Only fills a NULL store. An account that already says app_store or
+--         -- oxapay keeps saying it; this backfill is not evidence about the
+--         -- channel, only about the term.
+--         subscription_store      = coalesce(a.subscription_store, t.last_provider),
+--         updated_at              = now()
+--     FROM web_invoice_terms t
+--     WHERE a.account_id = t.account_id
+--       AND t.entitled_until_floor > now()
+--       AND (
+--             a.subscription_tier IS NULL
+--          OR a.subscription_tier = 'free'
+--          OR a.subscription_expires_at IS NULL
+--          OR a.subscription_expires_at < t.entitled_until_floor
+--       );
+--
+--     -- Read what the repair actually did, from the audit trail it just wrote:
+--     SELECT account_id, old_tier, new_tier, old_expires_at, new_expires_at,
+--            old_store, new_store, writer_fn, reason, actor
+--     FROM public.subscription_audit
+--     WHERE reason = 'backfill 2026-09-06: paid web invoice term restored'
+--     ORDER BY id DESC;
+--     -- expect: one row per repair, writer_fn NULL (plain SQL, no function in
+--     --         the stack), every new_expires_at >= its old_expires_at
+--
+--   ROLLBACK;   -- <- change to COMMIT when the above is right
+--
+-- Note the temp table survives the ROLLBACK only if it was created in an
+-- earlier transaction, which it was (step 1 is not inside a BEGIN). If you
+-- wrapped step 1 too, re-run it.
+
+
+-- -----------------------------------------------------------------------------
+-- PART 7A — STEP 4. Run the widened sweeper ONCE, by hand.
+-- -----------------------------------------------------------------------------
+-- Requires 20260906T100500 to be applied. It would run on its own within six
+-- hours anyway; running it here means it happens while somebody is watching,
+-- immediately after the repair, with the before/after in the same session.
+--
+--   SELECT set_config('doppler.actor', '<your name>', true);
+--   SELECT public.downgrade_expired_subscriptions();
+--   -- expect {"success":true,"downgraded":N,...} where N ≈ the count the
+--   -- 20260906T100500 guard block printed as a NOTICE
+--
+-- What it just swept, in full:
+--
+--   SELECT changed_at, account_id, old_tier, old_store, old_expires_at,
+--          now() - old_expires_at AS was_overdue_by, reason
+--   FROM public.subscription_audit
+--   WHERE writer_fn = 'downgrade_expired_subscriptions'
+--     AND changed_at > now() - interval '10 minutes'
+--   ORDER BY changed_at;
+--   -- every row should be a revolut/oxapay account 4-111 days past expiry.
+--   -- A store row here means the sweeper was already reaching those, which is
+--   -- expected: they were inside the 3-day grace before and are not now.
+
+
+-- -----------------------------------------------------------------------------
+-- STEP 5 — ASSERT. Nothing is left stuck.
+-- -----------------------------------------------------------------------------
+-- Run after step 4. Raises if the sweep did not finish the job.
+--
+--   DO $assert$
+--   DECLARE
+--       v_n    integer;
+--       v_list text;
+--   BEGIN
+--       SELECT count(*), string_agg(account_id || ' (' || coalesce(subscription_store,'null')
+--                                   || ', ' || (now() - subscription_expires_at)::text || ')', E'\n')
+--         INTO v_n, v_list
+--       FROM public.accounts
+--       WHERE subscription_tier IS NOT NULL
+--         AND subscription_tier <> 'free'
+--         AND subscription_expires_at IS NOT NULL
+--         AND subscription_expires_at < now() - interval '3 days';
+--
+--       IF v_n <> 0 THEN
+--           RAISE EXCEPTION
+--             'ASSERT FAILED: % account(s) still pro more than 3 days past expiry:%s%',
+--             v_n, E'\n', v_list;
+--       END IF;
+--
+--       RAISE NOTICE 'ASSERT OK: no account is pro more than 3 days past its expiry.';
+--   END
+--   $assert$;
+--
+-- Also worth checking, and NOT an assertion because a small number is normal
+-- (rows inside the 3-day grace):
+--
+--   SELECT account_id, subscription_store, subscription_expires_at,
+--          now() - subscription_expires_at AS overdue_by
+--   FROM public.accounts
+--   WHERE subscription_tier <> 'free'
+--     AND subscription_expires_at IS NOT NULL
+--     AND subscription_expires_at < now()
+--   ORDER BY subscription_expires_at;
+
+
+-- -----------------------------------------------------------------------------
+-- CLEANUP
+-- -----------------------------------------------------------------------------
+--   DROP TABLE IF EXISTS web_invoice_terms;
+--   (or just close the session — a TEMP table does not outlive it)
+
+
+-- =============================================================================
+-- ROLLBACK — from subscription_audit, which is why 20260906T100000 goes first
+-- =============================================================================
+--
+-- Undo the STEP 3 repair. Restores each repaired account to exactly the values
+-- it held immediately before, reading them out of the trail the repair wrote:
+--
+--   BEGIN;
+--     SELECT set_config('doppler.reason',
+--                       'rollback of backfill 2026-09-06', true),
+--            set_config('doppler.actor', '<your name>', true);
+--
+--     UPDATE public.accounts a SET
+--         subscription_tier       = s.old_tier,
+--         subscription_expires_at = s.old_expires_at,
+--         subscription_store      = s.old_store,
+--         updated_at              = now()
+--     FROM public.subscription_audit s
+--     WHERE s.reason = 'backfill 2026-09-06: paid web invoice term restored'
+--       AND s.account_id = a.account_id
+--       AND s.id = (
+--             SELECT max(x.id) FROM public.subscription_audit x
+--             WHERE x.account_id = a.account_id
+--               AND x.reason = 'backfill 2026-09-06: paid web invoice term restored'
+--           );
+--
+--     SELECT account_id, subscription_tier, subscription_expires_at, subscription_store
+--     FROM public.accounts
+--     WHERE account_id IN (
+--         SELECT account_id FROM public.subscription_audit
+--         WHERE reason = 'backfill 2026-09-06: paid web invoice term restored'
+--     );
+--   ROLLBACK;   -- <- change to COMMIT when the above is right
+--
+-- Undo the STEP 4 sweep: see the ROLLBACK section of
+-- 20260906T100500_downgrade_expired_subscriptions.sql. Note that reversing the
+-- sweep restores rows to pro-with-a-past-expiry, which the server treats as NOT
+-- entitled anyway (the four-conjunct rule in §1). Reversing it changes what the
+-- row SAYS, not what the customer can do.
+--
+-- =============================================================================
