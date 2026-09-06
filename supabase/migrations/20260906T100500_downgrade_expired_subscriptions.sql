@@ -1,16 +1,31 @@
 -- PROPOSAL — not yet applied; apply only after VPnReact/supabase/live/2026-09-06-subscription-rpcs.sql exists and the body below has been reconciled against the live dump
 --
--- *** DEFINE ONLY — DO NOT APPLY UNTIL 20260906T100600 (the backfill) HAS RUN ***
+-- *** DEFINE ONLY — APPLY IN THE MIDDLE OF 20260906T100600, NOT AFTER IT ***
 --
--- This file changes a function that pg_cron already calls every six hours. The
--- moment it is applied, the NEXT scheduled run sweeps a population it has never
--- swept before: the ~11 stuck revolut/oxapay accounts. If any of those rows is
--- actually a paying customer whose term was truncated by one of the writers
--- this batch fixes, the sweep makes that permanent and silent.
+-- 20260906T100600 is deliberately run in TWO SITTINGS and this file goes
+-- between them. This is the single true order; T100600 carries the same block
+-- under the heading "THE APPLY ORDER", and if the two ever disagree they are
+-- both wrong and must be fixed together.
 --
--- 20260906T100600 exists to answer that question first: it reconstructs each
--- web-checkout account's paid term from vpn_invoices, REVIEWs the disagreements
--- and repairs them, and only then runs this sweeper once by hand.
+--   1-5.  apply 20260906T100000 / T100100 / T100200 / T100300 / T100400
+--   6.    run 20260906T100600 STEPS 1-3   (temp table -> REVIEW -> REPAIR)
+--   7.    >>> APPLY THIS FILE <<<
+--   8.    run 20260906T100600 STEPS 4-5   (one manual sweep -> ASSERT)
+--
+-- WHY THE ORDER IS THIS AND NOT SOMETHING SIMPLER
+--   Step 6 must precede step 7: this file changes a function that pg_cron
+--   already calls every six hours, so the moment it is applied the NEXT
+--   scheduled run sweeps a population it has never swept before — the ~11
+--   stuck revolut/oxapay accounts. If any of those is a paying customer whose
+--   term was truncated by one of the writers this batch fixes, the sweep makes
+--   that permanent and silent. T100600 steps 1-3 reconstruct each web-checkout
+--   account's paid term from vpn_invoices and repair it first.
+--
+--   Step 8 cannot precede step 7: the widened body has to exist before it can
+--   be run. T100600's step 4 refuses to run if this file has not been applied.
+--
+--   No ordering of whole files satisfies both constraints, which is why
+--   T100600 is split rather than this file being moved.
 --
 -- DO NOT TOUCH cron.job in this file or in any file in this batch. The schedule
 -- is correct; only the WHERE clause is wrong. Adding a second cron entry would

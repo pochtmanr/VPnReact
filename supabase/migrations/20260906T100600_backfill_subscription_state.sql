@@ -6,21 +6,52 @@
 -- *** THIS IS THE ONLY FILE IN THE BATCH THAT RUNS DML ON accounts. ***
 -- *** RUN IT INTERACTIVELY, STEP BY STEP. DO NOT PASTE IT WHOLE.    ***
 --
--- Steps 1 and 2 are read-only. Step 3 is the repair and is expected to change
--- NOTHING. Step 4 runs the widened sweeper once by hand. Step 5 asserts.
+-- Steps 1 and 2 are read-only. Steps 3, 4 and 5 are live and are each marked
+--     <<< OPERATOR: ... >>>
+-- Step 3 is the repair and is expected to change NOTHING. Step 4 runs the
+-- widened sweeper once by hand. Step 5 asserts that nothing is left stuck.
 --
--- It must be run in ONE SQL Editor session, because step 1 creates a TEMP table
--- that steps 2 and 3 read. A temp table lives for the session, so opening a new
--- editor tab between steps loses it.
+-- There is a HARD STOP between step 3 and step 4: migration T100500 must be
+-- applied in between. See THE APPLY ORDER below.
 --
--- ORDER
---   20260906T100000 (audit)  — required, or none of this is reversible
---   20260906T100100 (sync stub)
---   20260906T100200 (claim guards)
---   20260906T100300 (revoke guards)
---   20260906T100400 (admin rpcs)
---   20260906T100500 (widened sweeper)  — required by step 4
---   THIS FILE
+-- =============================================================================
+-- THE APPLY ORDER — this file is SPLIT ACROSS the T100500 migration
+-- =============================================================================
+-- This is the single true order. T100500's header states the same sequence;
+-- if the two ever disagree, THIS block and T100500's are both wrong and must be
+-- fixed together.
+--
+--   1.  apply 20260906T100000_subscription_audit.sql       (required: nothing
+--                                                           below is reversible
+--                                                           without the trail)
+--   2.  apply 20260906T100100_lock_sync_subscription.sql
+--   3.  apply 20260906T100200_claim_subscription_guards.sql
+--   4.  apply 20260906T100300_revoke_subscription_guards.sql
+--   5.  apply 20260906T100400_admin_subscription_rpcs.sql
+--
+--   6.  >>> THIS FILE, STEPS 1-3 <<<   temp table -> REVIEW -> REPAIR
+--       Restores any web-checkout term that was truncated. Must happen BEFORE
+--       the sweeper is widened, or a truncated row gets swept to free and the
+--       evidence that it was ever paid stops being actionable.
+--
+--   7.  apply 20260906T100500_downgrade_expired_subscriptions.sql
+--       DEFINE ONLY — it changes a function pg_cron already calls every six
+--       hours, so from this moment the widened sweep WILL happen on its own
+--       within six hours whether or not step 8 is run.
+--
+--   8.  >>> THIS FILE, STEPS 4-5 <<<   one manual sweep -> ASSERT
+--       Runs the widened sweeper immediately, with somebody watching, instead
+--       of waiting for the cron tick.
+--
+-- Why the split: step 6 must precede step 7 (repair before sweep), and step 8
+-- cannot run before step 7 (the widened body has to exist). There is no
+-- ordering of whole files that satisfies both, so this file is deliberately
+-- run in two sittings.
+--
+-- It must be run in ONE SQL Editor SESSION across both sittings, because step 1
+-- creates a TEMP table that steps 2 and 3 read. A temp table lives for the
+-- session, so opening a new editor tab between steps loses it. If that happens,
+-- re-run step 1 — it is idempotent and read-only.
 --
 -- =============================================================================
 -- PART 7B — reconstruct what web-checkout customers actually paid for
@@ -163,122 +194,151 @@ ORDER BY t.entitled_until_floor DESC;
 
 
 -- -----------------------------------------------------------------------------
--- STEP 3 — REPAIR. Run ONLY if step 2 returned rows.
+-- STEP 3 — REPAIR.  <<< OPERATOR: run after reviewing the SELECT above >>>
 -- -----------------------------------------------------------------------------
--- Wrapped in an explicit transaction so the audit output can be read before
--- committing. Change the final ROLLBACK to COMMIT only when the audit rows
--- printed inside it are what you expect.
+-- If STEP 2 returned NO rows, this transaction updates nothing and the COMMIT
+-- is a no-op. That is the expected outcome. Run it anyway — a no-op COMMIT is
+-- cheaper than a skipped step somebody has to reason about later.
+--
+-- If STEP 2 DID return rows, read them first. This is a live UPDATE on
+-- accounts, and it is the only DML on accounts in the entire 2026-09-06 batch.
 --
 -- GREATEST(current, floor) — this can only ever move an expiry FORWARD. It
 -- never shortens, never downgrades, and never touches an account whose row
 -- already agrees.
 --
---   BEGIN;
---
---     SELECT set_config('doppler.reason',
---                       'backfill 2026-09-06: paid web invoice term restored', true),
---            set_config('doppler.actor', '<your name>', true);
---
---     UPDATE public.accounts a SET
---         subscription_tier       = 'pro',
---         subscription_expires_at = GREATEST(
---                                       coalesce(a.subscription_expires_at, t.entitled_until_floor),
---                                       t.entitled_until_floor),
---         -- Only fills a NULL store. An account that already says app_store or
---         -- oxapay keeps saying it; this backfill is not evidence about the
---         -- channel, only about the term.
---         subscription_store      = coalesce(a.subscription_store, t.last_provider),
---         updated_at              = now()
---     FROM web_invoice_terms t
---     WHERE a.account_id = t.account_id
---       AND t.entitled_until_floor > now()
---       AND (
---             a.subscription_tier IS NULL
---          OR a.subscription_tier = 'free'
---          OR a.subscription_expires_at IS NULL
---          OR a.subscription_expires_at < t.entitled_until_floor
---       );
---
---     -- Read what the repair actually did, from the audit trail it just wrote:
---     SELECT account_id, old_tier, new_tier, old_expires_at, new_expires_at,
---            old_store, new_store, writer_fn, reason, actor
---     FROM public.subscription_audit
---     WHERE reason = 'backfill 2026-09-06: paid web invoice term restored'
---     ORDER BY id DESC;
---     -- expect: one row per repair, writer_fn NULL (plain SQL, no function in
---     --         the stack), every new_expires_at >= its old_expires_at
---
---   ROLLBACK;   -- <- change to COMMIT when the above is right
---
--- Note the temp table survives the ROLLBACK only if it was created in an
--- earlier transaction, which it was (step 1 is not inside a BEGIN). If you
--- wrapped step 1 too, re-run it.
+-- Set the actor to your own name before running.
+
+BEGIN;
+
+SELECT set_config('doppler.reason',
+                  'backfill 2026-09-06: paid web invoice term restored', true),
+       set_config('doppler.actor', '(set me)', true);
+
+UPDATE public.accounts a SET
+    subscription_tier       = 'pro',
+    subscription_expires_at = GREATEST(
+                                  coalesce(a.subscription_expires_at, t.entitled_until_floor),
+                                  t.entitled_until_floor),
+    -- Only fills a NULL store. An account that already says app_store or
+    -- oxapay keeps saying it; this backfill is evidence about the TERM, not
+    -- about the channel.
+    subscription_store      = coalesce(a.subscription_store, t.last_provider),
+    updated_at              = now()
+FROM web_invoice_terms t
+WHERE a.account_id = t.account_id
+  AND t.entitled_until_floor > now()
+  AND (
+        a.subscription_tier IS NULL
+     OR a.subscription_tier = 'free'
+     OR a.subscription_expires_at IS NULL
+     OR a.subscription_expires_at < t.entitled_until_floor
+  );
+
+-- Read what the repair actually did, from the audit trail it just wrote.
+-- Expect: one row per repair, writer_fn NULL (plain SQL, no function in the
+-- stack), and every new_expires_at >= its old_expires_at. Zero rows is the
+-- expected result overall.
+SELECT account_id, old_tier, new_tier, old_expires_at, new_expires_at,
+       old_store, new_store, writer_fn, reason, actor
+FROM public.subscription_audit
+WHERE reason = 'backfill 2026-09-06: paid web invoice term restored'
+ORDER BY id DESC;
+
+COMMIT;
+-- ^ If the audit rows above are NOT what you expect, run ROLLBACK instead of
+--   COMMIT. The temp table survives either way: step 1 was not inside this
+--   transaction.
+
+
+-- =============================================================================
+-- ===  STOP.  Apply 20260906T100500_downgrade_expired_subscriptions.sql now. ===
+-- ===  Then come back and run steps 4 and 5 in THIS SAME SESSION.           ===
+-- =============================================================================
 
 
 -- -----------------------------------------------------------------------------
--- PART 7A — STEP 4. Run the widened sweeper ONCE, by hand.
+-- PART 7A — STEP 4.  <<< OPERATOR: run only after applying T100500 >>>
 -- -----------------------------------------------------------------------------
--- Requires 20260906T100500 to be applied. It would run on its own within six
+-- Run the widened sweeper ONCE, by hand. It would run on its own within six
 -- hours anyway; running it here means it happens while somebody is watching,
 -- immediately after the repair, with the before/after in the same session.
 --
---   SELECT set_config('doppler.actor', '<your name>', true);
---   SELECT public.downgrade_expired_subscriptions();
---   -- expect {"success":true,"downgraded":N,...} where N ≈ the count the
---   -- 20260906T100500 guard block printed as a NOTICE
---
--- What it just swept, in full:
---
---   SELECT changed_at, account_id, old_tier, old_store, old_expires_at,
---          now() - old_expires_at AS was_overdue_by, reason
---   FROM public.subscription_audit
---   WHERE writer_fn = 'downgrade_expired_subscriptions'
---     AND changed_at > now() - interval '10 minutes'
---   ORDER BY changed_at;
---   -- every row should be a revolut/oxapay account 4-111 days past expiry.
---   -- A store row here means the sweeper was already reaching those, which is
---   -- expected: they were inside the 3-day grace before and are not now.
+-- If T100500 has NOT been applied, this calls the OLD store-filtered body and
+-- silently does nothing useful — which is why the guard below refuses to run.
+
+DO $precheck$
+BEGIN
+    IF pg_get_functiondef('public.downgrade_expired_subscriptions()'::regprocedure)
+       NOT LIKE '%expiry sweep%' THEN
+        RAISE EXCEPTION
+            'ABORT: 20260906T100500 has not been applied — downgrade_expired_subscriptions is still the old store-filtered body. Apply it, then re-run this step.';
+    END IF;
+END
+$precheck$;
+
+SELECT set_config('doppler.actor', '(set me)', true);
+
+SELECT public.downgrade_expired_subscriptions();
+-- expect {"success":true,"downgraded":N,...} where N is close to the count the
+-- T100500 guard block printed as a NOTICE.
+
+-- What it just swept, in full. Every row should be a revolut/oxapay account
+-- 4-111 days past expiry. A store row here is expected too: those were inside
+-- the 3-day grace before and are not now.
+SELECT changed_at, account_id, old_tier, old_store, old_expires_at,
+       now() - old_expires_at AS was_overdue_by, reason
+FROM public.subscription_audit
+WHERE writer_fn = 'downgrade_expired_subscriptions'
+  AND changed_at > now() - interval '10 minutes'
+ORDER BY changed_at;
 
 
 -- -----------------------------------------------------------------------------
--- STEP 5 — ASSERT. Nothing is left stuck.
+-- STEP 5 — ASSERT.  <<< OPERATOR: run immediately after step 4 >>>
 -- -----------------------------------------------------------------------------
--- Run after step 4. Raises if the sweep did not finish the job.
---
---   DO $assert$
---   DECLARE
---       v_n    integer;
---       v_list text;
---   BEGIN
---       SELECT count(*), string_agg(account_id || ' (' || coalesce(subscription_store,'null')
---                                   || ', ' || (now() - subscription_expires_at)::text || ')', E'\n')
---         INTO v_n, v_list
---       FROM public.accounts
---       WHERE subscription_tier IS NOT NULL
---         AND subscription_tier <> 'free'
---         AND subscription_expires_at IS NOT NULL
---         AND subscription_expires_at < now() - interval '3 days';
---
---       IF v_n <> 0 THEN
---           RAISE EXCEPTION
---             'ASSERT FAILED: % account(s) still pro more than 3 days past expiry:%s%',
---             v_n, E'\n', v_list;
---       END IF;
---
---       RAISE NOTICE 'ASSERT OK: no account is pro more than 3 days past its expiry.';
---   END
---   $assert$;
---
--- Also worth checking, and NOT an assertion because a small number is normal
--- (rows inside the 3-day grace):
---
---   SELECT account_id, subscription_store, subscription_expires_at,
---          now() - subscription_expires_at AS overdue_by
---   FROM public.accounts
---   WHERE subscription_tier <> 'free'
---     AND subscription_expires_at IS NOT NULL
---     AND subscription_expires_at < now()
---   ORDER BY subscription_expires_at;
+-- Raises if the sweep did not finish the job. Nothing may be left pro more than
+-- three days past its expiry.
+
+DO $assert$
+DECLARE
+    v_n    integer;
+    v_list text;
+BEGIN
+    SELECT count(*),
+           string_agg(account_id || ' (' || coalesce(subscription_store, 'null')
+                      || ', ' || (now() - subscription_expires_at)::text || ' overdue)', E'\n')
+      INTO v_n, v_list
+    FROM public.accounts
+    WHERE subscription_tier IS NOT NULL
+      AND subscription_tier <> 'free'
+      AND subscription_expires_at IS NOT NULL
+      AND subscription_expires_at < now() - interval '3 days';
+
+    IF v_n <> 0 THEN
+        -- One placeholder per argument. RAISE treats %% as a literal percent
+        -- and does NOT consume an argument for it, so a stray %% here would
+        -- fail with 'too many parameters specified for RAISE' — at exactly the
+        -- moment the assertion is trying to tell you something.
+        RAISE EXCEPTION
+            'ASSERT FAILED: % account(s) still pro more than 3 days past expiry: %',
+            v_n, v_list;
+    END IF;
+
+    RAISE NOTICE 'ASSERT OK: no account is pro more than 3 days past its expiry.';
+END
+$assert$;
+
+-- Also worth reading, and deliberately NOT an assertion — a small number here
+-- is normal, because rows inside the 3-day grace have not been swept yet:
+SELECT account_id, subscription_store, subscription_expires_at,
+       now() - subscription_expires_at AS overdue_by
+FROM public.accounts
+WHERE subscription_tier IS NOT NULL
+  AND subscription_tier <> 'free'
+  AND subscription_expires_at IS NOT NULL
+  AND subscription_expires_at < now()
+ORDER BY subscription_expires_at;
 
 
 -- -----------------------------------------------------------------------------

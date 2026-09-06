@@ -22,7 +22,9 @@
 --   * creates public.subscription_audit_row() — the trigger function, which
 --     reads the PL/pgSQL call stack (GET DIAGNOSTICS … PG_CONTEXT) to record
 --     WHICH FUNCTION did the write, plus the PostgREST request context
---   * attaches two AFTER triggers to public.accounts
+--   * attaches three AFTER triggers to public.accounts (INSERT of an
+--     already-entitled row, UPDATE of any of the five columns, DELETE of a
+--     non-free row)
 --
 -- WHAT IT DOES NOT DO
 --   No DML on accounts. No change to any existing function. This file is safe
@@ -58,7 +60,8 @@ BEGIN
       AND c.relname = 'accounts'
       AND NOT t.tgisinternal
       AND t.tgname LIKE '%audit%'
-      AND t.tgname NOT IN ('trg_accounts_subscription_audit_upd',
+      AND t.tgname NOT IN ('trg_accounts_subscription_audit_ins',
+                           'trg_accounts_subscription_audit_upd',
                            'trg_accounts_subscription_audit_del');
 
     IF v_existing IS NOT NULL THEN
@@ -83,7 +86,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_audit (
     account_id        text,
     account_uuid      uuid,
 
-    op                text NOT NULL CHECK (op IN ('UPDATE', 'DELETE')),
+    op                text NOT NULL CHECK (op IN ('INSERT', 'UPDATE', 'DELETE')),
 
     -- The five columns that decide entitlement, before and after.
     old_tier          text,
@@ -181,6 +184,11 @@ AS $fn$
 DECLARE
     v_row        public.accounts%ROWTYPE;
     v_op         text;
+    v_old_tier       text;
+    v_old_expires_at timestamptz;
+    v_old_store      text;
+    v_old_txn        text;
+    v_old_synced_at  timestamptz;
     v_new_tier       text;
     v_new_expires_at timestamptz;
     v_new_store      text;
@@ -194,22 +202,46 @@ DECLARE
     v_user_agent text;
     v_client_ip  text;
 BEGIN
-    -- NEW is unassigned in a DELETE trigger and referencing any of its fields
-    -- raises, even from inside a CASE arm that is not taken — PL/pgSQL has to
-    -- supply the row as a query parameter before the expression runs. So the
-    -- new-side values are read here, in the branch where NEW exists, and the
-    -- INSERT below never mentions NEW at all.
+    -- NEW is unassigned in a DELETE trigger, and OLD is unassigned in an INSERT
+    -- trigger. Referencing any field of an unassigned record raises — even from
+    -- inside a CASE arm that is not taken, because PL/pgSQL has to supply the
+    -- row as a query parameter before the expression runs. So every side is
+    -- read here, in the branch where that record actually exists, and the
+    -- INSERT below mentions neither OLD nor NEW.
     IF TG_OP = 'DELETE' THEN
         v_row := OLD;
         v_op  := 'DELETE';
+        v_old_tier       := OLD.subscription_tier;
+        v_old_expires_at := OLD.subscription_expires_at;
+        v_old_store      := OLD.subscription_store;
+        v_old_txn        := OLD.original_transaction_id;
+        v_old_synced_at  := OLD.revenuecat_synced_at;
         v_new_tier       := NULL;
         v_new_expires_at := NULL;
         v_new_store      := NULL;
         v_new_txn        := NULL;
         v_new_synced_at  := NULL;
+    ELSIF TG_OP = 'INSERT' THEN
+        v_row := NEW;
+        v_op  := 'INSERT';
+        v_old_tier       := NULL;
+        v_old_expires_at := NULL;
+        v_old_store      := NULL;
+        v_old_txn        := NULL;
+        v_old_synced_at  := NULL;
+        v_new_tier       := NEW.subscription_tier;
+        v_new_expires_at := NEW.subscription_expires_at;
+        v_new_store      := NEW.subscription_store;
+        v_new_txn        := NEW.original_transaction_id;
+        v_new_synced_at  := NEW.revenuecat_synced_at;
     ELSE
         v_row := NEW;
         v_op  := 'UPDATE';
+        v_old_tier       := OLD.subscription_tier;
+        v_old_expires_at := OLD.subscription_expires_at;
+        v_old_store      := OLD.subscription_store;
+        v_old_txn        := OLD.original_transaction_id;
+        v_old_synced_at  := OLD.revenuecat_synced_at;
         v_new_tier       := NEW.subscription_tier;
         v_new_expires_at := NEW.subscription_expires_at;
         v_new_store      := NEW.subscription_store;
@@ -284,11 +316,11 @@ BEGIN
         v_row.account_id,
         v_row.id,
         v_op,
-        OLD.subscription_tier,        v_new_tier,
-        OLD.subscription_expires_at,  v_new_expires_at,
-        OLD.subscription_store,       v_new_store,
-        OLD.original_transaction_id,  v_new_txn,
-        OLD.revenuecat_synced_at,     v_new_synced_at,
+        v_old_tier,       v_new_tier,
+        v_old_expires_at, v_new_expires_at,
+        v_old_store,      v_new_store,
+        v_old_txn,        v_new_txn,
+        v_old_synced_at,  v_new_synced_at,
         v_writer,
         v_ctx,
         v_jwt_role,
@@ -342,6 +374,27 @@ WHEN (
 )
 EXECUTE FUNCTION public.subscription_audit_row();
 
+DROP TRIGGER IF EXISTS trg_accounts_subscription_audit_ins ON public.accounts;
+
+-- An account is normally created free and upgraded later, which the UPDATE
+-- trigger catches. An account created ALREADY non-free is a different thing:
+-- create_account() does not do it, so it means somebody inserted a row with an
+-- entitlement pre-attached — a migration, a support script, a direct write from
+-- the admin panel or a bot. Without this trigger such a row has no audit entry
+-- at all: it simply exists, Pro, with nothing to say where it came from.
+--
+-- Deliberately narrower than the UPDATE trigger: a plain free account creation
+-- is the overwhelmingly common case and writes nothing here.
+CREATE TRIGGER trg_accounts_subscription_audit_ins
+AFTER INSERT ON public.accounts
+FOR EACH ROW
+WHEN (
+       (NEW.subscription_tier IS NOT NULL AND NEW.subscription_tier <> 'free')
+    OR NEW.subscription_expires_at IS NOT NULL
+    OR NEW.original_transaction_id IS NOT NULL
+)
+EXECUTE FUNCTION public.subscription_audit_row();
+
 DROP TRIGGER IF EXISTS trg_accounts_subscription_audit_del ON public.accounts;
 
 -- Deleting a free account is routine (delete_account exists and clients call
@@ -372,13 +425,23 @@ COMMIT;
 --    WHERE n.nspname='public' AND c.relname='subscription_audit';
 --    -- expect: rls_enabled = t, n_policies = 0, acl = only the owner
 --
--- 2. Both triggers are attached and enabled.
+-- 2. All three triggers are attached and enabled.
 --
 --    SELECT tgname, tgenabled, pg_get_triggerdef(oid)
 --    FROM pg_trigger
 --    WHERE tgrelid='public.accounts'::regclass AND NOT tgisinternal
 --      AND tgname LIKE 'trg_accounts_subscription_audit%';
---    -- expect: 2 rows, tgenabled='O'
+--    -- expect: 3 rows (…_ins, …_upd, …_del), tgenabled='O'
+--
+-- 2b. An account born entitled is recorded:
+--
+--    BEGIN;
+--      INSERT INTO public.accounts (account_id, subscription_tier, subscription_expires_at)
+--      VALUES ('VPN-AUDT-TEST-0001', 'pro', now() + interval '1 day');
+--      SELECT account_id, op, old_tier, new_tier, writer_fn
+--        FROM public.subscription_audit ORDER BY id DESC LIMIT 1;
+--      -- expect op='INSERT', old_tier NULL, new_tier 'pro'
+--    ROLLBACK;
 --
 -- 3. End-to-end, on a row that does not matter. Pick a genuinely free account
 --    with no txn and no expiry, and put it back afterwards. This is the ONLY
@@ -413,6 +476,7 @@ COMMIT;
 -- =============================================================================
 --
 --   BEGIN;
+--     DROP TRIGGER IF EXISTS trg_accounts_subscription_audit_ins ON public.accounts;
 --     DROP TRIGGER IF EXISTS trg_accounts_subscription_audit_upd ON public.accounts;
 --     DROP TRIGGER IF EXISTS trg_accounts_subscription_audit_del ON public.accounts;
 --     DROP FUNCTION IF EXISTS public.subscription_audit_row();

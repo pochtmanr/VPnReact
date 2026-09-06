@@ -217,10 +217,37 @@ BEGIN
               AND v_cur_expires IS NOT NULL
               AND v_cur_expires > now();
 
-    -- A NULL requested expiry means the event carried none. Leave the term
-    -- alone rather than nulling it: revoke_subscription and the sweeper are the
-    -- only things allowed to end a term.
+    -- A NULL requested expiry means the event carried none — a
+    -- NON_RENEWING_PURCHASE with no expiration_at_ms, or any anon caller that
+    -- simply omits p_expires_at.
+    --
+    -- If the account is NOT currently entitled there is nothing to extend and
+    -- no term to write, so this writes NOTHING. Falling through would set
+    -- tier='pro' with expires_at NULL, which is:
+    --   * not entitled by the server rule (get_servers_v2 requires
+    --     expires_at IS NOT NULL AND expires_at > now()), so the customer sees
+    --     a Pro badge and gets no credentials — the Windows dead end, again;
+    --   * PERMANENTLY INVISIBLE to the expiry sweeper, whose predicate is also
+    --     `expires_at IS NOT NULL`. The row could never be cleaned up by
+    --     anything except a human noticing it.
+    -- Granting an unbounded term is strictly worse than granting nothing.
+    IF p_expires_at IS NULL AND NOT v_entitled THEN
+        RETURN jsonb_build_object(
+            'success',      true,
+            'action',       'ignored',
+            'reason',       'no_expiry',
+            'account_id',   p_account_id,
+            'tier',         v_cur_tier,
+            'expires_at',   v_cur_expires,
+            'store',        v_cur_store,
+            'ownership_set', false
+        );
+    END IF;
+
     IF p_expires_at IS NULL THEN
+        -- Entitled, and the event named no expiry: leave the term exactly as
+        -- it is. v_cur_expires is non-NULL here by the definition of
+        -- v_entitled, so this cannot null the column.
         v_new_expires := v_cur_expires;
     ELSIF v_entitled THEN
         v_new_expires := GREATEST(v_cur_expires, p_expires_at);
@@ -334,7 +361,9 @@ DECLARE
     v_store          TEXT;
     v_grant          JSONB;
     v_prev_store     TEXT;
+    v_prev_store_n   TEXT;
     v_prev_tier      TEXT;
+    v_prev_txn       TEXT;
     v_prev_downgrade BOOLEAN := false;
 BEGIN
     -- RECONCILE :92-98 — unchanged from the repo copy. Kept ahead of the tier
@@ -370,6 +399,19 @@ BEGIN
 
     -- NEW — normalise the store before anything reads or writes it.
     v_store := public.subscription_normalize_store(coalesce(p_store, 'app_store'));
+
+    -- NEW — stamp a reason for every write this call makes, including the ones
+    -- made inside subscription_apply_grant and the transfer branch's downgrade
+    -- of the previous owner. set_config(..., true) is transaction-local, so it
+    -- covers the whole call and nothing after it.
+    --
+    -- Without this, a claim-path audit row has a writer_fn and no reason, and
+    -- "which store was this claim for" needs the pg_context string parsed by
+    -- hand. The raw p_store is recorded, not the normalised one: knowing the
+    -- caller said 'ios' rather than 'app_store' is what identifies the caller.
+    PERFORM set_config('doppler.reason',
+                       'claim:' || coalesce(p_store, ''),
+                       true);
 
     -- CHANGED :102-116 — the legacy no-transaction-id branch was a blind
     -- tier+expiry UPDATE with no ownership check. Both live mobile callers
@@ -423,7 +465,20 @@ BEGIN
             p_product_id              => p_product_id,
             p_set_ownership           => true
         );
+
+        -- The INSERT above is what CLAIMS the transaction, so it has to come
+        -- first — it is the serialisation point every concurrent claim for this
+        -- transaction contends on. But subscription_apply_grant reports failure
+        -- as a RETURN VALUE, not an exception, so an early RETURN here would
+        -- leave that ownership row behind with no matching entitlement: a
+        -- transaction owned by an account that was never granted anything, and
+        -- the real owner permanently unable to claim it because the UNIQUE
+        -- constraint is taken. Undo the claim before returning.
         IF NOT coalesce((v_grant ->> 'success')::boolean, false) THEN
+            DELETE FROM subscription_ownership
+            WHERE original_transaction_id = p_original_transaction_id
+              AND current_owner_account_id = p_account_id
+              AND transferred_at IS NULL;
             RETURN v_grant;
         END IF;
 
@@ -480,13 +535,28 @@ BEGIN
     -- account whose Pro came from revolut, oxapay or an admin grant has been
     -- paid for through a channel this event does not speak for. Only an
     -- app_store/play_store term is genuinely superseded by a store restore.
-    SELECT subscription_tier, subscription_store
-      INTO v_prev_tier, v_prev_store
+    SELECT subscription_tier, subscription_store, original_transaction_id
+      INTO v_prev_tier, v_prev_store, v_prev_txn
     FROM accounts
     WHERE account_id = v_existing_owner
     FOR UPDATE;
 
-    IF public.subscription_normalize_store(v_prev_store) IN ('app_store', 'play_store') THEN
+    v_prev_store_n := public.subscription_normalize_store(v_prev_store);
+
+    -- A NULL store with a transaction id set is a STORE row whose store column
+    -- was never written — exactly what the old legacy no-transaction-id branch
+    -- produced (it wrote tier and expiry and nothing else), and what
+    -- sync_subscription produced for anyone who called it after a claim.
+    -- Without this clause such a row falls to the ELSE arm, keeps Pro, and
+    -- hands its transaction to the new owner — one paid subscription, two
+    -- entitled accounts, which is the exact duplication the transfer branch
+    -- exists to prevent.
+    --
+    -- NULL store AND no txn is genuinely unknown provenance and still falls to
+    -- the ELSE arm: there is no evidence it is a store subscription, and
+    -- downgrading on no evidence is what the old unconditional revoke did.
+    IF v_prev_store_n IN ('app_store', 'play_store')
+       OR (v_prev_store IS NULL AND v_prev_txn IS NOT NULL) THEN
         UPDATE accounts SET
             subscription_tier       = 'free',
             -- LEAST(x, now()) rather than NULL. A NULL expiry loses the fact
@@ -539,6 +609,7 @@ BEGIN
         'action',                  'transferred',
         'previous_owner',          v_existing_owner,
         'previous_owner_store',    v_prev_store,
+        'previous_owner_had_txn',  (v_prev_txn IS NOT NULL),
         'previous_owner_downgraded', v_prev_downgrade,
         'new_owner',               p_account_id,
         'grant',                   v_grant
@@ -651,7 +722,34 @@ COMMIT;
 --    -- expect action 'transferred', previous_owner_downgraded = false,
 --    --        and B still tier='pro' with its revolut expiry intact
 --
--- 8. Shortening attempts in the wild, once this is live for a day:
+-- 8. A claim with no expiry on a free account writes NOTHING:
+--
+--    SELECT public.claim_subscription('<FREE-TEST-ACCOUNT>', 'pro', NULL, 'T-NOEXP');
+--    -- expect {"success":true,"action":"claimed", "grant":{... "action":"ignored",
+--    --          "reason":"no_expiry" ...}} — and the account STILL free:
+--    SELECT subscription_tier, subscription_expires_at FROM public.accounts
+--     WHERE account_id='<FREE-TEST-ACCOUNT>';
+--    -- expect free / NULL. A pro row with a NULL expiry is not entitled by the
+--    -- server rule AND is invisible to the sweeper, so it can never be cleaned up.
+--    -- (An ownership row IS created and kept: the transaction is genuinely
+--    --  claimed by this account, there is simply no term to grant yet.)
+--
+-- 9. A transfer away from a legacy row (txn set, store NULL) DOES downgrade:
+--
+--    -- account B: subscription_tier='pro', original_transaction_id='T-Y',
+--    --            subscription_store IS NULL  (what the old legacy branch left)
+--    SELECT public.claim_subscription('<A>', 'pro', now() + interval '30 days', 'T-Y');
+--    -- expect previous_owner_downgraded = true, previous_owner_had_txn = true.
+--    -- Before this fix B kept Pro AND lost the txn: one subscription, two
+--    -- entitled accounts.
+--
+-- 10. Every claim-path audit row carries a reason:
+--
+--    SELECT writer_fn, reason, count(*) FROM public.subscription_audit
+--    WHERE changed_at > now() - interval '1 day' GROUP BY 1,2 ORDER BY 3 DESC;
+--    -- expect reasons like 'claim:ios', 'claim:app_store', 'claim:android'
+--
+-- 11. Shortening attempts in the wild, once this is live for a day:
 --
 --    SELECT count(*) FROM public.subscription_audit
 --     WHERE writer_fn = 'subscription_apply_grant'
