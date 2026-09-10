@@ -2,8 +2,26 @@
 
 **Audience:** whoever maintains the VPS admin panel (`doppler-admin`, GitHub
 `pochtmanr/doppler-admin`, deployed by `scripts/deploy.sh`).
-**Depends on:** `supabase/migrations/20260906T100400_admin_subscription_rpcs.sql`.
-**Status:** the migration is written but **not applied**. Nothing below works until it is.
+**Depends on:** `supabase/migrations/20260910T090000_admin_subscription_controls.sql`.
+**Status:** written, **not applied**. Nothing below works until it is.
+
+> **2026-09-10.** The original dependency, `20260906T100400_admin_subscription_rpcs.sql`,
+> could never be applied on its own — its guard requires `subscription_normalize_store`
+> and the `subscription_audit` trigger, both of which ship in the same blocked batch. The
+> panel shipped anyway, so every Pro/Free click in the Accounts tab returned
+> `PGRST202`, exactly as §7 predicted. `20260910T090000` installs the same two
+> functions standalone, with the normaliser inlined, and adds two more:
+>
+> | Function | New? |
+> |---|---|
+> | `admin_grant_subscription` | body from `20260906T100400`, normaliser inlined |
+> | `admin_revoke_subscription` | body from `20260906T100400`, verbatim |
+> | `admin_set_subscription_expiry` | replaces `20260908T174000` — **the `admin_grant_only` refusal is gone**, see §3.3 |
+> | `admin_set_subscription_store` | new, see §3.4 |
+>
+> When the `20260906T1*` batch is finally unblocked, `20260906T100400` must be
+> **skipped** — its guard aborts on a name that already exists. That file's trailing
+> comments say so too.
 
 ---
 
@@ -101,7 +119,54 @@ Sets `tier='free'` and clamps `expires_at` to `LEAST(expires_at, now())` —
 **never NULL**. Keeps `subscription_store` and every ownership column, so the
 action is reversible and `verify_restore` keeps working for that customer.
 
-### 3.3 Show the operator what happened
+### 3.3 Move an expiry — on any store
+
+```ts
+const { data } = await supabase.rpc('admin_set_subscription_expiry', {
+  p_account_id: id,
+  p_reason: reason,
+  p_actor: admin.email,
+  p_days: 30,                 // XOR
+  // p_expires_at: isoDate,   // one or the other, never both
+});
+```
+
+`p_days` stacks on the live term; `p_expires_at` writes an absolute date and must
+be in the future — **to end a term, use `admin_revoke_subscription`**, which
+clamps rather than truncating blind.
+
+Until 2026-09-10 this refused every store but `admin` / `dev-grant` with
+`admin_grant_only`. The effect in the field was that Revolut and OxaPay
+customers — the ones who pay us directly, with no store to re-sync from — were
+the only customers support could not extend. The refusal is now a **flag**:
+`store_managed` is true when the normalised store is `app_store` or
+`play_store`. Warn on it; do not hide the control. RevenueCat can overwrite
+those rows at the next renewal event, which is a thing the operator should know
+before they act, not be prevented from doing.
+
+### 3.4 Correct the payment source
+
+```ts
+const { data } = await supabase.rpc('admin_set_subscription_store', {
+  p_account_id: id,
+  p_store: 'oxapay',   // null / '' / 'none' / 'clear' to blank it
+  p_reason: reason,
+  p_actor: admin.email,
+});
+```
+
+For the rows the old raw PATCH overwrote with `'admin'` (§2). Writes
+**`subscription_store` and nothing else** — not the tier, not the expiry, not an
+ownership column. Input is normalised before validation, so `'iOS'` is stored as
+`app_store`. Allowlist: `app_store`, `play_store`, `stripe`, `paddle`, `revolut`,
+`oxapay`, `admin`, `dev-grant`.
+
+Returns `warning: 'no_original_transaction_id'` when a row is being labelled
+`app_store`/`play_store` with no transaction id on it. That combination is
+almost always a mislabel — nothing can key on it — but it is a warning, not a
+refusal.
+
+### 3.5 Show the operator what happened
 
 `before`/`after` exist so the panel does not have to re-fetch and diff. Show at
 minimum the expiry change, and show `stacked` — an operator who granted 30 days
@@ -165,12 +230,16 @@ sync feature added in future.)*
   RevenueCat webhook: it means *the store said this ended*, it refuses
   non-store rows, and it clears ownership. The panel's verb is
   `admin_revoke_subscription`.
+- Do **not** gate a control on the payment source. That is what
+  `admin_grant_only` did, and the customers it locked out — Revolut and OxaPay —
+  are the ones with no store to re-sync from and therefore the ones support has
+  to be able to help by hand. Warn on `store_managed`; refuse nothing.
 - Do **not** write `subscription_source`. Nothing reads it and nothing writes
   it today; do not start.
 - Do **not** introduce a `premium` tier. The clients map every tier that is not
   `pro` to FREE; `premium` exists only inside immutable product ids.
 
-## 6. One more thing to fix while you are in there
+## 6. ~~One more thing to fix while you are in there~~ — FIXED 2026-09-08
 
 `src/app/api/admin/subscriptions/route.ts:32-38`:
 
@@ -197,10 +266,18 @@ same class of divergence that produced the Windows "PRO badge, eight servers
 that all refuse to connect" dead end. It is a display bug, not an enforcement
 one, but it is the display an operator makes decisions from.
 
+**Done.** `isActiveSubscription` in `src/lib/subscription-display.ts` now requires
+a non-NULL expiry in the future, matching `get_servers_v2`, and it is the single
+helper every count and badge in both tabs goes through.
+
 ## 7. Deploy order
 
-1. Apply `20260906T100400_admin_subscription_rpcs.sql`.
-2. Verify both RPCs exist and are `service_role`-only (§VERIFY in that file).
+1. Apply `20260910T090000_admin_subscription_controls.sql` in the Supabase
+   Dashboard SQL Editor. Run its VERIFY §0 **first** — it dumps the one function
+   the file replaces so you can diff it before overwriting a live body.
+2. Verify all four RPCs exist **exactly once** and are `service_role`-only
+   (VERIFY §1 and §1b in that file). More than one row per name is an overload,
+   and PostgREST will dispatch to whichever one matches the argument names.
 3. Only then deploy the panel.
 
 Backwards, the panel's grant and set-free buttons get `PGRST202` — PostgREST
