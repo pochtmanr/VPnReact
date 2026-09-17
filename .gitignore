@@ -53,3 +53,6 @@ xcuserdata/
 *.keystore
 keystore.properties
 keyfolder/
+
+# agent/session scratch
+**/.superpowers/
