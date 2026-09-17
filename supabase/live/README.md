@@ -104,7 +104,7 @@ harder — not as a clean run.
 
 ## What is *not* allowed from this machine
 
-- No `supabase db push` from `landing/` — `landing/supabase/.temp/project-ref` is stale and names
+- No `supabase db push` from `doppler-web/` — `doppler-web/supabase/.temp/project-ref` is stale and names
   a different project (`seakhlgyzkerxabitgoo`). Clear `.temp/` first if you ever link.
 - No replay of `20260102_subscription_ownership.sql`. If the `subscription_store` CHECK was
   relaxed live (four writers store `revolut` / `oxapay` / `paddle` / `dev-grant`, which the

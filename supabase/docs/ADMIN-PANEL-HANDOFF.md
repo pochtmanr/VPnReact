@@ -56,7 +56,7 @@ await untypedClient.from("accounts").update(updateData).eq("id", id);   // :46-4
 
 | Defect | Line | What it costs |
 |---|---|---|
-| Expiry is **absolute**, computed from `now()` | `:41-42` | Granting 30 goodwill days to a customer with 200 days left **cuts them to 30**. Every other grant path in the product stacks (`landing/src/app/api/oxapay/webhook/route.ts:144-151`, `revolut/webhook/route.ts:191-199`, `/api/dev/grant-pro`); this one does not. |
+| Expiry is **absolute**, computed from `now()` | `:41-42` | Granting 30 goodwill days to a customer with 200 days left **cuts them to 30**. Every other grant path in the product stacks (`doppler-web/src/app/api/oxapay/webhook/route.ts:144-151`, `revolut/webhook/route.ts:191-199`, `/api/dev/grant-pro`); this one does not. |
 | `subscription_store` overwritten with `'admin'` | `:44` | Erases `app_store` / `play_store` / `revolut` / `oxapay`. After one grant the row no longer says how the customer paid, and `revoke_subscription` — which only revokes store subscriptions — can never act on them again. |
 | Downgrade **nulls** `subscription_expires_at` | `:30` | Destroys the only record of what the customer had bought. Support cannot answer "until when was I Pro?"; the backfill has nothing to reason from. |
 | Downgrade **nulls** `subscription_store` | `:31` | Same, for the payment channel. |
